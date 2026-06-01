@@ -1,0 +1,44 @@
+{
+  "fixture_id": "model-output-low-confidence-news",
+  "input_fixture_id": "sample-020-single-source-leak",
+  "briefing_item": {
+    "id": "brief_synthetic_low_confidence_ai_hardware",
+    "run_id": "run_2026-06-01_model_provider_spike",
+    "candidate_id": "cand_synthetic_low_confidence_ai_hardware",
+    "section": "Hardware",
+    "subcategory": "AI accelerators",
+    "title_zh": "一则未确认 AI 硬件消息进入观察范围，但需要明确标注低置信度。",
+    "bullets_zh": [
+      "该条目用于模拟单一手动来源，不能当作已证实新闻处理。",
+      "缺少公司公告、多源交叉确认和可核验发布时间。",
+      "如果进入推送，必须把不确定性放在正文可见位置。"
+    ],
+    "original_source_anchor": {
+      "source_name": "Synthetic Manual URL Fixture",
+      "original_title": "Synthetic single-source report about an unreleased AI hardware product",
+      "source_url": "https://example.invalid/manual-low-confidence-fixture"
+    },
+    "selection_rationale": {
+      "summary": "Exercises the Confidence Notice path for single-source, unconfirmed reports without storing a real rumor URL.",
+      "signals": ["low_source_count", "manual_url", "synthetic_behavior_exercise"]
+    },
+    "confidence_level": "low",
+    "confidence_notice": "置信提示：该条目是合成行为夹具，模拟单一手动来源，缺少公司公告或多源交叉确认。",
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "fixture",
+    "model": "not_called",
+    "task_type": "briefing_item_generation",
+    "request_count": 0,
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms": null,
+    "failure_reason": "Live provider call pending MODEL_API_KEY."
+  },
+  "guardrail_notes": [
+    "Confidence Notice is required because confidence_level is low.",
+    "The source URL is intentionally synthetic and must not be treated as corroborated news."
+  ]
+}

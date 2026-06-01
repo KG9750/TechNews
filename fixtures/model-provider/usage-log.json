@@ -1,0 +1,42 @@
+{
+  "run_id": "run_2026-06-01_model_provider_spike",
+  "status": "fixture_only_live_provider_pending",
+  "provider": "fixture",
+  "model": "not_called",
+  "tasks": [
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-001-openai-gpt-4o",
+      "output_fixture": "outputs/high-confidence-news.json",
+      "request_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": null,
+      "failure_reason": "Live provider call pending MODEL_API_KEY."
+    },
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-020-single-source-leak",
+      "output_fixture": "outputs/low-confidence-news.json",
+      "request_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": null,
+      "failure_reason": "Live provider call pending MODEL_API_KEY."
+    },
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-018-rt-2",
+      "output_fixture": "outputs/academic-paper.json",
+      "request_count": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "latency_ms": null,
+      "failure_reason": "Live provider call pending MODEL_API_KEY."
+    }
+  ],
+  "notes": [
+    "This file records the usage metadata shape only.",
+    "A real model-provider spike must replace fixture provider/model values with redacted live call evidence."
+  ]
+}

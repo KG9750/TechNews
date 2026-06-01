@@ -1,0 +1,44 @@
+{
+  "fixture_id": "model-output-high-confidence-news",
+  "input_fixture_id": "sample-001-openai-gpt-4o",
+  "briefing_item": {
+    "id": "brief_openai_gpt4o",
+    "run_id": "run_2026-06-01_model_provider_spike",
+    "candidate_id": "cand_openai_hello_gpt4o",
+    "section": "AI",
+    "subcategory": "Multimodal AI",
+    "title_zh": "OpenAI 发布 GPT-4o，重点降低实时多模态交互门槛。",
+    "bullets_zh": [
+      "这是一次官方模型发布，覆盖文本、语音和视觉交互。",
+      "事件影响模型产品形态和开发者集成方式。",
+      "原始来源保留为 OpenAI 官方公告，便于后续核验。"
+    ],
+    "original_source_anchor": {
+      "source_name": "OpenAI News",
+      "original_title": "Hello GPT-4o",
+      "source_url": "https://openai.com/index/hello-gpt-4o/"
+    },
+    "selection_rationale": {
+      "summary": "Official model release with broad product and developer impact.",
+      "signals": ["source_trust", "event_impact", "timeliness"]
+    },
+    "confidence_level": "high",
+    "confidence_notice": null,
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "fixture",
+    "model": "not_called",
+    "task_type": "briefing_item_generation",
+    "request_count": 0,
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms": null,
+    "failure_reason": "Live provider call pending MODEL_API_KEY."
+  },
+  "guardrail_notes": [
+    "Output preserves the original OpenAI source anchor.",
+    "No source media is displayed because the fixture does not provide eligible media metadata."
+  ]
+}
