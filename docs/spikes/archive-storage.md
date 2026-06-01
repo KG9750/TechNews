@@ -1,6 +1,6 @@
 # Archive And Storage Spike
 
-Status: Not started
+Status: Local write and failure simulation complete; external sync target pending
 Owner: Briefing Administrator
 
 ## Goal
@@ -24,6 +24,20 @@ archives/
       media/
 ```
 
+Fixture evidence:
+
+```text
+fixtures/archive-storage/
+  local-archive/
+    2026-06-01/
+      technology/
+        briefing.html
+        briefing.md
+        metadata.json
+        media/
+          README.md
+```
+
 ## Questions To Answer
 
 - What is the first `ARCHIVE_LOCAL_ROOT` on the Briefing Host?
@@ -34,13 +48,17 @@ archives/
 
 ## Verification Checklist
 
-- A sample Archive Package is written locally.
-- `metadata.json` includes selected items, excluded candidates, delivery status, model usage summary, and sync status.
-- The package can be copied or synced to the target.
-- A simulated sync failure keeps the local package and records failure status.
+- [x] A sample Archive Package is written locally.
+- [x] `metadata.json` includes selected items, excluded candidates, delivery status, model usage summary, and sync status.
+- [ ] The package can be copied or synced to the target.
+- [x] A simulated sync failure keeps the local package and records failure status.
 
 ## Evidence To Attach
 
-- Example local archive tree.
-- Redacted sync command or NAS configuration note.
-- Success and failure status examples.
+- Example local archive tree: `fixtures/archive-storage/local-archive/2026-06-01/technology/`.
+- Failure status example: `sync_status.remote_sync.status = failed` in fixture `metadata.json`.
+- Pending: redacted success evidence for a real `ARCHIVE_SYNC_TARGET`.
+
+## Current Finding
+
+The local-first strategy in ADR-0006 is viable for the archive package shape. The fixture proves that local artifacts remain readable and that sync failure can be recorded without deleting local output. The spike is not fully complete until the Briefing Administrator provides a real NAS/cloud target and a redacted success note.

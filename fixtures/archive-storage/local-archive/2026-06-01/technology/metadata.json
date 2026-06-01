@@ -1,0 +1,118 @@
+{
+  "run_id": "run_2026-06-01_archive_storage_spike",
+  "domain_template": "technology",
+  "generated_at": "2026-06-01T07:30:00Z",
+  "files": {
+    "briefing_html": "briefing.html",
+    "briefing_md": "briefing.md",
+    "metadata_json": "metadata.json",
+    "media_dir": "media/"
+  },
+  "selected_items": [
+    {
+      "briefing_item_id": "brief_openai_gpt4o",
+      "candidate_id": "cand_openai_hello_gpt4o",
+      "section": "AI",
+      "subcategory": "Multimodal AI",
+      "title_zh": "OpenAI 发布 GPT-4o，重点降低实时多模态交互门槛。",
+      "confidence_level": "high",
+      "selection_rationale": "Official model release with broad product and developer impact.",
+      "original_source_anchor": {
+        "source_name": "OpenAI News",
+        "original_title": "Hello GPT-4o",
+        "source_url": "https://openai.com/index/hello-gpt-4o/"
+      },
+      "media_attribution": null
+    },
+    {
+      "briefing_item_id": "brief_apple_m4",
+      "candidate_id": "cand_apple_m4_2024_05_07",
+      "section": "Hardware",
+      "subcategory": "Semiconductors",
+      "title_zh": "Apple 发布 M4 芯片，强化端侧 AI 和新 iPad Pro 性能叙事。",
+      "confidence_level": "high",
+      "selection_rationale": "Official chip announcement with device and AI workload implications.",
+      "original_source_anchor": {
+        "source_name": "Apple Newsroom",
+        "original_title": "Apple introduces M4 chip",
+        "source_url": "https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/"
+      },
+      "media_attribution": {
+        "source_name": "Apple Newsroom",
+        "media_url": "https://www.apple.com/newsroom/images/2024/05/apple-introduces-m4-chip/tile/Apple-M4-chip-badge-240507.jpg.og.jpg?202605131928",
+        "usage_state": "metadata_only_not_downloaded",
+        "eligibility_note": "Media reuse policy must be checked before automated MVP display."
+      }
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "candidate_id": "cand_github_blog_shop_2026_05_28",
+      "selection_rationale": "RSS item normalized successfully but is lower priority for a daily technology briefing than model, hardware, or academic progress items."
+    }
+  ],
+  "connector_status": {
+    "src-openai-news": {
+      "status": "completed",
+      "item_count": 1
+    },
+    "src-manual-url": {
+      "status": "completed",
+      "item_count": 1
+    },
+    "src-github-blog": {
+      "status": "completed",
+      "item_count": 1
+    }
+  },
+  "delivery_status": {
+    "feishu_user_demo": {
+      "recipient_type": "feishu_user",
+      "status": "not_sent_in_archive_spike",
+      "reason": "Archive/storage fixture does not call Feishu."
+    },
+    "feishu_group_demo": {
+      "recipient_type": "feishu_group",
+      "status": "not_sent_in_archive_spike",
+      "reason": "Archive/storage fixture does not call Feishu."
+    }
+  },
+  "media_inventory": [
+    {
+      "candidate_id": "cand_apple_m4_2024_05_07",
+      "source_media_url": "https://www.apple.com/newsroom/images/2024/05/apple-introduces-m4-chip/tile/Apple-M4-chip-badge-240507.jpg.og.jpg?202605131928",
+      "stored_file": null,
+      "attribution": "Apple Newsroom: https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+      "status": "metadata_only_not_downloaded"
+    }
+  ],
+  "sync_status": {
+    "local_archive": {
+      "status": "written",
+      "root": "fixtures/archive-storage/local-archive",
+      "package_path": "2026-06-01/technology"
+    },
+    "remote_sync": {
+      "status": "failed",
+      "target": "ARCHIVE_SYNC_TARGET_UNSET",
+      "attempted_at": "2026-06-01T07:31:00Z",
+      "failure_reason": "No real NAS or cloud sync target configured for the repository fixture.",
+      "retryable": true
+    }
+  },
+  "model_usage_summary": {
+    "provider": "fixture",
+    "model": "not_called",
+    "task_count": 0,
+    "request_count": 0,
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms": null,
+    "failure_count": 0,
+    "notes": "Archive/storage spike fixture reuses curated sample outputs and does not call a model provider."
+  },
+  "warnings": [
+    "Remote sync is intentionally failed because no real ARCHIVE_SYNC_TARGET is configured.",
+    "Delivery status is present for contract coverage but Feishu delivery is verified in a separate spike."
+  ]
+}
