@@ -1,0 +1,36 @@
+{
+  "run_id": "run_2026-06-01_feishu_delivery_spike",
+  "delivery_status": {
+    "feishu_user_demo": {
+      "recipient_type": "feishu_user",
+      "recipient_id_ref": "FEISHU_DEFAULT_USER_OPEN_ID",
+      "path": "internal_app_bot",
+      "status": "pending_live_test",
+      "message_shape": "interactive_card",
+      "requires_redacted_response": true
+    },
+    "feishu_group_demo": {
+      "recipient_type": "feishu_group",
+      "recipient_id_ref": "FEISHU_DEFAULT_CHAT_ID",
+      "path": "internal_app_bot",
+      "status": "pending_live_test",
+      "message_shape": "interactive_card",
+      "requires_redacted_response": true
+    },
+    "feishu_group_fallback_example": {
+      "recipient_type": "feishu_group",
+      "recipient_id_ref": "FEISHU_GROUP_WEBHOOK_URL",
+      "path": "custom_group_bot_fallback",
+      "status": "not_attempted",
+      "reason": "Fallback only; does not satisfy personal delivery requirement."
+    }
+  },
+  "failure_example": {
+    "status": "failed",
+    "retryable": true,
+    "failure_stage": "send_message",
+    "provider_error_code": "REDACTED",
+    "provider_error_message": "REDACTED",
+    "record_in_archive_metadata": true
+  }
+}

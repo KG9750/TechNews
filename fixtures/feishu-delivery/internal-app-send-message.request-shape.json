@@ -1,0 +1,39 @@
+{
+  "notes": [
+    "Draft request shape for Feishu internal app bot send-message API.",
+    "The final spike must validate whether card content is submitted as a JSON string or provider-specific object for the chosen API/client.",
+    "Do not replace placeholders with real ids in committed files."
+  ],
+  "user_delivery": {
+    "method": "POST",
+    "path": "/open-apis/im/v1/messages",
+    "query": {
+      "receive_id_type": "open_id"
+    },
+    "headers": {
+      "Authorization": "Bearer ${FEISHU_TENANT_ACCESS_TOKEN}",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "receive_id": "${FEISHU_DEFAULT_USER_OPEN_ID}",
+      "msg_type": "interactive",
+      "content_object_file": "fixtures/feishu-delivery/push-briefing-card-content.json"
+    }
+  },
+  "group_delivery": {
+    "method": "POST",
+    "path": "/open-apis/im/v1/messages",
+    "query": {
+      "receive_id_type": "chat_id"
+    },
+    "headers": {
+      "Authorization": "Bearer ${FEISHU_TENANT_ACCESS_TOKEN}",
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "receive_id": "${FEISHU_DEFAULT_CHAT_ID}",
+      "msg_type": "interactive",
+      "content_object_file": "fixtures/feishu-delivery/push-briefing-card-content.json"
+    }
+  }
+}
