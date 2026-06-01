@@ -1,0 +1,91 @@
+[
+  {
+    "id": "cand_github_blog_shop_2026_05_28",
+    "run_id": "run_2026-06-01_source_ingestion_spike",
+    "source_id": "src-github-blog",
+    "source_type": "public_feed",
+    "source_name": "GitHub Blog",
+    "original_title": "Still a developer. Just outside. Our latest GitHub Shop collection is here.",
+    "source_url": "https://github.blog/news-insights/company-news/still-a-developer-just-outside-our-latest-github-shop-collection-is-here/",
+    "original_source_anchor": {
+      "source_name": "GitHub Blog",
+      "original_title": "Still a developer. Just outside. Our latest GitHub Shop collection is here.",
+      "source_url": "https://github.blog/news-insights/company-news/still-a-developer-just-outside-our-latest-github-shop-collection-is-here/"
+    },
+    "dedupe_key": "src-github-blog|https://github.blog/news-insights/company-news/still-a-developer-just-outside-our-latest-github-shop-collection-is-here/",
+    "event_key": null,
+    "published_at": "2026-05-28T18:18:43Z",
+    "discovered_at": "2026-06-01T06:02:34Z",
+    "language": "en",
+    "section_hints": ["Technology Industry Progress", "Software"],
+    "source_media": null,
+    "eligibility_state": "needs_review",
+    "eligibility_notes": "RSS metadata normalized successfully. Terms and media reuse still require source eligibility review before automated MVP ingestion.",
+    "raw_metadata": {
+      "feed_title": "The GitHub Blog",
+      "categories": ["Company news", "News & insights", "GitHub Shop"],
+      "description_excerpt": "The ESC collection lets you escape the confines of your desk and get out into the sun where good ideas are bound to happen..."
+    }
+  },
+  {
+    "id": "cand_arxiv_2605_31603v1",
+    "run_id": "run_2026-06-01_source_ingestion_spike",
+    "source_id": "src-arxiv-cs-ai",
+    "source_type": "academic_source",
+    "source_name": "arXiv cs.AI",
+    "original_title": "Lumos-Nexus: Efficient Frequency Bridging with Homogeneous Latent Space for Video Unified Models",
+    "source_url": "http://arxiv.org/abs/2605.31603v1",
+    "original_source_anchor": {
+      "source_name": "arXiv cs.AI",
+      "original_title": "Lumos-Nexus: Efficient Frequency Bridging with Homogeneous Latent Space for Video Unified Models",
+      "source_url": "http://arxiv.org/abs/2605.31603v1"
+    },
+    "dedupe_key": "src-arxiv-cs-ai|http://arxiv.org/abs/2605.31603v1",
+    "event_key": null,
+    "published_at": "2026-05-29T17:59:50Z",
+    "discovered_at": "2026-06-01T06:02:34Z",
+    "language": "en",
+    "section_hints": ["Academic Progress", "AI"],
+    "source_media": null,
+    "eligibility_state": "eligible",
+    "eligibility_notes": "arXiv API Atom metadata normalized successfully. Follow arXiv API user manual and conservative request pacing.",
+    "raw_metadata": {
+      "feed_title": "arXiv Query: search_query=cat:cs.AI&id_list=&start=0&max_results=1",
+      "authors": ["Jiazheng Xing", "Hangjie Yuan", "Lingling Cai", "Xinyu Liu", "Yujie Wei"],
+      "categories": ["cs.CV", "cs.AI"],
+      "summary_excerpt": "Connector-based video unified models have demonstrated strong capability in instruction-grounded video synthesis..."
+    }
+  },
+  {
+    "id": "cand_apple_m4_2024_05_07",
+    "run_id": "run_2026-06-01_source_ingestion_spike",
+    "source_id": "src-manual-url",
+    "source_type": "manual_url",
+    "source_name": "Apple Newsroom",
+    "original_title": "Apple introduces M4 chip",
+    "source_url": "https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+    "original_source_anchor": {
+      "source_name": "Apple Newsroom",
+      "original_title": "Apple introduces M4 chip",
+      "source_url": "https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/"
+    },
+    "dedupe_key": "src-manual-url|https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+    "event_key": null,
+    "published_at": null,
+    "discovered_at": "2026-06-01T06:03:12Z",
+    "language": "en",
+    "section_hints": ["Hardware", "AI"],
+    "source_media": {
+      "url": "https://www.apple.com/newsroom/images/2024/05/apple-introduces-m4-chip/tile/Apple-M4-chip-badge-240507.jpg.og.jpg?202605131928",
+      "kind": "open_graph_image",
+      "attribution": "Apple Newsroom: https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+      "eligibility_note": "Open Graph image discovered; actual reuse/display policy must be checked before MVP automated use."
+    },
+    "eligibility_state": "needs_review",
+    "eligibility_notes": "Manual URL metadata normalized successfully. Official source, but media reuse and exact publication timestamp need eligibility review.",
+    "raw_metadata": {
+      "site_name": "Apple Newsroom",
+      "description_excerpt": "Apple today announced M4, the latest Apple-designed silicon chip delivering phenomenal performance to the all-new iPad Pro."
+    }
+  }
+]
