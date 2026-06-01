@@ -22,19 +22,19 @@ Use this breakdown to create GitHub issues after the remaining external spike ev
 
 Every draft below contains the required sections: Problem, Scope, Out of scope, Acceptance criteria, Test expectations, Relevant docs, Dependencies, and Triage label.
 
-| Module | Draft | Initial label | Main blockers |
-| --- | --- | --- | --- |
-| Repo and CI | `docs/issues/mvp/01-repo-ci-foundation.md` | `needs-triage` | Readiness gate |
-| Contracts | `docs/issues/mvp/02-contract-schemas.md` | `needs-triage` | Live model/archive/Feishu spike feedback |
-| Taxonomy and source registry | `docs/issues/mvp/03-taxonomy-source-registry.md` | `needs-triage` | Source registry owner review |
-| Source connectors | `docs/issues/mvp/04-source-connectors.md` | `needs-triage` | Source connector acceptance from source spike |
-| Ranking and Selection Rationale | `docs/issues/mvp/05-ranking-selection-rationale.md` | `needs-triage` | Model provider spike |
-| Briefing generation and Confidence Notices | `docs/issues/mvp/06-briefing-generation-confidence.md` | `needs-triage` | Model provider spike and Feishu card verification |
-| Archive Package | `docs/issues/mvp/07-archive-package.md` | `needs-triage` | Archive sync target |
-| Feishu delivery | `docs/issues/mvp/08-feishu-delivery.md` | `needs-triage` | Live Feishu delivery spike |
-| Operations Console | `docs/issues/mvp/09-operations-console.md` | `needs-triage` | Storage and auth defaults confirmed |
-| Deployment and secrets | `docs/issues/mvp/10-deployment-secrets.md` | `needs-triage` | Briefing Host paths and secrets |
-| End-to-end MVP acceptance | `docs/issues/mvp/11-e2e-mvp-acceptance.md` | `needs-triage` | All core implementation issues |
+| Module | GitHub issue | Draft | Initial label | Main blockers |
+| --- | --- | --- | --- | --- |
+| Repo and CI | #10 | `docs/issues/mvp/01-repo-ci-foundation.md` | `needs-triage` | Readiness gate |
+| Contracts | #11 | `docs/issues/mvp/02-contract-schemas.md` | `needs-triage` | Live model/archive/Feishu spike feedback |
+| Taxonomy and source registry | #12 | `docs/issues/mvp/03-taxonomy-source-registry.md` | `needs-triage` | Source registry owner review |
+| Source connectors | #13 | `docs/issues/mvp/04-source-connectors.md` | `needs-triage` | Source connector acceptance from source spike |
+| Ranking and Selection Rationale | #14 | `docs/issues/mvp/05-ranking-selection-rationale.md` | `needs-triage` | Model provider spike |
+| Briefing generation and Confidence Notices | #15 | `docs/issues/mvp/06-briefing-generation-confidence.md` | `needs-triage` | Model provider spike and Feishu card verification |
+| Archive Package | #16 | `docs/issues/mvp/07-archive-package.md` | `needs-triage` | Archive sync target |
+| Feishu delivery | #17 | `docs/issues/mvp/08-feishu-delivery.md` | `needs-triage` | Live Feishu delivery spike |
+| Operations Console | #18 | `docs/issues/mvp/09-operations-console.md` | `needs-triage` | Storage and auth defaults confirmed |
+| Deployment and secrets | #19 | `docs/issues/mvp/10-deployment-secrets.md` | `needs-triage` | Briefing Host paths and secrets |
+| End-to-end MVP acceptance | #20 | `docs/issues/mvp/11-e2e-mvp-acceptance.md` | `needs-triage` | All core implementation issues |
 
 ## Acceptance Coverage Map
 
