@@ -1,0 +1,644 @@
+[
+  {
+    "fixture_id": "sample-001-openai-gpt-4o",
+    "scenario_tags": ["public_feed", "source_media", "high_confidence", "ai"],
+    "raw_source_metadata": {
+      "source_name": "OpenAI News",
+      "original_title": "Hello GPT-4o",
+      "source_url": "https://openai.com/index/hello-gpt-4o/",
+      "published_at": "2024-05-13T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "Multimodal AI"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official model release with broad product and developer impact."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "OpenAI 发布 GPT-4o，重点降低实时多模态交互门槛。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-002-apple-intelligence",
+    "scenario_tags": ["public_feed", "source_media", "high_confidence", "duplicate_event_candidate"],
+    "raw_source_metadata": {
+      "source_name": "Apple Newsroom",
+      "original_title": "Introducing Apple Intelligence for iPhone, iPad, and Mac",
+      "source_url": "https://www.apple.com/newsroom/2024/06/introducing-apple-intelligence-for-iphone-ipad-and-mac/",
+      "published_at": "2024-06-10T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "AI applications"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official platform announcement affecting major consumer operating systems."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Apple 推出 Apple Intelligence，把生成式 AI 纳入 iPhone、iPad 和 Mac 系统体验。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-003-nvidia-blackwell",
+    "scenario_tags": ["public_feed", "source_media", "high_confidence", "hardware"],
+    "raw_source_metadata": {
+      "source_name": "NVIDIA Newsroom",
+      "original_title": "NVIDIA Blackwell Platform Arrives to Power a New Era of Computing",
+      "source_url": "https://nvidianews.nvidia.com/news/nvidia-blackwell-platform-arrives-to-power-a-new-era-of-computing",
+      "published_at": "2024-03-18T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Hardware",
+      "subcategory": "AI accelerators"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official AI accelerator platform launch with infrastructure impact."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "NVIDIA 发布 Blackwell 平台，继续推动 AI 数据中心硬件升级。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-004-anthropic-claude-35-sonnet",
+    "scenario_tags": ["public_feed", "source_media", "high_confidence", "ai"],
+    "raw_source_metadata": {
+      "source_name": "Anthropic News",
+      "original_title": "Claude 3.5 Sonnet",
+      "source_url": "https://www.anthropic.com/news/claude-3-5-sonnet",
+      "published_at": "2024-06-20T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "Foundation models"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official model release from a major AI lab."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Anthropic 发布 Claude 3.5 Sonnet，强化前沿模型竞争。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-005-alphafold-3",
+    "scenario_tags": ["public_feed", "academic_progress", "source_media", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Google DeepMind Blog",
+      "original_title": "AlphaFold 3 predicts the structure and interactions of all of life's molecules",
+      "source_url": "https://deepmind.google/discover/blog/alphafold-3-predicts-the-structure-and-interactions-of-all-of-lifes-molecules/",
+      "published_at": "2024-05-08T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Academic Progress",
+      "subcategory": "AI papers"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Major scientific AI result with official research context."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "DeepMind 发布 AlphaFold 3，扩展分子结构与相互作用预测能力。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-006-meta-llama-31",
+    "scenario_tags": ["public_feed", "open_source_ai", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Meta AI Blog",
+      "original_title": "Introducing Llama 3.1",
+      "source_url": "https://ai.meta.com/blog/meta-llama-3-1/",
+      "published_at": "2024-07-23T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "Open-source AI"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official open model release with ecosystem impact."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Meta 发布 Llama 3.1，继续扩大开放模型生态影响力。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-007-google-gemini-15",
+    "scenario_tags": ["public_feed", "ai", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Google Blog",
+      "original_title": "Our next-generation model: Gemini 1.5",
+      "source_url": "https://blog.google/technology/ai/google-gemini-next-generation-model-february-2024/",
+      "published_at": "2024-02-15T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "Foundation models"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official frontier model update from a major provider."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Google 发布 Gemini 1.5，突出长上下文能力。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-008-microsoft-phi-3",
+    "scenario_tags": ["public_feed", "ai", "software", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Microsoft Azure Blog",
+      "original_title": "Introducing Phi-3: redefining what's possible with SLMs",
+      "source_url": "https://azure.microsoft.com/en-us/blog/introducing-phi-3-redefining-whats-possible-with-slms/",
+      "published_at": "2024-04-23T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "Foundation models"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official small language model release with deployment implications."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Microsoft 发布 Phi-3，强调小模型在端侧和低成本场景的价值。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-009-huggingface-lerobot",
+    "scenario_tags": ["public_feed", "embodied_intelligence", "open_source", "source_media"],
+    "raw_source_metadata": {
+      "source_name": "Hugging Face Blog",
+      "original_title": "LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch",
+      "source_url": "https://huggingface.co/blog/lerobot",
+      "published_at": null
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "needs_review",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Embodied Intelligence",
+      "subcategory": "Model training"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "medium",
+      "selection_rationale": "Relevant open-source robotics tooling; exact publication metadata should be verified by ingestion.",
+      "confidence_notice": "发布日期或 feed metadata 需要在采集 spike 中核验。"
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Hugging Face 推出 LeRobot，降低机器人学习工具链使用门槛。",
+      "bullet_count": 3,
+      "requires_confidence_notice": true
+    }
+  },
+  {
+    "fixture_id": "sample-010-github-copilot-workspace",
+    "scenario_tags": ["public_feed", "software", "ai_agent", "source_media"],
+    "raw_source_metadata": {
+      "source_name": "GitHub Blog",
+      "original_title": "Introducing GitHub Copilot Workspace",
+      "source_url": "https://github.blog/news-insights/product-news/introducing-github-copilot-workspace/",
+      "published_at": "2024-04-29T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Software",
+      "subcategory": "Developer tools"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official developer tool announcement with AI agent workflow relevance."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "GitHub 推出 Copilot Workspace，探索从需求到代码的 AI 辅助开发流程。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-011-kubernetes-130",
+    "scenario_tags": ["public_feed", "software", "no_media", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Kubernetes Blog",
+      "original_title": "Kubernetes v1.30: Uwubernetes",
+      "source_url": "https://kubernetes.io/blog/2024/04/17/kubernetes-v1-30-release/",
+      "published_at": "2024-04-17T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Software",
+      "subcategory": "Cloud and DevOps"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Important but may rank below major AI/hardware items unless recipient subscribes to cloud-native updates."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Kubernetes v1.30 发布，云原生基础设施继续迭代。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-012-rust-178",
+    "scenario_tags": ["public_feed", "software", "no_media", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "Rust Blog",
+      "original_title": "Announcing Rust 1.78.0",
+      "source_url": "https://blog.rust-lang.org/2024/05/02/Rust-1.78.0.html",
+      "published_at": "2024-05-02T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Software",
+      "subcategory": "Programming languages"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Useful for developer subscribers but not necessarily daily top story."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Rust 1.78 发布，语言和工具链继续稳定演进。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-013-apple-m4",
+    "scenario_tags": ["public_feed", "hardware", "source_media", "duplicate_event_candidate"],
+    "raw_source_metadata": {
+      "source_name": "Apple Newsroom",
+      "original_title": "Apple introduces M4 chip",
+      "source_url": "https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+      "published_at": "2024-05-07T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Hardware",
+      "subcategory": "Semiconductors"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official chip announcement with device and AI workload implications."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Apple 发布 M4 芯片，强化端侧 AI 和新 iPad Pro 性能叙事。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-014-windows-copilot-pc",
+    "scenario_tags": ["public_feed", "software", "hardware", "source_media"],
+    "raw_source_metadata": {
+      "source_name": "Windows Blog",
+      "original_title": "Introducing Copilot+ PCs",
+      "source_url": "https://blogs.windows.com/windowsexperience/2024/05/20/introducing-copilot-pcs/",
+      "published_at": "2024-05-20T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Hardware",
+      "subcategory": "Consumer devices"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Official PC platform announcement connecting hardware requirements and AI features."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Microsoft 推出 Copilot+ PC，推动本地 AI 能力成为 PC 平台卖点。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-015-crowdstrike-outage",
+    "scenario_tags": ["manual_url", "software", "security", "industry", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "CrowdStrike Guidance Hub",
+      "original_title": "Falcon Content Update Remediation and Guidance Hub",
+      "source_url": "https://www.crowdstrike.com/falcon-content-update-remediation-and-guidance-hub/",
+      "published_at": "2024-07-19T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "manual_url",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Software",
+      "subcategory": "Security"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "high",
+      "selection_rationale": "Operational security incident with broad technology industry impact and official guidance source."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "CrowdStrike 发布故障修复指引，安全软件更新风险成为行业焦点。",
+      "bullet_count": 4,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-016-attention-is-all-you-need",
+    "scenario_tags": ["academic_source", "no_media", "historical_reference", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "arXiv",
+      "original_title": "Attention Is All You Need",
+      "source_url": "https://arxiv.org/abs/1706.03762",
+      "published_at": "2017-06-12T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "academic_source",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Academic Progress",
+      "subcategory": "AI papers"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Historical baseline paper; useful for related history but not daily news unless referenced by a current item."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Transformer 经典论文可作为相关历史引用，而不是每日新闻本体。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-017-segment-anything",
+    "scenario_tags": ["academic_source", "source_media", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "arXiv",
+      "original_title": "Segment Anything",
+      "source_url": "https://arxiv.org/abs/2304.02643",
+      "published_at": "2023-04-05T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "academic_source",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Academic Progress",
+      "subcategory": "Datasets and benchmarks"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Useful as related history or benchmark context when a current vision model item appears."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Segment Anything 可作为视觉模型和数据集话题的相关历史。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-018-rt-2",
+    "scenario_tags": ["academic_source", "embodied_intelligence", "robotics", "high_confidence"],
+    "raw_source_metadata": {
+      "source_name": "arXiv",
+      "original_title": "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control",
+      "source_url": "https://arxiv.org/abs/2307.15818",
+      "published_at": "2023-07-28T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "academic_source",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Embodied Intelligence",
+      "subcategory": "Recent papers"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Robotics foundation-model context item; not daily news unless tied to a current deployment or follow-up."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "RT-2 可作为机器人视觉-语言-动作模型相关历史。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-019-diffusion-policy",
+    "scenario_tags": ["academic_source", "embodied_intelligence", "robotics", "no_media"],
+    "raw_source_metadata": {
+      "source_name": "arXiv",
+      "original_title": "Diffusion Policy: Visuomotor Policy Learning via Action Diffusion",
+      "source_url": "https://arxiv.org/abs/2303.04137",
+      "published_at": "2023-03-07T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "academic_source",
+      "eligibility_state": "eligible",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Embodied Intelligence",
+      "subcategory": "Model training"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "high",
+      "selection_rationale": "Important robotics learning reference; use for related history unless newly trending."
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Diffusion Policy 可作为机器人操作学习进展的相关历史。",
+      "bullet_count": 3,
+      "requires_confidence_notice": false
+    }
+  },
+  {
+    "fixture_id": "sample-020-single-source-leak",
+    "scenario_tags": ["manual_url", "low_confidence", "no_media", "rumor_or_leak"],
+    "raw_source_metadata": {
+      "source_name": "Manual URL Inbox",
+      "original_title": "Single-source report about an unreleased AI hardware product",
+      "source_url": "https://example.invalid/manual-low-confidence-fixture",
+      "published_at": null
+    },
+    "expected_candidate_item": {
+      "source_type": "manual_url",
+      "eligibility_state": "needs_review",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Hardware",
+      "subcategory": "AI accelerators"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "low",
+      "selection_rationale": "Exercises the Confidence Notice path for single-source, unconfirmed reports.",
+      "confidence_notice": "置信提示：该条目来自单一手动来源，缺少公司公告或多源交叉确认。"
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "一则未确认 AI 硬件消息进入观察范围，但需要明确标注低置信度。",
+      "bullet_count": 3,
+      "requires_confidence_notice": true
+    }
+  },
+  {
+    "fixture_id": "sample-021-duplicate-apple-ai-coverage",
+    "scenario_tags": ["public_feed", "duplicate_coverage", "industry", "medium_confidence"],
+    "raw_source_metadata": {
+      "source_name": "The Verge",
+      "original_title": "Apple announces its AI system for iPhone, iPad, and Mac",
+      "source_url": "https://www.theverge.com/",
+      "published_at": "2024-06-10T00:00:00Z"
+    },
+    "expected_candidate_item": {
+      "source_type": "public_feed",
+      "eligibility_state": "needs_review",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "AI",
+      "subcategory": "AI applications"
+    },
+    "expected_selection": {
+      "selected": false,
+      "confidence_level": "medium",
+      "selection_rationale": "Duplicate coverage of sample-002; preserve as corroborating source instead of separate Push Briefing item.",
+      "confidence_notice": "来源 URL 需要在采集 spike 中替换为具体文章链接。"
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "重复报道应合并为同一事件的补充来源，而不是单独推送。",
+      "bullet_count": 3,
+      "requires_confidence_notice": true
+    }
+  },
+  {
+    "fixture_id": "sample-022-unitree-g1",
+    "scenario_tags": ["manual_url", "embodied_intelligence", "robot_body", "source_media"],
+    "raw_source_metadata": {
+      "source_name": "Unitree",
+      "original_title": "Unitree G1",
+      "source_url": "https://www.unitree.com/g1/",
+      "published_at": null
+    },
+    "expected_candidate_item": {
+      "source_type": "manual_url",
+      "eligibility_state": "needs_review",
+      "raw_metadata_only": true
+    },
+    "expected_classification": {
+      "section": "Embodied Intelligence",
+      "subcategory": "Robot body"
+    },
+    "expected_selection": {
+      "selected": true,
+      "confidence_level": "medium",
+      "selection_rationale": "Official robotics product page useful for embodied-intelligence hardware coverage; release timing should be verified.",
+      "confidence_notice": "置信提示：该条目来自官方产品页，但发布时间和量产状态需要进一步核验。"
+    },
+    "expected_push_briefing_shape": {
+      "title_zh": "Unitree G1 可作为人形机器人本体进展样本，但发布时间需要核验。",
+      "bullet_count": 3,
+      "requires_confidence_notice": true
+    }
+  }
+]
