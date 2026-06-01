@@ -119,9 +119,9 @@
     "fixture_id": "sample-005-alphafold-3",
     "scenario_tags": ["public_feed", "academic_progress", "source_media", "high_confidence"],
     "raw_source_metadata": {
-      "source_name": "Google DeepMind Blog",
-      "original_title": "AlphaFold 3 predicts the structure and interactions of all of life's molecules",
-      "source_url": "https://deepmind.google/discover/blog/alphafold-3-predicts-the-structure-and-interactions-of-all-of-lifes-molecules/",
+      "source_name": "Google Blog",
+      "original_title": "Google DeepMind and Isomorphic Labs introduce AlphaFold 3 AI model",
+      "source_url": "https://blog.google/innovation-and-ai/products/google-deepmind-isomorphic-alphafold-3-ai-model/",
       "published_at": "2024-05-08T00:00:00Z"
     },
     "expected_candidate_item": {
@@ -179,7 +179,7 @@
     "raw_source_metadata": {
       "source_name": "Google Blog",
       "original_title": "Our next-generation model: Gemini 1.5",
-      "source_url": "https://blog.google/technology/ai/google-gemini-next-generation-model-february-2024/",
+      "source_url": "https://blog.google/innovation-and-ai/products/google-gemini-next-generation-model-february-2024/",
       "published_at": "2024-02-15T00:00:00Z"
     },
     "expected_candidate_item": {
@@ -236,8 +236,8 @@
     "scenario_tags": ["public_feed", "embodied_intelligence", "open_source", "source_media"],
     "raw_source_metadata": {
       "source_name": "Hugging Face Blog",
-      "original_title": "LeRobot: State-of-the-art Machine Learning for Real-World Robotics in Pytorch",
-      "source_url": "https://huggingface.co/blog/lerobot",
+      "original_title": "LeRobot v0.5.0: Scaling Every Dimension",
+      "source_url": "https://huggingface.co/blog/lerobot-release-v050",
       "published_at": null
     },
     "expected_candidate_item": {
@@ -252,7 +252,7 @@
     "expected_selection": {
       "selected": true,
       "confidence_level": "medium",
-      "selection_rationale": "Relevant open-source robotics tooling; exact publication metadata should be verified by ingestion.",
+      "selection_rationale": "Relevant open-source robotics tooling and dataset/training ecosystem; exact release metadata should be verified by ingestion.",
       "confidence_notice": "发布日期或 feed metadata 需要在采集 spike 中核验。"
     },
     "expected_push_briefing_shape": {
@@ -266,8 +266,8 @@
     "scenario_tags": ["public_feed", "software", "ai_agent", "source_media"],
     "raw_source_metadata": {
       "source_name": "GitHub Blog",
-      "original_title": "Introducing GitHub Copilot Workspace",
-      "source_url": "https://github.blog/news-insights/product-news/introducing-github-copilot-workspace/",
+      "original_title": "GitHub Copilot Workspace: Welcome to the Copilot-native developer environment",
+      "source_url": "https://github.blog/news-insights/product-news/github-copilot-workspace/",
       "published_at": "2024-04-29T00:00:00Z"
     },
     "expected_candidate_item": {
@@ -381,9 +381,9 @@
     "fixture_id": "sample-014-windows-copilot-pc",
     "scenario_tags": ["public_feed", "software", "hardware", "source_media"],
     "raw_source_metadata": {
-      "source_name": "Windows Blog",
+      "source_name": "Microsoft Official Blog",
       "original_title": "Introducing Copilot+ PCs",
-      "source_url": "https://blogs.windows.com/windowsexperience/2024/05/20/introducing-copilot-pcs/",
+      "source_url": "https://blogs.microsoft.com/blog/2024/05/20/introducing-copilot-pcs/",
       "published_at": "2024-05-20T00:00:00Z"
     },
     "expected_candidate_item": {
@@ -553,13 +553,14 @@
   },
   {
     "fixture_id": "sample-020-single-source-leak",
-    "scenario_tags": ["manual_url", "low_confidence", "no_media", "rumor_or_leak"],
+    "scenario_tags": ["manual_url", "low_confidence", "no_media", "rumor_or_leak", "synthetic_behavior_exercise"],
     "raw_source_metadata": {
-      "source_name": "Manual URL Inbox",
-      "original_title": "Single-source report about an unreleased AI hardware product",
+      "source_name": "Synthetic Manual URL Fixture",
+      "original_title": "Synthetic single-source report about an unreleased AI hardware product",
       "source_url": "https://example.invalid/manual-low-confidence-fixture",
       "published_at": null
     },
+    "fixture_note": "Synthetic behavior exercise; intentionally not a real source URL and must never be treated as corroborated news.",
     "expected_candidate_item": {
       "source_type": "manual_url",
       "eligibility_state": "needs_review",
@@ -572,8 +573,8 @@
     "expected_selection": {
       "selected": true,
       "confidence_level": "low",
-      "selection_rationale": "Exercises the Confidence Notice path for single-source, unconfirmed reports.",
-      "confidence_notice": "置信提示：该条目来自单一手动来源，缺少公司公告或多源交叉确认。"
+      "selection_rationale": "Exercises the Confidence Notice path for single-source, unconfirmed reports without storing a real rumor URL.",
+      "confidence_notice": "置信提示：该条目是合成行为夹具，模拟单一手动来源，缺少公司公告或多源交叉确认。"
     },
     "expected_push_briefing_shape": {
       "title_zh": "一则未确认 AI 硬件消息进入观察范围，但需要明确标注低置信度。",
@@ -585,9 +586,9 @@
     "fixture_id": "sample-021-duplicate-apple-ai-coverage",
     "scenario_tags": ["public_feed", "duplicate_coverage", "industry", "medium_confidence"],
     "raw_source_metadata": {
-      "source_name": "The Verge",
-      "original_title": "Apple announces its AI system for iPhone, iPad, and Mac",
-      "source_url": "https://www.theverge.com/",
+      "source_name": "TechCrunch",
+      "original_title": "Apple Intelligence is the company's new generative AI offering",
+      "source_url": "https://techcrunch.com/2024/06/10/apple-intelligence-is-the-companys-new-generative-ai-offering/",
       "published_at": "2024-06-10T00:00:00Z"
     },
     "expected_candidate_item": {
@@ -603,7 +604,7 @@
       "selected": false,
       "confidence_level": "medium",
       "selection_rationale": "Duplicate coverage of sample-002; preserve as corroborating source instead of separate Push Briefing item.",
-      "confidence_notice": "来源 URL 需要在采集 spike 中替换为具体文章链接。"
+      "confidence_notice": "该条目是 sample-002 的二次报道，应作为补充来源合并，不单独推送。"
     },
     "expected_push_briefing_shape": {
       "title_zh": "重复报道应合并为同一事件的补充来源，而不是单独推送。",
