@@ -3,7 +3,7 @@
 Status: Draft
 Last updated: 2026-06-01
 
-These notes describe the first-version system shape. They intentionally avoid locking in a specific framework or database before implementation starts.
+These notes describe the first-version system shape. Framework, deployment, storage, model-boundary, and console-access defaults are now recorded in ADRs under `docs/adr/`.
 
 ## Assumptions
 
@@ -12,6 +12,16 @@ These notes describe the first-version system shape. They intentionally avoid lo
 - The Delivery Deadline is more important than complete source coverage.
 - The first version optimizes for briefing quality and reliability, not cost control.
 - The first version does not store complete source text by default.
+
+## Recorded ADR Defaults
+
+- Application stack: Python 3.12 single service with FastAPI and server-rendered Operations Console pages.
+- Deployment target: Docker Compose on an always-on Briefing Host with mounted data and archive volumes.
+- Operational data: SQLite for configuration, run state, delivery status, sync status, and model usage metadata.
+- Archive strategy: local-first Archive Package creation, followed by NAS/cloud sync with recorded failure status.
+- Feishu delivery: internal app bot first, with custom group bot only as group-chat fallback pending the delivery spike.
+- Model boundary: one internal generation boundary with provider-specific code isolated in adapters.
+- Console access: one Briefing Administrator account using username, password hash, and signed sessions.
 
 ## High-Level Components
 
