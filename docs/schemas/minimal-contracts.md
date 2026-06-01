@@ -1,6 +1,6 @@
 # Minimal Contracts
 
-Status: Draft
+Status: Reviewed for pre-development spikes
 Last updated: 2026-06-01
 
 These contracts are the shared input for Feishu, model, archive, and source spikes. They are intentionally minimal and will later be converted into JSON schemas.
@@ -12,6 +12,71 @@ These contracts are the shared input for Feishu, model, archive, and source spik
 - Timestamps use ISO 8601 UTC.
 - Source text bodies are not stored by default.
 - URLs must point to source pages, official assets, or generated archive files.
+- Field names in this document are canonical for pre-development spikes.
+- Spike outputs may add optional fields, but must not rename required fields without updating this document first.
+
+## Canonical Values
+
+Use these values during spikes so Feishu, model, source, and archive outputs stay comparable:
+
+| Concept | Values |
+| --- | --- |
+| `source_type` | `public_feed`, `academic_source`, `manual_url`, `deferred_connector` |
+| `eligibility_state` | `eligible`, `needs_review`, `deferred`, `blocked` |
+| `confidence_level` | `high`, `medium`, `low` |
+| `connector_status.status` | `completed`, `partial`, `timeout`, `failed`, `skipped` |
+| `delivery_status.status` | `pending`, `sent`, `failed`, `skipped` |
+| `sync_status.status` | `not_started`, `local_written`, `synced`, `failed` |
+| `model_task_status.status` | `pending`, `completed`, `failed`, `skipped` |
+
+## Shared Nested Shapes
+
+Use these embedded shapes where referenced below.
+
+### OriginalSourceAnchor
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `source_name` | yes | Human-readable source name. |
+| `original_title` | yes | Original title from the source. |
+| `source_url` | yes | Canonical source URL. |
+
+### SourceMedia
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `url` | yes | Source, official, paper, or structured metadata image URL. |
+| `kind` | yes | `feed_image`, `open_graph_image`, `official_image`, `paper_asset`, or `favicon`. |
+| `attribution` | yes | Source name and URL for media attribution. |
+| `eligibility_note` | yes | Why the media is allowed, unclear, or omitted. |
+
+### SelectionRationale
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `summary` | yes | Human-readable explanation. |
+| `signals` | yes | Short list such as source trust, impact, timeliness, corroboration, or subscription match. |
+
+### ConfidenceNotice
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `reason` | yes | Why confidence is not high. |
+| `display_text_zh` | yes | Visible Chinese notice for Push Briefings. |
+| `supporting_sources` | yes | Source anchors that support the notice. |
+
+### ModelUsage
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `provider` | yes | Model Provider name. |
+| `model` | yes | Model name. |
+| `task_type` | yes | Example: `classification`, `ranking`, `summary`, `confidence_notice`. |
+| `request_count` | yes | Number of requests for this task. |
+| `input_tokens` | no | Include when provider reports it. |
+| `output_tokens` | no | Include when provider reports it. |
+| `latency_ms` | no | End-to-end task latency when measured. |
+| `failure_reason` | no | Required when task status is `failed`. |
 
 ## CandidateItem
 
@@ -26,6 +91,9 @@ Minimum fields:
 | `source_name` | yes | Human-readable source name. |
 | `original_title` | yes | Title as published by the source. |
 | `source_url` | yes | Original Source Anchor URL. |
+| `original_source_anchor` | yes | OriginalSourceAnchor shape. |
+| `dedupe_key` | yes | Stable key used to identify duplicate source items. |
+| `event_key` | no | Shared key for multiple sources covering the same event. |
 | `published_at` | no | Source publication time when available. |
 | `discovered_at` | yes | Time the system found the item. |
 | `language` | no | Source language when detected. |
@@ -34,6 +102,11 @@ Minimum fields:
 | `eligibility_state` | yes | `eligible`, `needs_review`, `deferred`, or `blocked`. |
 | `eligibility_notes` | no | Storage, rate limit, media, or access notes. |
 | `raw_metadata` | no | Small source metadata only; no full article body. |
+
+CandidateItem spike rule:
+
+- `raw_metadata` may include title, author, summary/excerpt from feed metadata, tags, and Open Graph fields.
+- `raw_metadata` must not include full article body text.
 
 ## BriefingItem
 
@@ -55,6 +128,13 @@ Minimum fields:
 | `media_attribution` | no | Required when source media is used. |
 | `related_history` | no | Lightweight links to earlier archived items. |
 
+BriefingItem spike rules:
+
+- `bullets_zh` must contain three or four items.
+- `confidence_notice` is required when `confidence_level` is `medium` or `low`.
+- `media_attribution` is required whenever SourceMedia is displayed.
+- Model output must not invent sources, URLs, media, or citations that are absent from CandidateItems.
+
 ## ArchiveMetadata
 
 Minimum fields:
@@ -74,6 +154,12 @@ Minimum fields:
 | `model_usage_summary` | yes | Request counts, token usage when available, latency, and failures. |
 | `warnings` | no | Run-level warnings. |
 
+ArchiveMetadata spike rules:
+
+- `excluded_candidates` must preserve Selection Rationales, not just candidate ids.
+- `delivery_status` must be keyed by Briefing Recipient id.
+- `model_usage_summary` is required even though MVP does not enforce budget caps.
+
 ## BriefingRun
 
 Minimum fields:
@@ -91,6 +177,69 @@ Minimum fields:
 | `archive_status` | yes | Archive write and sync status. |
 | `feishu_delivery_status` | yes | Per recipient delivery result. |
 | `run_warnings` | no | Late connectors, low-confidence pushes, or sync failures. |
+
+BriefingRun spike rules:
+
+- Late Source Connectors must be represented in `connector_status`, not hidden.
+- Feishu failures must be represented in `feishu_delivery_status`, not only in logs.
+- Sync failures must be represented in `archive_status` and ArchiveMetadata.
+
+## Minimum Example
+
+This example is intentionally abbreviated, but it shows the required relationships:
+
+```json
+{
+  "run_id": "run_2026-06-01_technology",
+  "candidate": {
+    "id": "cand_openai_hello_gpt4o",
+    "run_id": "run_2026-06-01_technology",
+    "source_id": "src-openai-news",
+    "source_type": "public_feed",
+    "source_name": "OpenAI News",
+    "original_title": "Hello GPT-4o",
+    "source_url": "https://openai.com/index/hello-gpt-4o/",
+    "original_source_anchor": {
+      "source_name": "OpenAI News",
+      "original_title": "Hello GPT-4o",
+      "source_url": "https://openai.com/index/hello-gpt-4o/"
+    },
+    "dedupe_key": "openai-news|https://openai.com/index/hello-gpt-4o/",
+    "discovered_at": "2026-06-01T00:10:00Z",
+    "eligibility_state": "eligible"
+  },
+  "briefing_item": {
+    "id": "brief_openai_gpt4o",
+    "run_id": "run_2026-06-01_technology",
+    "candidate_id": "cand_openai_hello_gpt4o",
+    "section": "AI",
+    "subcategory": "Multimodal AI",
+    "title_zh": "OpenAI 发布 GPT-4o，重点降低实时多模态交互门槛。",
+    "bullets_zh": [
+      "这是一次官方模型发布，覆盖文本、语音和视觉交互。",
+      "事件影响模型产品形态和开发者集成方式。",
+      "原始来源保留为 OpenAI 官方公告，便于核验。"
+    ],
+    "original_source_anchor": {
+      "source_name": "OpenAI News",
+      "original_title": "Hello GPT-4o",
+      "source_url": "https://openai.com/index/hello-gpt-4o/"
+    },
+    "selection_rationale": {
+      "summary": "Official model release with broad product and developer impact.",
+      "signals": ["source_trust", "event_impact", "timeliness"]
+    },
+    "confidence_level": "high"
+  }
+}
+```
+
+## Spike Acceptance Checklist
+
+- Feishu spike can render `BriefingItem`, `confidence_notice`, `original_source_anchor`, and delivery status.
+- Model spike can emit `BriefingItem`, `SelectionRationale`, `ConfidenceNotice`, and `ModelUsage`.
+- Archive spike can persist `ArchiveMetadata`, selected items, excluded candidates, delivery status, sync status, and usage metadata.
+- Source spike can emit `CandidateItem` without full article body storage.
 
 ## Spike Requirement
 
