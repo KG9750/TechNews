@@ -62,6 +62,8 @@ def check_required_files() -> list[str]:
         "docs/secrets.md",
         ".env.example",
         ".gitignore",
+        "scripts/spikes/feishu_delivery_spike.py",
+        "scripts/spikes/archive_storage_spike.py",
     ]
     require_files(files)
     return [f"required files present: {len(files)}"]
@@ -316,6 +318,16 @@ def check_feishu_fixture() -> list[str]:
     return ["Feishu fixture: user/group request shapes and message content valid"]
 
 
+def check_spike_runners() -> list[str]:
+    gitignore = read(".gitignore")
+    require("evidence/" in gitignore, ".gitignore must ignore generated evidence/")
+    for path in ["scripts/spikes/feishu_delivery_spike.py", "scripts/spikes/archive_storage_spike.py"]:
+        text = read(path)
+        require("evidence/" in text, f"{path} must write generated evidence outside tracked docs")
+        require("--dry-run" in text, f"{path} must support --dry-run")
+    return ["spike runners: Feishu and archive dry-run helpers present"]
+
+
 def check_adrs() -> list[str]:
     required = [
         "docs/adr/0002-feishu-internal-app-bot-first.md",
@@ -397,6 +409,7 @@ def run(require_live: bool) -> int:
         check_archive_fixture,
         check_model_fixtures,
         check_feishu_fixture,
+        check_spike_runners,
         check_adrs,
         check_mvp_issue_drafts,
     ]

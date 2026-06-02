@@ -61,6 +61,18 @@ To finish the gate, provide these values in the deployment environment or secure
 - `FEISHU_DEFAULT_USER_OPEN_ID`
 - `FEISHU_DEFAULT_CHAT_ID`
 
+Dry-run before live send:
+
+```bash
+python3 scripts/spikes/feishu_delivery_spike.py --dry-run
+```
+
+Live command after credentials are configured:
+
+```bash
+python3 scripts/spikes/feishu_delivery_spike.py
+```
+
 Required evidence:
 
 - Redacted successful send response for one user.
@@ -84,6 +96,18 @@ Required evidence:
 
 - `ARCHIVE_LOCAL_ROOT`
 - `ARCHIVE_SYNC_TARGET`
+
+Dry-run before live sync:
+
+```bash
+python3 scripts/spikes/archive_storage_spike.py --dry-run
+```
+
+Live command after paths are configured:
+
+```bash
+python3 scripts/spikes/archive_storage_spike.py
+```
 
 Required evidence:
 

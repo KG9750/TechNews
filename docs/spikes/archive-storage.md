@@ -11,6 +11,7 @@ Prove that an Archive Package can be written locally on the Briefing Host, synce
 
 - Minimal contracts: `docs/schemas/minimal-contracts.md`
 - Secrets inventory: `docs/secrets.md`
+- Throwaway live runner: `scripts/spikes/archive_storage_spike.py`
 
 ## Archive Package Shape
 
@@ -57,6 +58,8 @@ fixtures/archive-storage/
 
 - Example local archive tree: `fixtures/archive-storage/local-archive/2026-06-01/technology/`.
 - Failure status example: `sync_status.remote_sync.status = failed` in fixture `metadata.json`.
+- Dry-run command: `python3 scripts/spikes/archive_storage_spike.py --dry-run`.
+- Live command: `python3 scripts/spikes/archive_storage_spike.py`.
 - Pending: redacted success evidence for a real `ARCHIVE_SYNC_TARGET`.
 
 ## Current Finding

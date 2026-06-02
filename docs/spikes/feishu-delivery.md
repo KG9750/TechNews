@@ -16,6 +16,7 @@ Use a Feishu internal app bot as the primary MVP delivery path for both users an
 - Draft card content fixture: `fixtures/feishu-delivery/push-briefing-card-content.json`
 - Draft internal app request shape: `fixtures/feishu-delivery/internal-app-send-message.request-shape.json`
 - Delivery status examples: `fixtures/feishu-delivery/delivery-status-examples.json`
+- Throwaway live runner: `scripts/spikes/feishu_delivery_spike.py`
 
 ## Test Message Shape
 
@@ -50,6 +51,8 @@ The test Push Briefing must include:
 - Draft request payload: `fixtures/feishu-delivery/internal-app-send-message.request-shape.json`.
 - Draft rendered-message text: `fixtures/feishu-delivery/rendered-message.md`.
 - Draft delivery status examples: `fixtures/feishu-delivery/delivery-status-examples.json`.
+- Dry-run command: `python3 scripts/spikes/feishu_delivery_spike.py --dry-run`.
+- Live command: `python3 scripts/spikes/feishu_delivery_spike.py`.
 - Pending: redacted success response for user delivery.
 - Pending: redacted success response for group delivery.
 - Pending: screenshot or copied rendered-message text from Feishu.
