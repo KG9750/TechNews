@@ -1,7 +1,7 @@
 # Development Readiness Gate Status
 
 Status: Not passed
-Last updated: 2026-06-01
+Last updated: 2026-06-02
 
 This file is the current audit trail for the readiness gate in `docs/PRE-DEVELOPMENT-PLAN.md`. It records evidence that has been verified and the remaining evidence required before formal MVP implementation issues can move out of `needs-triage`.
 
@@ -16,6 +16,8 @@ The repository is ready for live external validation, but not ready for product 
 Additional review item:
 
 - Source eligibility: 32 first-version seed sources are covered in `docs/source-eligibility-reviews.md`; 5 arXiv metadata-only sources are `eligible`, and 27 public/company/manual sources remain `needs_review` before automated production ingestion.
+
+The live spike evidence procedure is now documented in `docs/live-spike-evidence-runbook.md`. Template evidence files live under `fixtures/live-evidence-templates/`; they are examples only, and `scripts/check_readiness.py` rejects any live evidence that still contains `TEMPLATE_` placeholders.
 
 Local evidence can be checked with:
 
@@ -35,19 +37,26 @@ To make missing or invalid redacted live evidence fail the check after live spik
 python3 scripts/check_readiness.py --require-evidence
 ```
 
+For the final readiness gate, require both environment variables and redacted evidence:
+
+```bash
+python3 scripts/check_readiness.py --require-live --require-evidence
+```
+
 The checker may also print `REVIEW` notes. These are not local fixture failures, but they identify items that must not be treated as fully production-ready. For example, first-version seed sources still need source-by-source eligibility review before automated ingestion.
 
 ## Requirement Status
 
 | Requirement | Status | Evidence | Remaining gap |
 | --- | --- | --- | --- |
-| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `297a71d` | None |
+| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `76a9f74` | None |
 | GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1 | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; issue #2 closed | None |
-| Feishu delivery spike passes for one user and one group | Blocked | Fixtures in `fixtures/feishu-delivery/`; issue #3 open `needs-info` | Need Feishu app credentials, user open_id, group chat_id, live send evidence |
+| Feishu delivery spike passes for one user and one group | Blocked | Fixtures in `fixtures/feishu-delivery/`; live evidence template in `fixtures/live-evidence-templates/feishu-delivery/`; issue #3 open `needs-info` | Need Feishu app credentials, user open_id, group chat_id, live send evidence under `evidence/feishu-delivery/` |
 | Source ingestion spike normalizes every First-Version Source type | Passed | `docs/spikes/source-ingestion.md`; `fixtures/source-ingestion/candidate-items.json`; issue #4 closed | None |
-| Archive/storage spike passes | Blocked | Local archive fixture in `fixtures/archive-storage/`; issue #6 open `needs-info` | Need real NAS/cloud sync target success evidence |
-| Model Provider spike passes structured output and usage metadata checks | Blocked | Prompt/output fixtures in `fixtures/model-provider/`; issue #5 open `needs-info` | Need live provider/model, redacted outputs, token/latency/failure metadata |
+| Archive/storage spike passes | Blocked | Local archive fixture in `fixtures/archive-storage/`; live evidence template in `fixtures/live-evidence-templates/archive-storage/`; issue #6 open `needs-info` | Need real NAS/cloud sync target success evidence under `evidence/archive-storage/` |
+| Model Provider spike passes structured output and usage metadata checks | Blocked | Prompt/output fixtures in `fixtures/model-provider/`; live evidence template in `fixtures/live-evidence-templates/model-provider/`; issue #5 open `needs-info` | Need live provider/model, redacted outputs, token/latency/failure metadata under `evidence/model-provider/` |
+| Live evidence runbook and template-negative gate exist | Passed | `docs/live-spike-evidence-runbook.md`; `fixtures/live-evidence-templates/`; `scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-templates` fails on `TEMPLATE_` placeholders | None |
 | Technology Domain Template and briefing style guide are drafted | Passed | `docs/taxonomy/technology-domain-template.md`; `docs/briefing-style-guide.md`; issue #7 closed | None |
 | Source registry contains at least 30 seed sources | Passed | `docs/source-registry.md`; 37 total seed sources, 32 first-version, 5 deferred | None |
 | Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; 32 first-version sources covered, 5 `eligible`, 27 `needs_review` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
@@ -58,6 +67,8 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 ## External Inputs Needed
 
 To finish the gate, provide these values in the deployment environment or secure local test environment. Do not commit them.
+
+Use `docs/live-spike-evidence-runbook.md` for the exact commands, redaction rules, evidence layouts, and final gate command. Copy templates from `fixtures/live-evidence-templates/` only as a starting point; every `TEMPLATE_` placeholder must be replaced or the checker will fail.
 
 ### Feishu
 
