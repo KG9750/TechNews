@@ -16,6 +16,7 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 
 
 class CheckFailure(Exception):
@@ -28,6 +29,10 @@ def read(path: str) -> str:
 
 def load_json(path: str):
     return json.loads(read(path))
+
+
+def load_json_path(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def require(condition: bool, message: str) -> None:
@@ -303,6 +308,18 @@ def check_model_fixtures() -> list[str]:
     return ["model fixtures: three structured outputs and usage log valid"]
 
 
+MODEL_OUTPUT_PROFILES = {
+    "high-confidence-news": "sample-001-openai-gpt-4o",
+    "low-confidence-news": "sample-020-single-source-leak",
+    "academic-paper": "sample-018-rt-2",
+}
+
+
+def golden_sample_by_id() -> dict[str, dict]:
+    items = load_json("fixtures/golden-samples/items.json")
+    return {item["fixture_id"]: item for item in items}
+
+
 def check_feishu_fixture() -> list[str]:
     card = load_json("fixtures/feishu-delivery/push-briefing-card-content.json")
     request = load_json("fixtures/feishu-delivery/internal-app-send-message.request-shape.json")
@@ -405,7 +422,159 @@ def check_external_environment() -> tuple[list[str], list[str]]:
     return ok, missing_messages
 
 
-def run(require_live: bool) -> int:
+def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+    evidence_dir = evidence_root / "feishu-delivery"
+    missing: list[str] = []
+    failures: list[str] = []
+    passed: list[str] = []
+    required_files = {
+        "user response": evidence_dir / "user-response.redacted.json",
+        "group response": evidence_dir / "group-response.redacted.json",
+        "rendered message": evidence_dir / "rendered-message.md",
+    }
+    for label, path in required_files.items():
+        if not path.exists():
+            missing.append(f"Feishu live evidence missing {label}: {path}")
+    if missing:
+        return passed, missing, failures
+    for label, path in [
+        ("user", required_files["user response"]),
+        ("group", required_files["group response"]),
+    ]:
+        payload = load_json_path(path)
+        if payload.get("code") != 0:
+            failures.append(f"Feishu {label} response code must be 0")
+        data = payload.get("data", {})
+        if not isinstance(data, dict) or not data:
+            failures.append(f"Feishu {label} response must include data")
+    rendered = required_files["rendered message"].read_text(encoding="utf-8")
+    for needle in ["Source", "置信提示"]:
+        if needle not in rendered:
+            failures.append(f"Feishu rendered message missing {needle}")
+    if not failures:
+        passed.append("Feishu live evidence: user and group delivery responses present")
+    return passed, missing, failures
+
+
+def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+    evidence_dir = evidence_root / "archive-storage"
+    result_path = evidence_dir / "sync-result.json"
+    missing: list[str] = []
+    failures: list[str] = []
+    passed: list[str] = []
+    if not result_path.exists():
+        missing.append(f"Archive live evidence missing sync result: {result_path}")
+        return passed, missing, failures
+    payload = load_json_path(result_path)
+    local_status = payload.get("local_archive", {}).get("status")
+    remote_status = payload.get("remote_sync", {}).get("status")
+    if local_status != "written":
+        failures.append("Archive live evidence local_archive.status must be written")
+    if remote_status != "synced":
+        failures.append("Archive live evidence remote_sync.status must be synced")
+    if int(payload.get("local_archive", {}).get("file_count") or 0) <= 0:
+        failures.append("Archive live evidence local_archive.file_count must be > 0")
+    if int(payload.get("remote_sync", {}).get("file_count") or 0) <= 0:
+        failures.append("Archive live evidence remote_sync.file_count must be > 0")
+    if not (evidence_dir / "local-tree.txt").exists():
+        missing.append(f"Archive live evidence missing local tree: {evidence_dir / 'local-tree.txt'}")
+    if not (evidence_dir / "remote-tree.txt").exists():
+        missing.append(f"Archive live evidence missing remote tree: {evidence_dir / 'remote-tree.txt'}")
+    if not failures and not missing:
+        passed.append("Archive live evidence: local write and remote sync success present")
+    return passed, missing, failures
+
+
+def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+    evidence_dir = evidence_root / "model-provider"
+    output_dir = evidence_dir / "outputs"
+    usage_path = evidence_dir / "usage-log.json"
+    missing: list[str] = []
+    failures: list[str] = []
+    passed: list[str] = []
+    samples = golden_sample_by_id()
+    if not output_dir.exists():
+        missing.append(f"Model live evidence missing output directory: {output_dir}")
+    for profile, fixture_id in MODEL_OUTPUT_PROFILES.items():
+        path = output_dir / f"{profile}.json"
+        if not path.exists():
+            missing.append(f"Model live evidence missing output: {path}")
+            continue
+        payload = load_json_path(path)
+        fixture = samples[fixture_id]
+        if payload.get("input_fixture_id") != fixture_id:
+            failures.append(f"{path}: input_fixture_id must be {fixture_id}")
+        item = payload.get("briefing_item")
+        if not isinstance(item, dict):
+            failures.append(f"{path}: missing briefing_item")
+            continue
+        required = [
+            "id",
+            "run_id",
+            "candidate_id",
+            "section",
+            "title_zh",
+            "bullets_zh",
+            "original_source_anchor",
+            "selection_rationale",
+            "confidence_level",
+        ]
+        for field in required:
+            if field not in item:
+                failures.append(f"{path}: missing briefing_item.{field}")
+        bullets = item.get("bullets_zh", [])
+        if not isinstance(bullets, list) or not 3 <= len(bullets) <= 4:
+            failures.append(f"{path}: bullets_zh must contain 3-4 bullets")
+        anchor = item.get("original_source_anchor", {})
+        expected_anchor = fixture["raw_source_metadata"]
+        for field in ["source_name", "original_title", "source_url"]:
+            if anchor.get(field) != expected_anchor[field]:
+                failures.append(f"{path}: original_source_anchor.{field} changed")
+        if item.get("confidence_level") in {"medium", "low"} and not item.get("confidence_notice"):
+            failures.append(f"{path}: confidence_notice required for {item.get('confidence_level')} confidence")
+        if profile == "low-confidence-news" and item.get("confidence_level") != "low":
+            failures.append(f"{path}: low-confidence fixture must remain low")
+        usage = payload.get("model_usage", {})
+        if usage.get("provider") in {"fixture", None, ""}:
+            failures.append(f"{path}: model_usage.provider must identify a live provider")
+        if usage.get("model") in {"not_called", None, ""}:
+            failures.append(f"{path}: model_usage.model must identify a live model")
+        if int(usage.get("request_count") or 0) <= 0:
+            failures.append(f"{path}: model_usage.request_count must be > 0")
+    if not usage_path.exists():
+        missing.append(f"Model live evidence missing usage log: {usage_path}")
+    else:
+        usage_log = load_json_path(usage_path)
+        if usage_log.get("provider") in {"fixture", None, ""}:
+            failures.append("Model usage log provider must identify a live provider")
+        if usage_log.get("model") in {"not_called", None, ""}:
+            failures.append("Model usage log model must identify a live model")
+        tasks = usage_log.get("tasks", [])
+        if len(tasks) != 3:
+            failures.append("Model usage log must include three tasks")
+        for task in tasks:
+            if int(task.get("request_count") or 0) <= 0:
+                failures.append("Model usage log every task request_count must be > 0")
+            if "latency_ms" not in task:
+                failures.append("Model usage log every task must include latency_ms")
+    if not failures and not missing:
+        passed.append("Model live evidence: three live outputs and usage log valid")
+    return passed, missing, failures
+
+
+def check_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+    passed: list[str] = []
+    missing: list[str] = []
+    failures: list[str] = []
+    for checker in [check_feishu_live_evidence, check_archive_live_evidence, check_model_live_evidence]:
+        check_passed, check_missing, check_failures = checker(evidence_root)
+        passed.extend(check_passed)
+        missing.extend(check_missing)
+        failures.extend(check_failures)
+    return passed, missing, failures
+
+
+def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
     checks = [
         check_required_files,
         check_json_fixtures,
@@ -431,6 +600,12 @@ def run(require_live: bool) -> int:
 
     external_ok, external_missing = check_external_environment()
     passed.extend(external_ok)
+    evidence_missing: list[str] = []
+    evidence_failures: list[str] = []
+    if require_evidence:
+        evidence_ok, evidence_missing, evidence_failures = check_live_evidence(evidence_root)
+        passed.extend(evidence_ok)
+        failures.extend(evidence_failures)
 
     for item in passed:
         print(f"PASS {item}")
@@ -440,10 +615,14 @@ def run(require_live: bool) -> int:
         print(f"REVIEW {item}")
     for item in external_missing:
         print(f"BLOCKED {item}")
+    for item in evidence_missing:
+        print(f"BLOCKED {item}")
 
     if failures:
         return 1
     if require_live and external_missing:
+        return 2
+    if require_evidence and evidence_missing:
         return 2
     if external_missing:
         print("SUMMARY local readiness evidence is valid; live external spike evidence is still pending")
@@ -459,8 +638,18 @@ def main() -> int:
         action="store_true",
         help="Fail when required external environment variables are missing.",
     )
+    parser.add_argument(
+        "--require-evidence",
+        action="store_true",
+        help="Fail when redacted live spike evidence is missing or incomplete.",
+    )
+    parser.add_argument(
+        "--evidence-root",
+        default=str(DEFAULT_EVIDENCE_ROOT),
+        help="Directory containing redacted live spike evidence.",
+    )
     args = parser.parse_args()
-    return run(require_live=args.require_live)
+    return run(require_live=args.require_live, require_evidence=args.require_evidence, evidence_root=Path(args.evidence_root))
 
 
 if __name__ == "__main__":

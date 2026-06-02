@@ -29,6 +29,12 @@ To make missing external variables fail the check before a live spike, run:
 python3 scripts/check_readiness.py --require-live
 ```
 
+To make missing or invalid redacted live evidence fail the check after live spikes, run:
+
+```bash
+python3 scripts/check_readiness.py --require-evidence
+```
+
 The checker may also print `REVIEW` notes. These are not local fixture failures, but they identify items that must not be treated as fully production-ready. For example, first-version seed sources still need source-by-source eligibility review before automated ingestion.
 
 ## Requirement Status
@@ -80,6 +86,12 @@ Required evidence:
 - Rendered Feishu message text or screenshot.
 - Scopes, permissions, recipient id type, rate/message-size notes, and any failure response shape.
 
+Expected evidence files:
+
+- `evidence/feishu-delivery/user-response.redacted.json`
+- `evidence/feishu-delivery/group-response.redacted.json`
+- `evidence/feishu-delivery/rendered-message.md`
+
 ### Model Provider
 
 - `MODEL_PROVIDER`
@@ -104,6 +116,13 @@ Required evidence:
 - Provider/model name.
 - Request count, token usage when available, latency, and failure reason when present.
 
+Expected evidence files:
+
+- `evidence/model-provider/outputs/high-confidence-news.json`
+- `evidence/model-provider/outputs/low-confidence-news.json`
+- `evidence/model-provider/outputs/academic-paper.json`
+- `evidence/model-provider/usage-log.json`
+
 ### Archive Sync
 
 - `ARCHIVE_LOCAL_ROOT`
@@ -127,6 +146,12 @@ Required evidence:
 - Redacted sync command or host-native sync configuration note.
 - Successful sync status for a sample package.
 - Failure status remains recorded and retryable.
+
+Expected evidence files:
+
+- `evidence/archive-storage/sync-result.json`
+- `evidence/archive-storage/local-tree.txt`
+- `evidence/archive-storage/remote-tree.txt`
 
 ## Implementation Rule
 
