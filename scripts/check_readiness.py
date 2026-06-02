@@ -55,6 +55,7 @@ def check_required_files() -> list[str]:
         "docs/spikes/model-provider.md",
         "docs/spikes/archive-storage.md",
         "docs/source-registry.md",
+        "docs/source-eligibility-reviews.md",
         "docs/source-eligibility-checklist.md",
         "docs/taxonomy/technology-domain-template.md",
         "docs/briefing-style-guide.md",
@@ -81,6 +82,95 @@ def check_source_registry() -> list[str]:
 
 
 def check_source_registry_review_notes() -> list[str]:
+    rows = parse_source_eligibility_reviews()
+    needs_terms_review = [row["ID"] for row in rows if row["Eligibility state"] == "needs_review"]
+    blocked = [row["ID"] for row in rows if row["Eligibility state"] == "blocked"]
+    deferred = [row["ID"] for row in rows if row["Eligibility state"] == "deferred"]
+    notes = []
+    if needs_terms_review:
+        notes.append(
+            "source eligibility: "
+            f"{len(needs_terms_review)} first-version source reviews remain needs_review "
+            "(terms, media reuse, rate limits, or disallowed behavior need owner confirmation)"
+        )
+    if blocked:
+        notes.append(f"source eligibility: blocked source reviews present: {', '.join(blocked)}")
+    if deferred:
+        notes.append(f"source eligibility: deferred source reviews present: {', '.join(deferred)}")
+    return notes
+
+
+def parse_markdown_table(path: str) -> list[dict[str, str]]:
+    lines = read(path).splitlines()
+    header = None
+    rows: list[dict[str, str]] = []
+    for line in lines:
+        if not line.startswith("|"):
+            continue
+        cols = [part.strip() for part in line.strip().strip("|").split("|")]
+        if cols and cols[0] == "ID":
+            header = cols
+            continue
+        if not header or not cols or cols[0].startswith("---"):
+            continue
+        if cols[0].startswith("src-"):
+            require(len(cols) == len(header), f"{path}: row {cols[0]} has wrong column count")
+            rows.append(dict(zip(header, cols)))
+    return rows
+
+
+def parse_source_eligibility_reviews() -> list[dict[str, str]]:
+    return parse_markdown_table("docs/source-eligibility-reviews.md")
+
+
+def check_source_eligibility_reviews() -> list[str]:
+    registry_text = read("docs/source-registry.md")
+    registry_rows = [
+        line for line in registry_text.splitlines() if line.startswith("| src-") and "| first-version |" in line
+    ]
+    first_version_ids = []
+    for row in registry_rows:
+        columns = [part.strip() for part in row.strip().strip("|").split("|")]
+        first_version_ids.append(columns[0])
+
+    review_rows = parse_source_eligibility_reviews()
+    review_by_id = {row["ID"]: row for row in review_rows}
+    missing = sorted(set(first_version_ids) - set(review_by_id))
+    extra = sorted(set(review_by_id) - set(first_version_ids))
+    require(not missing, f"source eligibility reviews missing first-version sources: {', '.join(missing)}")
+    require(not extra, f"source eligibility reviews include non-first-version sources: {', '.join(extra)}")
+
+    allowed_states = {"eligible", "needs_review", "deferred", "blocked"}
+    required_columns = [
+        "Access method",
+        "Terms evidence",
+        "Full text storage",
+        "Summary/storage",
+        "Media use",
+        "Rate limit",
+        "Attribution",
+        "Disallowed behavior",
+        "Next action",
+    ]
+    state_counts = {state: 0 for state in allowed_states}
+    for source_id in first_version_ids:
+        row = review_by_id[source_id]
+        state = row["Eligibility state"]
+        require(state in allowed_states, f"{source_id}: invalid eligibility state {state}")
+        state_counts[state] += 1
+        for column in required_columns:
+            require(row[column] and row[column] != "-", f"{source_id}: missing {column}")
+        require("not stored" in row["Full text storage"], f"{source_id}: full text storage must be not stored")
+        require("source name" in row["Attribution"], f"{source_id}: attribution must preserve source name")
+
+    return [
+        f"source eligibility reviews: {len(review_rows)} first-version sources covered",
+        "source eligibility reviews: "
+        + ", ".join(f"{state}={count}" for state, count in sorted(state_counts.items()) if count),
+    ]
+
+
+def _legacy_source_registry_review_notes() -> list[str]:
     text = read("docs/source-registry.md")
     rows = [line for line in text.splitlines() if line.startswith("| src-") and "| first-version |" in line]
     needs_terms_review = []
@@ -302,6 +392,7 @@ def run(require_live: bool) -> int:
         check_required_files,
         check_json_fixtures,
         check_source_registry,
+        check_source_eligibility_reviews,
         check_golden_samples,
         check_archive_fixture,
         check_model_fixtures,

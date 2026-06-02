@@ -13,6 +13,10 @@ The repository is ready for live external validation, but not ready for product 
 - Model Provider spike: needs one real provider/model call set with usage metadata.
 - Archive/storage spike: needs real `ARCHIVE_SYNC_TARGET` success evidence.
 
+Additional review item:
+
+- Source eligibility: 32 first-version seed sources are covered in `docs/source-eligibility-reviews.md`; 5 arXiv metadata-only sources are `eligible`, and 27 public/company/manual sources remain `needs_review` before automated production ingestion.
+
 Local evidence can be checked with:
 
 ```bash
@@ -40,6 +44,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Model Provider spike passes structured output and usage metadata checks | Blocked | Prompt/output fixtures in `fixtures/model-provider/`; issue #5 open `needs-info` | Need live provider/model, redacted outputs, token/latency/failure metadata |
 | Technology Domain Template and briefing style guide are drafted | Passed | `docs/taxonomy/technology-domain-template.md`; `docs/briefing-style-guide.md`; issue #7 closed | None |
 | Source registry contains at least 30 seed sources | Passed | `docs/source-registry.md`; 37 total seed sources, 32 first-version, 5 deferred | None |
+| Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; 32 first-version sources covered, 5 `eligible`, 27 `needs_review` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
 | Golden samples cover at least 20 real-world items | Passed | `fixtures/golden-samples/items.json`; 22 total fixtures, 21 real-world items; issue #8 closed | None |
 | Required ADRs exist | Passed | 8 ADRs in `docs/adr/`; issue #9 closed | None |
 | MVP issue breakdown exists and is labeled | Passed | `docs/github-issue-breakdown.md`; GitHub issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 created with milestone `mvp` and label `needs-triage` | None |

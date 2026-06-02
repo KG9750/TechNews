@@ -50,3 +50,4 @@ This registry is a starting point for the Source Ingestion Spike. Feed URLs and 
 - `first-version` means the source is a candidate for MVP ingestion, not that its terms are already approved.
 - Sources without reliable feeds may still be handled through Manual URL Inbox during the MVP.
 - Every first-version source must pass `docs/source-eligibility-checklist.md` before automated ingestion.
+- Current per-source eligibility state is tracked in `docs/source-eligibility-reviews.md`.
