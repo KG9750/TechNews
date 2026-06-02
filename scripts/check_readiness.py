@@ -80,6 +80,25 @@ def check_source_registry() -> list[str]:
     ]
 
 
+def check_source_registry_review_notes() -> list[str]:
+    text = read("docs/source-registry.md")
+    rows = [line for line in text.splitlines() if line.startswith("| src-") and "| first-version |" in line]
+    needs_terms_review = []
+    for row in rows:
+        columns = [part.strip() for part in row.strip().strip("|").split("|")]
+        source_id = columns[0]
+        notes = columns[-1].lower()
+        if "validate" in notes or "terms" in notes or "fallback" in notes:
+            needs_terms_review.append(source_id)
+    if not needs_terms_review:
+        return []
+    return [
+        "source registry: "
+        f"{len(needs_terms_review)} first-version seed sources still need full eligibility checklist review "
+        "(terms, media reuse, rate limits, and disallowed behavior) before automated ingestion"
+    ]
+
+
 def check_golden_samples() -> list[str]:
     items = load_json("fixtures/golden-samples/items.json")
     require(isinstance(items, list), "golden samples must be a JSON list")
@@ -292,11 +311,13 @@ def run(require_live: bool) -> int:
     ]
     passed: list[str] = []
     failures: list[str] = []
+    review_notes: list[str] = []
     for check in checks:
         try:
             passed.extend(check())
         except CheckFailure as exc:
             failures.append(str(exc))
+    review_notes.extend(check_source_registry_review_notes())
 
     external_ok, external_missing = check_external_environment()
     passed.extend(external_ok)
@@ -305,6 +326,8 @@ def run(require_live: bool) -> int:
         print(f"PASS {item}")
     for item in failures:
         print(f"FAIL {item}")
+    for item in review_notes:
+        print(f"REVIEW {item}")
     for item in external_missing:
         print(f"BLOCKED {item}")
 

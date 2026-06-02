@@ -25,6 +25,8 @@ To make missing external variables fail the check before a live spike, run:
 python3 scripts/check_readiness.py --require-live
 ```
 
+The checker may also print `REVIEW` notes. These are not local fixture failures, but they identify items that must not be treated as fully production-ready. For example, first-version seed sources still need source-by-source eligibility review before automated ingestion.
+
 ## Requirement Status
 
 | Requirement | Status | Evidence | Remaining gap |
