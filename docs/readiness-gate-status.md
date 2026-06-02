@@ -86,6 +86,18 @@ Required evidence:
 - `MODEL_DEFAULT_MODEL`
 - `MODEL_API_KEY`
 
+Dry-run before live model calls:
+
+```bash
+python3 scripts/spikes/model_provider_spike.py --dry-run
+```
+
+Validate redacted live evidence after calls are made with the chosen provider:
+
+```bash
+python3 scripts/spikes/model_provider_spike.py --validate-evidence
+```
+
 Required evidence:
 
 - Redacted request/response for high-confidence news, low-confidence news, and academic paper examples.

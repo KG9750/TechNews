@@ -20,6 +20,7 @@ Fixture inputs and expected outputs:
 - Low-confidence output shape: `fixtures/model-provider/outputs/low-confidence-news.json`
 - Academic paper output shape: `fixtures/model-provider/outputs/academic-paper.json`
 - Usage metadata shape: `fixtures/model-provider/usage-log.json`
+- Throwaway request/evidence validator: `scripts/spikes/model_provider_spike.py`
 
 ## Required Tasks
 
@@ -59,6 +60,8 @@ This is observability only. It does not introduce budget caps or automatic low-c
 - Prompt draft: `fixtures/model-provider/prompt-contract.md`.
 - Structured output examples: `fixtures/model-provider/outputs/`.
 - Usage metadata shape: `fixtures/model-provider/usage-log.json`.
+- Dry-run request envelopes: `python3 scripts/spikes/model_provider_spike.py --dry-run`.
+- Live evidence validation: `python3 scripts/spikes/model_provider_spike.py --validate-evidence`.
 - Pending: redacted live request and response examples.
 - Pending: live notes on schema or style-guide changes required by model behavior.
 
