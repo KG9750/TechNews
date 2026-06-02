@@ -66,6 +66,7 @@ def check_required_files() -> list[str]:
     files = [
         "AGENTS.md",
         "CONTEXT.md",
+        ".github/workflows/pre-development-readiness.yml",
         "docs/PRE-DEVELOPMENT-PLAN.md",
         "docs/PRD.md",
         "docs/MVP-SCOPE.md",
@@ -379,6 +380,19 @@ def check_spike_runners() -> list[str]:
     return ["spike runners: Feishu, archive, and model-provider helpers present"]
 
 
+def check_readiness_ci_workflow() -> list[str]:
+    text = read(".github/workflows/pre-development-readiness.yml")
+    for needle in [
+        "python scripts/check_readiness.py",
+        "python -m py_compile",
+        "--require-evidence --evidence-root fixtures/live-evidence-templates",
+        "Expected template evidence validation to fail",
+    ]:
+        require(needle in text, f"readiness CI workflow missing: {needle}")
+    require("--require-live" not in text, "readiness CI must not require live external credentials")
+    return ["readiness CI workflow: local gate, script compile, and template-negative check present"]
+
+
 def check_adrs() -> list[str]:
     required = [
         "docs/adr/0002-feishu-internal-app-bot-first.md",
@@ -628,6 +642,7 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
         check_model_fixtures,
         check_feishu_fixture,
         check_spike_runners,
+        check_readiness_ci_workflow,
         check_adrs,
         check_mvp_issue_drafts,
     ]
