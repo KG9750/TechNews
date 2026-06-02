@@ -1,0 +1,40 @@
+{
+  "input_fixture_id": "sample-018-rt-2",
+  "briefing_item": {
+    "id": "brief_rt2_context_live",
+    "run_id": "run_2026-06-01_model_provider_spike",
+    "candidate_id": "cand_arxiv_rt2",
+    "section": "Embodied Intelligence",
+    "subcategory": "Recent papers",
+    "title_zh": "TEMPLATE_REPLACE_WITH_LIVE_ACADEMIC_TITLE",
+    "bullets_zh": [
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_1",
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_2",
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_3"
+    ],
+    "original_source_anchor": {
+      "source_name": "arXiv",
+      "original_title": "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control",
+      "source_url": "https://arxiv.org/abs/2307.15818"
+    },
+    "selection_rationale": {
+      "summary": "TEMPLATE_REPLACE_WITH_LIVE_RATIONALE",
+      "signals": ["academic_source", "embodied_intelligence", "historical_context"]
+    },
+    "confidence_level": "high",
+    "confidence_notice": null,
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "TEMPLATE_REPLACE_WITH_LIVE_PROVIDER",
+    "model": "TEMPLATE_REPLACE_WITH_LIVE_MODEL",
+    "task_type": "briefing_item_generation",
+    "request_count": 1,
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms": 0,
+    "failure_reason": null
+  },
+  "guardrail_notes": ["TEMPLATE_REPLACE_WITH_LIVE_GUARDRAIL_NOTE"]
+}

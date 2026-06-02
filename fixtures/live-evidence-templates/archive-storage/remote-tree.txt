@@ -1,0 +1,5 @@
+briefing.html
+briefing.md
+metadata.json
+media/README.md
+TEMPLATE_REPLACE_WITH_ACTUAL_REMOTE_TREE_IF_DIFFERENT

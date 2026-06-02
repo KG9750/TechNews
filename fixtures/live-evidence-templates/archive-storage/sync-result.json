@@ -1,0 +1,14 @@
+{
+  "run_id": "run_2026-06-01_archive_storage_spike",
+  "local_archive": {
+    "status": "written",
+    "package_path": "TEMPLATE_REDACTED_LOCAL_PATH",
+    "file_count": 4
+  },
+  "remote_sync": {
+    "status": "synced",
+    "target": "TEMPLATE_REDACTED_SYNC_TARGET",
+    "file_count": 4,
+    "retryable": false
+  }
+}

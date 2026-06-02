@@ -1,0 +1,40 @@
+{
+  "input_fixture_id": "sample-020-single-source-leak",
+  "briefing_item": {
+    "id": "brief_synthetic_low_confidence_live",
+    "run_id": "run_2026-06-01_model_provider_spike",
+    "candidate_id": "cand_synthetic_low_confidence_ai_hardware",
+    "section": "Hardware",
+    "subcategory": "AI accelerators",
+    "title_zh": "TEMPLATE_REPLACE_WITH_LIVE_LOW_CONFIDENCE_TITLE",
+    "bullets_zh": [
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_1",
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_2",
+      "TEMPLATE_REPLACE_WITH_LIVE_BULLET_3"
+    ],
+    "original_source_anchor": {
+      "source_name": "Synthetic Manual URL Fixture",
+      "original_title": "Synthetic single-source report about an unreleased AI hardware product",
+      "source_url": "https://example.invalid/manual-low-confidence-fixture"
+    },
+    "selection_rationale": {
+      "summary": "TEMPLATE_REPLACE_WITH_LIVE_RATIONALE",
+      "signals": ["low_source_count", "manual_url", "synthetic_behavior_exercise"]
+    },
+    "confidence_level": "low",
+    "confidence_notice": "置信提示：TEMPLATE_REPLACE_WITH_LIVE_CONFIDENCE_NOTICE。",
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "TEMPLATE_REPLACE_WITH_LIVE_PROVIDER",
+    "model": "TEMPLATE_REPLACE_WITH_LIVE_MODEL",
+    "task_type": "briefing_item_generation",
+    "request_count": 1,
+    "input_tokens": null,
+    "output_tokens": null,
+    "latency_ms": 0,
+    "failure_reason": null
+  },
+  "guardrail_notes": ["TEMPLATE_REPLACE_WITH_LIVE_GUARDRAIL_NOTE"]
+}

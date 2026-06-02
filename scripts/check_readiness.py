@@ -17,6 +17,19 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
+TEMPLATE_MARKER = "TEMPLATE_"
+LIVE_EVIDENCE_TEMPLATE_FILES = [
+    "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
+    "fixtures/live-evidence-templates/feishu-delivery/group-response.redacted.json",
+    "fixtures/live-evidence-templates/feishu-delivery/rendered-message.md",
+    "fixtures/live-evidence-templates/model-provider/outputs/high-confidence-news.json",
+    "fixtures/live-evidence-templates/model-provider/outputs/low-confidence-news.json",
+    "fixtures/live-evidence-templates/model-provider/outputs/academic-paper.json",
+    "fixtures/live-evidence-templates/model-provider/usage-log.json",
+    "fixtures/live-evidence-templates/archive-storage/sync-result.json",
+    "fixtures/live-evidence-templates/archive-storage/local-tree.txt",
+    "fixtures/live-evidence-templates/archive-storage/remote-tree.txt",
+]
 
 
 class CheckFailure(Exception):
@@ -33,6 +46,10 @@ def load_json(path: str):
 
 def load_json_path(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def read_path(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
 
 
 def require(condition: bool, message: str) -> None:
@@ -54,6 +71,7 @@ def check_required_files() -> list[str]:
         "docs/MVP-SCOPE.md",
         "docs/ARCHITECTURE-NOTES.md",
         "docs/readiness-gate-status.md",
+        "docs/live-spike-evidence-runbook.md",
         "docs/schemas/minimal-contracts.md",
         "docs/spikes/feishu-delivery.md",
         "docs/spikes/source-ingestion.md",
@@ -73,6 +91,16 @@ def check_required_files() -> list[str]:
     ]
     require_files(files)
     return [f"required files present: {len(files)}"]
+
+
+def check_live_evidence_templates() -> list[str]:
+    require_files(LIVE_EVIDENCE_TEMPLATE_FILES)
+    json_paths = [path for path in LIVE_EVIDENCE_TEMPLATE_FILES if path.endswith(".json")]
+    for path in json_paths:
+        load_json(path)
+    for path in LIVE_EVIDENCE_TEMPLATE_FILES:
+        require(TEMPLATE_MARKER in read(path), f"{path} must contain a TEMPLATE_ placeholder")
+    return [f"live evidence templates: {len(LIVE_EVIDENCE_TEMPLATE_FILES)} files present, parseable, and marked"]
 
 
 def check_source_registry() -> list[str]:
@@ -422,6 +450,11 @@ def check_external_environment() -> tuple[list[str], list[str]]:
     return ok, missing_messages
 
 
+def check_no_template_marker(path: Path, failures: list[str], label: str) -> None:
+    if TEMPLATE_MARKER in read_path(path):
+        failures.append(f"{label} still contains a TEMPLATE_ placeholder: {path}")
+
+
 def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
     evidence_dir = evidence_root / "feishu-delivery"
     missing: list[str] = []
@@ -437,6 +470,8 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
             missing.append(f"Feishu live evidence missing {label}: {path}")
     if missing:
         return passed, missing, failures
+    for label, path in required_files.items():
+        check_no_template_marker(path, failures, f"Feishu live evidence {label}")
     for label, path in [
         ("user", required_files["user response"]),
         ("group", required_files["group response"]),
@@ -465,6 +500,7 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
     if not result_path.exists():
         missing.append(f"Archive live evidence missing sync result: {result_path}")
         return passed, missing, failures
+    check_no_template_marker(result_path, failures, "Archive live evidence sync result")
     payload = load_json_path(result_path)
     local_status = payload.get("local_archive", {}).get("status")
     remote_status = payload.get("remote_sync", {}).get("status")
@@ -476,10 +512,14 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
         failures.append("Archive live evidence local_archive.file_count must be > 0")
     if int(payload.get("remote_sync", {}).get("file_count") or 0) <= 0:
         failures.append("Archive live evidence remote_sync.file_count must be > 0")
-    if not (evidence_dir / "local-tree.txt").exists():
-        missing.append(f"Archive live evidence missing local tree: {evidence_dir / 'local-tree.txt'}")
-    if not (evidence_dir / "remote-tree.txt").exists():
-        missing.append(f"Archive live evidence missing remote tree: {evidence_dir / 'remote-tree.txt'}")
+    for label, path in [
+        ("local tree", evidence_dir / "local-tree.txt"),
+        ("remote tree", evidence_dir / "remote-tree.txt"),
+    ]:
+        if not path.exists():
+            missing.append(f"Archive live evidence missing {label}: {path}")
+        else:
+            check_no_template_marker(path, failures, f"Archive live evidence {label}")
     if not failures and not missing:
         passed.append("Archive live evidence: local write and remote sync success present")
     return passed, missing, failures
@@ -500,6 +540,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
         if not path.exists():
             missing.append(f"Model live evidence missing output: {path}")
             continue
+        check_no_template_marker(path, failures, f"Model live evidence {profile} output")
         payload = load_json_path(path)
         fixture = samples[fixture_id]
         if payload.get("input_fixture_id") != fixture_id:
@@ -544,6 +585,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
     if not usage_path.exists():
         missing.append(f"Model live evidence missing usage log: {usage_path}")
     else:
+        check_no_template_marker(usage_path, failures, "Model live evidence usage log")
         usage_log = load_json_path(usage_path)
         if usage_log.get("provider") in {"fixture", None, ""}:
             failures.append("Model usage log provider must identify a live provider")
@@ -578,6 +620,7 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
     checks = [
         check_required_files,
         check_json_fixtures,
+        check_live_evidence_templates,
         check_source_registry,
         check_source_eligibility_reviews,
         check_golden_samples,
