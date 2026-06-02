@@ -15,7 +15,7 @@ The repository is ready for live external validation, but not ready for product 
 
 Additional review item:
 
-- Source eligibility: 32 first-version seed sources are covered in `docs/source-eligibility-reviews.md`; 5 arXiv metadata-only sources are `eligible`, and 27 public/company/manual sources remain `needs_review` before automated production ingestion.
+- Source eligibility: 32 first-version seed sources are covered in `docs/source-eligibility-reviews.md`; 7 metadata/text-only sources are `eligible`, and 25 public/company/manual sources remain `needs_review` before automated production ingestion.
 
 The live spike evidence procedure is now documented in `docs/live-spike-evidence-runbook.md`. Template evidence files live under `fixtures/live-evidence-templates/`; they are examples only, and `scripts/check_readiness.py` rejects any live evidence that still contains `TEMPLATE_` placeholders.
 
@@ -59,7 +59,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Live evidence runbook and template-negative gate exist | Passed | `docs/live-spike-evidence-runbook.md`; `fixtures/live-evidence-templates/`; `scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-templates` fails on `TEMPLATE_` placeholders | None |
 | Technology Domain Template and briefing style guide are drafted | Passed | `docs/taxonomy/technology-domain-template.md`; `docs/briefing-style-guide.md`; issue #7 closed | None |
 | Source registry contains at least 30 seed sources | Passed | `docs/source-registry.md`; 37 total seed sources, 32 first-version, 5 deferred | None |
-| Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; 32 first-version sources covered, 5 `eligible`, 27 `needs_review` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
+| Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; 32 first-version sources covered, 7 `eligible`, 25 `needs_review` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
 | Golden samples cover at least 20 real-world items | Passed | `fixtures/golden-samples/items.json`; 22 total fixtures, 21 real-world items; issue #8 closed | None |
 | Required ADRs exist | Passed | 8 ADRs in `docs/adr/`; issue #9 closed | None |
 | MVP issue breakdown exists and is labeled | Passed | `docs/github-issue-breakdown.md`; GitHub issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 created with milestone `mvp` and label `needs-triage` | None |
