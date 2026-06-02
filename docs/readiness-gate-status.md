@@ -13,6 +13,18 @@ The repository is ready for live external validation, but not ready for product 
 - Model Provider spike: needs one real provider/model call set with usage metadata.
 - Archive/storage spike: needs real `ARCHIVE_SYNC_TARGET` success evidence.
 
+Local evidence can be checked with:
+
+```bash
+python3 scripts/check_readiness.py
+```
+
+To make missing external variables fail the check before a live spike, run:
+
+```bash
+python3 scripts/check_readiness.py --require-live
+```
+
 ## Requirement Status
 
 | Requirement | Status | Evidence | Remaining gap |
