@@ -18,6 +18,13 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 TEMPLATE_MARKER = "TEMPLATE_"
+SOURCE_REVIEW_PLACEHOLDERS = [
+    "terms/feed policy not yet recorded",
+    "feed/api availability and terms not yet recorded",
+    "validate feed terms",
+    "terms not yet recorded",
+    "review terms, robots guidance, feed policy",
+]
 LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/group-response.redacted.json",
@@ -137,6 +144,12 @@ def check_source_registry_review_notes() -> list[str]:
     return notes
 
 
+def require_no_source_review_placeholder(value: str, label: str) -> None:
+    lowered = value.lower()
+    for placeholder in SOURCE_REVIEW_PLACEHOLDERS:
+        require(placeholder not in lowered, f"{label}: source review placeholder remains: {placeholder}")
+
+
 def parse_markdown_table(path: str) -> list[dict[str, str]]:
     lines = read(path).splitlines()
     header = None
@@ -197,13 +210,26 @@ def check_source_eligibility_reviews() -> list[str]:
         state_counts[state] += 1
         for column in required_columns:
             require(row[column] and row[column] != "-", f"{source_id}: missing {column}")
+            require_no_source_review_placeholder(row[column], f"{source_id} {column}")
         require("not stored" in row["Full text storage"], f"{source_id}: full text storage must be not stored")
         require("source name" in row["Attribution"], f"{source_id}: attribution must preserve source name")
+        if source_id == "src-manual-url":
+            require("per submitted url" in row["Terms evidence"].lower(), f"{source_id}: manual URLs need per-URL review")
+            require("per-url" in row["Next action"].lower(), f"{source_id}: manual URLs need per-URL next action")
+        else:
+            require("reviewed" in row["Terms evidence"].lower(), f"{source_id}: terms evidence must cite a reviewed source")
+
+    for row in registry_rows:
+        columns = [part.strip() for part in row.strip().strip("|").split("|")]
+        source_id = columns[0]
+        notes = columns[-1]
+        require_no_source_review_placeholder(notes, f"{source_id} registry notes")
 
     return [
         f"source eligibility reviews: {len(review_rows)} first-version sources covered",
         "source eligibility reviews: "
         + ", ".join(f"{state}={count}" for state, count in sorted(state_counts.items()) if count),
+        "source eligibility reviews: no generic terms-evidence placeholders remain",
     ]
 
 
