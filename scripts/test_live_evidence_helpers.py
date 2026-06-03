@@ -83,6 +83,7 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         results = preflight.run_dry_runs(evidence_root, run_helpers=True)
+        summary = preflight.build_summary(evidence_root, run_helpers=False)
         assert len(results) == 5
         assert all(result["returncode"] == 0 for result in results)
         assert (evidence_root / "feishu-delivery/dry-run-request-shape.redacted.json").exists()
@@ -90,6 +91,10 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
         assert any("--validate-requests" in result["command"] for result in results)
         assert (evidence_root / "archive-storage/dry-run-sync-result.json").exists()
         assert (evidence_root / "readiness-manifest.dry-run.json").exists()
+        assert "feishu-delivery/dry-run-request-shape.redacted.json" in summary["dry_run_artifacts"]["present"]
+        assert "model-provider/requests/high-confidence-news.request.json" in summary["dry_run_artifacts"]["present"]
+        assert "archive-storage/dry-run-sync-result.json" in summary["dry_run_artifacts"]["present"]
+        assert "feishu-delivery/user-response.redacted.json" in summary["evidence"]["missing"]
 
 
 def test_preflight_packet_lists_status_without_secret_values() -> None:
@@ -108,6 +113,8 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "# Live Readiness Execution Packet" in packet
     assert "MODEL_API_KEY" in packet
     assert "readiness-manifest.json" in packet
+    assert "Dry-Run Artifact Inventory" in packet
+    assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
     assert secret not in packet

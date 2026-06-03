@@ -64,6 +64,16 @@ EVIDENCE_FILES = [
     "archive-storage/local-tree.txt",
     "archive-storage/remote-tree.txt",
 ]
+DRY_RUN_ARTIFACT_FILES = [
+    "readiness-manifest.dry-run.json",
+    "feishu-delivery/dry-run-request-shape.redacted.json",
+    "model-provider/dry-run-summary.json",
+    "model-provider/prompt-contract.md",
+    "model-provider/requests/high-confidence-news.request.json",
+    "model-provider/requests/low-confidence-news.request.json",
+    "model-provider/requests/academic-paper.request.json",
+    "archive-storage/dry-run-sync-result.json",
+]
 
 SENSITIVE_ENV_NAMES = sorted({name for names in ENV_GROUPS.values() for name in names})
 SPIKE_PACKET_SPECS = [
@@ -126,6 +136,15 @@ def env_summary() -> dict[str, dict[str, list[str]]]:
 def evidence_summary(evidence_root: Path) -> dict[str, list[str]]:
     present = [path for path in EVIDENCE_FILES if (evidence_root / path).exists()]
     missing = [path for path in EVIDENCE_FILES if not (evidence_root / path).exists()]
+    return {
+        "present": present,
+        "missing": missing,
+    }
+
+
+def dry_run_artifact_summary(evidence_root: Path) -> dict[str, list[str]]:
+    present = [path for path in DRY_RUN_ARTIFACT_FILES if (evidence_root / path).exists()]
+    missing = [path for path in DRY_RUN_ARTIFACT_FILES if not (evidence_root / path).exists()]
     return {
         "present": present,
         "missing": missing,
@@ -271,6 +290,16 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
             "",
             "Missing evidence files:",
             markdown_bullets(summary["evidence"]["missing"], empty_label="None missing."),
+            "",
+            "## Dry-Run Artifact Inventory",
+            "",
+            "These files are generated helper outputs. They do not count as final live evidence.",
+            "",
+            "Present dry-run artifacts:",
+            markdown_bullets(summary["dry_run_artifacts"]["present"], empty_label="None present."),
+            "",
+            "Missing dry-run artifacts:",
+            markdown_bullets(summary["dry_run_artifacts"]["missing"], empty_label="None missing."),
             "",
             "## Evidence Validation Status",
             "",
@@ -445,6 +474,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "dry_run_commands": dry_run_results,
         "environment": env_summary(),
         "evidence": evidence_summary(evidence_root),
+        "dry_run_artifacts": dry_run_artifact_summary(evidence_root),
         "evidence_validation": evidence_validation_summary(evidence_root),
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
         "next_commands": [

@@ -1041,6 +1041,8 @@ def check_spike_runners() -> list[str]:
     require("build_spike_packet" in preflight_text, "live readiness preflight must build per-spike packets")
     require("check_live_evidence" in preflight_text, "live readiness preflight must validate live evidence content")
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
+    require("DRY_RUN_ARTIFACT_FILES" in preflight_text, "live readiness preflight must define dry-run artifact inventory")
+    require("dry_run_artifacts" in preflight_text, "live readiness preflight must summarize dry-run artifacts separately")
     require("--validate-requests" in preflight_text, "live readiness preflight must validate model request envelopes")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
@@ -1061,7 +1063,12 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
+    for needle in [
+        "summary[\"dry_run_artifacts\"][\"present\"]",
+        "They do not count as final live evidence.",
+    ]:
+        require(needle in test_text, f"live evidence helper tests missing dry-run inventory assertion: {needle}")
+    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation, dry-run artifact inventory, per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:

@@ -27,6 +27,8 @@ evidence/readiness-action-packet.md
 
 The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index and worksheet, readiness-manifest blocker, relevant GitHub issues, and an MVP issue unlock matrix into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
+The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
+
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
 ```bash
@@ -41,7 +43,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, Markdown packet output without secret values, readiness manifest dry-run shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 
