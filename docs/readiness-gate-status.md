@@ -21,6 +21,14 @@ The live spike evidence procedure is now documented in `docs/live-spike-evidence
 
 Pre-development readiness is also protected in GitHub Actions by `.github/workflows/pre-development-readiness.yml`. The workflow runs the local readiness checker, compiles the readiness/spike scripts, and proves the tracked evidence templates cannot pass as live evidence. It intentionally does not require live external credentials.
 
+The GitHub issue tracker gate is checked manually because it requires `gh` access. Run it from this checkout with:
+
+```bash
+python3 scripts/check_readiness.py --require-github
+```
+
+This verifies the required triage labels, milestones, pre-development issues, and MVP issue labels. The default CI workflow intentionally does not require this external access.
+
 Local evidence can be checked with:
 
 ```bash
@@ -51,8 +59,8 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 
 | Requirement | Status | Evidence | Remaining gap |
 | --- | --- | --- | --- |
-| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `63a8d69` | None |
-| GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1 | None |
+| Baseline docs are committed and pushed | Passed | Baseline commit `6fa77b1`; current `main` is verified by the latest Pre-development readiness CI and optional GitHub tracker gate | None |
+| GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1; `python3 scripts/check_readiness.py --require-github` verifies tracker state | None |
 | Pre-development readiness CI exists | Passed | `.github/workflows/pre-development-readiness.yml`; `scripts/check_readiness.py` verifies workflow coverage | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; issue #2 closed | None |
 | Feishu delivery spike passes for one user and one group | Blocked | Fixtures in `fixtures/feishu-delivery/`; live evidence template in `fixtures/live-evidence-templates/feishu-delivery/`; issue #3 open `needs-info` | Need Feishu app credentials, user open_id, group chat_id, live send evidence under `evidence/feishu-delivery/` |
@@ -65,7 +73,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; `fixtures/source-ingestion/source-access-policy.json`; 32 first-version sources covered, 7 `eligible`, 25 `needs_review`; readiness checks that `needs_review` sources have `production_auto_ingestion: false` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
 | Golden samples cover at least 20 real-world items | Passed | `fixtures/golden-samples/items.json`; 22 total fixtures, 21 real-world items; issue #8 closed | None |
 | Required ADRs exist | Passed | 8 ADRs in `docs/adr/`; issue #9 closed | None |
-| MVP issue breakdown exists and is labeled | Passed | `docs/github-issue-breakdown.md`; GitHub issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 created with milestone `mvp` and label `needs-triage` | None |
+| MVP issue breakdown exists and is labeled | Passed | `docs/github-issue-breakdown.md`; GitHub issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 created with milestone `mvp` and label `needs-triage`; `--require-github` verifies none are marked `ready-for-agent` before readiness passes | None |
 
 ## External Inputs Needed
 

@@ -24,3 +24,13 @@ Create a GitHub issue.
 ## When a skill says "fetch the relevant ticket"
 
 Run `gh issue view <number> --comments`.
+
+## Readiness Gate Check
+
+Before moving MVP issues from `needs-triage` to an implementation-ready label, run:
+
+```bash
+python3 scripts/check_readiness.py --require-github
+```
+
+This verifies the canonical triage labels, `pre-development`/`mvp`/`post-mvp` milestones, pre-development tracking issues, and that MVP issues #10-#20 remain `needs-triage` while the readiness gate is not passed.

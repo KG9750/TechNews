@@ -13,6 +13,7 @@ import importlib.util
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Iterable
 
@@ -59,6 +60,20 @@ LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/archive-storage/local-tree.txt",
     "fixtures/live-evidence-templates/archive-storage/remote-tree.txt",
 ]
+REQUIRED_GITHUB_LABELS = {
+    "needs-triage",
+    "needs-info",
+    "ready-for-agent",
+    "ready-for-human",
+    "wontfix",
+}
+REQUIRED_GITHUB_MILESTONES = {
+    "pre-development",
+    "mvp",
+    "post-mvp",
+}
+PREDEVELOPMENT_ISSUES = set(range(1, 10))
+MVP_ISSUES = set(range(10, 21))
 
 
 class CheckFailure(Exception):
@@ -75,6 +90,26 @@ def load_json(path: str):
 
 def load_json_path(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def run_gh_json(args: list[str]):
+    try:
+        result = subprocess.run(
+            ["gh", *args],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise CheckFailure("gh CLI is required for --require-github") from exc
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise CheckFailure(f"gh {' '.join(args)} failed: {detail}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise CheckFailure(f"gh {' '.join(args)} did not return JSON") from exc
 
 
 def read_path(path: Path) -> str:
@@ -534,6 +569,7 @@ def check_readiness_ci_workflow() -> list[str]:
     ]:
         require(needle in text, f"readiness CI workflow missing: {needle}")
     require("--require-live" not in text, "readiness CI must not require live external credentials")
+    require("--require-github" not in text, "readiness CI must not require GitHub tracker access")
     return ["readiness CI workflow: local gate, script compile, template-negative, and redaction-negative checks present"]
 
 
@@ -577,6 +613,69 @@ def check_mvp_issue_drafts() -> list[str]:
     for number in range(10, 21):
         require(f"#{number}" in breakdown, f"issue breakdown missing #{number}")
     return ["MVP issue drafts: 11 complete drafts linked to #10-#20"]
+
+
+def check_github_tracker() -> list[str]:
+    label_rows = run_gh_json(["label", "list", "--limit", "100", "--json", "name"])
+    labels = {row["name"] for row in label_rows}
+    missing_labels = sorted(REQUIRED_GITHUB_LABELS - labels)
+    require(not missing_labels, f"GitHub labels missing: {', '.join(missing_labels)}")
+
+    milestone_rows = run_gh_json(["api", "repos/KG9750/TechNews/milestones"])
+    milestones = {row["title"]: row for row in milestone_rows}
+    missing_milestones = sorted(REQUIRED_GITHUB_MILESTONES - set(milestones))
+    require(not missing_milestones, f"GitHub milestones missing: {', '.join(missing_milestones)}")
+    for title in REQUIRED_GITHUB_MILESTONES:
+        require(milestones[title]["state"] == "open", f"GitHub milestone {title} must be open")
+
+    issue_rows = run_gh_json(
+        [
+            "issue",
+            "list",
+            "--state",
+            "all",
+            "--limit",
+            "100",
+            "--json",
+            "number,title,state,labels,milestone",
+        ]
+    )
+    issues = {int(row["number"]): row for row in issue_rows}
+    required_issues = PREDEVELOPMENT_ISSUES | MVP_ISSUES
+    missing_issues = sorted(required_issues - set(issues))
+    require(not missing_issues, "GitHub issues missing: " + ", ".join(f"#{number}" for number in missing_issues))
+
+    for number in PREDEVELOPMENT_ISSUES:
+        issue = issues[number]
+        milestone = issue.get("milestone") or {}
+        require(milestone.get("title") == "pre-development", f"GitHub issue #{number} must use pre-development milestone")
+
+    for number in MVP_ISSUES:
+        issue = issues[number]
+        labels = {label["name"] for label in issue.get("labels", [])}
+        milestone = issue.get("milestone") or {}
+        require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open before MVP work starts")
+        require(milestone.get("title") == "mvp", f"GitHub issue #{number} must use mvp milestone")
+        require("needs-triage" in labels, f"GitHub issue #{number} must keep needs-triage before readiness passes")
+        require("ready-for-agent" not in labels, f"GitHub issue #{number} must not be ready-for-agent before readiness passes")
+        require("ready-for-human" not in labels, f"GitHub issue #{number} must not be ready-for-human before readiness passes")
+
+    for number in [3, 5, 6]:
+        issue = issues[number]
+        labels = {label["name"] for label in issue.get("labels", [])}
+        require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open until live evidence is attached")
+        require("needs-info" in labels, f"GitHub issue #{number} must keep needs-info while external evidence is blocked")
+
+    issue_1_labels = {label["name"] for label in issues[1].get("labels", [])}
+    require(issues[1]["state"] == "OPEN", "GitHub issue #1 must remain open until the readiness gate passes")
+    require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
+
+    return [
+        f"GitHub tracker: {len(REQUIRED_GITHUB_LABELS)} triage labels present",
+        f"GitHub tracker: {len(REQUIRED_GITHUB_MILESTONES)} milestones open",
+        f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage",
+        "GitHub tracker: Feishu, model, and archive spike issues remain needs-info",
+    ]
 
 
 def check_external_environment() -> tuple[list[str], list[str]]:
@@ -799,7 +898,7 @@ def check_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list
     return passed, missing, failures
 
 
-def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
+def run(require_live: bool, require_evidence: bool, require_github: bool, evidence_root: Path) -> int:
     checks = [
         check_required_files,
         check_json_fixtures,
@@ -818,6 +917,8 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
         check_adrs,
         check_mvp_issue_drafts,
     ]
+    if require_github:
+        checks.append(check_github_tracker)
     passed: list[str] = []
     failures: list[str] = []
     review_notes: list[str] = []
@@ -874,12 +975,22 @@ def main() -> int:
         help="Fail when redacted live spike evidence is missing or incomplete.",
     )
     parser.add_argument(
+        "--require-github",
+        action="store_true",
+        help="Fail when GitHub labels, milestones, or issue tracker gates drift.",
+    )
+    parser.add_argument(
         "--evidence-root",
         default=str(DEFAULT_EVIDENCE_ROOT),
         help="Directory containing redacted live spike evidence.",
     )
     args = parser.parse_args()
-    return run(require_live=args.require_live, require_evidence=args.require_evidence, evidence_root=Path(args.evidence_root))
+    return run(
+        require_live=args.require_live,
+        require_evidence=args.require_evidence,
+        require_github=args.require_github,
+        evidence_root=Path(args.evidence_root),
+    )
 
 
 if __name__ == "__main__":

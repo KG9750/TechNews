@@ -1,7 +1,7 @@
 # Pre-Development Plan
 
 Status: Draft
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 This plan replaces the earlier preparation plan. Its main correction is ordering: define the minimum contracts first, then run Feishu, source, model, and archive spikes against those contracts. Implementation work must not start until the readiness gate passes.
 
@@ -39,6 +39,7 @@ Verification:
 - The GitHub repo contains the pushed baseline.
 - Labels and milestones exist.
 - The tracking issue links to `docs/PRE-DEVELOPMENT-PLAN.md` and `docs/PRD.md`.
+- `python3 scripts/check_readiness.py --require-github` passes when run by a maintainer with `gh` access.
 
 ## Phase 1: Minimum Contracts First
 
@@ -226,6 +227,7 @@ Verification:
 - Every MVP acceptance checklist item maps to at least one issue.
 - Issues with unresolved ADR dependencies stay `needs-triage`.
 - Only decision-complete issues receive `ready-for-agent`.
+- `python3 scripts/check_readiness.py --require-github` confirms MVP issues #10-#20 remain `needs-triage` until the readiness gate passes.
 
 ## Development Readiness Gate
 
