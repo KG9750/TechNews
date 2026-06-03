@@ -444,6 +444,42 @@ def test_archive_live_evidence_requires_matching_counts_and_trees() -> None:
     assert "Archive live evidence local and remote tree listings must match" in failures
 
 
+def test_archive_live_evidence_requires_counts_match_tree_entries() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "archive-storage/sync-result.json",
+            {
+                "run_id": "run_synthetic_archive_storage",
+                "local_archive": {
+                    "status": "written",
+                    "package_path": "REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology",
+                    "file_count": 3,
+                },
+                "remote_sync": {
+                    "status": "synced",
+                    "target": "REDACTED_SYNC_TARGET/2026-06-01/technology",
+                    "file_count": 3,
+                    "retryable": False,
+                },
+            },
+        )
+        tree = "briefing.md\nmetadata.json\n"
+        (evidence_root / "archive-storage/local-tree.txt").write_text(tree, encoding="utf-8")
+        (evidence_root / "archive-storage/remote-tree.txt").write_text(tree, encoding="utf-8")
+        try:
+            archive_spike.validate_evidence(evidence_root / "archive-storage")
+        except archive_spike.SpikeError as error:
+            assert "local_archive.file_count must match local tree file entries" in str(error)
+        else:
+            raise AssertionError("expected archive validator to reject file_count/tree count mismatch")
+        _, missing, failures = readiness.check_archive_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Archive live evidence local_archive.file_count must match local tree file entries" in failures
+    assert "Archive live evidence remote_sync.file_count must match remote tree file entries" in failures
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -579,8 +615,9 @@ def write_synthetic_live_evidence(evidence_root: Path) -> None:
         },
     )
     (evidence_root / "archive-storage").mkdir(parents=True, exist_ok=True)
-    (evidence_root / "archive-storage/local-tree.txt").write_text("briefing.md\nmetadata.json\n", encoding="utf-8")
-    (evidence_root / "archive-storage/remote-tree.txt").write_text("briefing.md\nmetadata.json\n", encoding="utf-8")
+    archive_tree = "briefing.html\nbriefing.md\nmedia/\nmedia/README.md\nmetadata.json\n"
+    (evidence_root / "archive-storage/local-tree.txt").write_text(archive_tree, encoding="utf-8")
+    (evidence_root / "archive-storage/remote-tree.txt").write_text(archive_tree, encoding="utf-8")
 
     write_json(
         evidence_root / "readiness-manifest.json",
@@ -841,6 +878,7 @@ def main() -> int:
     test_model_live_evidence_rejects_template_and_leaky_content()
     test_archive_failure_reason_redacts_private_paths()
     test_archive_live_evidence_requires_matching_counts_and_trees()
+    test_archive_live_evidence_requires_counts_match_tree_entries()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()

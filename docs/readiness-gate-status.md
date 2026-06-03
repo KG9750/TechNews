@@ -199,6 +199,7 @@ Required evidence:
 - Local Archive Package path.
 - Redacted sync command or host-native sync configuration note.
 - Successful sync status for a sample package.
+- Local and remote `file_count` values that match their corresponding tree file entries.
 - Failure status remains recorded and retryable.
 
 Expected evidence files:

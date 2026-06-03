@@ -203,6 +203,10 @@ def read_tree(path: Path) -> list[str]:
     return lines
 
 
+def tree_file_count(lines: list[str]) -> int:
+    return len([line for line in lines if not line.endswith("/")])
+
+
 def positive_int(value: object, label: str) -> int:
     try:
         number = int(value or 0)
@@ -232,6 +236,10 @@ def validate_evidence(evidence_dir: Path) -> int:
 
     local_tree = read_tree(evidence_dir / "local-tree.txt")
     remote_tree = read_tree(evidence_dir / "remote-tree.txt")
+    if local_count != tree_file_count(local_tree):
+        raise SpikeError(f"{result_path}: local_archive.file_count must match local tree file entries")
+    if remote_count != tree_file_count(remote_tree):
+        raise SpikeError(f"{result_path}: remote_sync.file_count must match remote tree file entries")
     if local_tree != remote_tree:
         raise SpikeError("archive evidence local and remote tree listings must match")
     print(f"LIVE archive evidence validates: {evidence_dir}")

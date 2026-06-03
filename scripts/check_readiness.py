@@ -1093,6 +1093,10 @@ def check_spike_runners() -> list[str]:
         "archive evidence local and remote tree listings must match" in archive_text,
         "archive runner must validate matching local and remote tree evidence",
     )
+    require(
+        "file_count must match local tree file entries" in archive_text,
+        "archive runner must validate file counts against tree file entries",
+    )
     feishu_text = read("scripts/spikes/feishu_delivery_spike.py")
     require("--attempt-group-webhook-fallback" in feishu_text, "Feishu runner must expose explicit group webhook fallback")
     require("build_group_webhook_payload" in feishu_text, "Feishu runner must build group webhook fallback payloads")
@@ -1169,6 +1173,7 @@ def check_spike_runners() -> list[str]:
         "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
         "test_archive_live_evidence_requires_matching_counts_and_trees",
+        "test_archive_live_evidence_requires_counts_match_tree_entries",
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
         "test_readiness_manifest_tracks_dirty_worktree_guard",
@@ -1195,6 +1200,7 @@ def check_spike_runners() -> list[str]:
         "must not include full-body keys",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",
+        "file_count must match local tree file entries",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
@@ -1782,6 +1788,14 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
             if not lines:
                 failures.append(f"Archive live evidence {label} must list at least one file")
             tree_lines[label] = lines
+    if tree_lines.get("local tree") and local_file_count > 0:
+        local_tree_file_count = len([line for line in tree_lines["local tree"] if not line.endswith("/")])
+        if local_file_count != local_tree_file_count:
+            failures.append("Archive live evidence local_archive.file_count must match local tree file entries")
+    if tree_lines.get("remote tree") and remote_file_count > 0:
+        remote_tree_file_count = len([line for line in tree_lines["remote tree"] if not line.endswith("/")])
+        if remote_file_count != remote_tree_file_count:
+            failures.append("Archive live evidence remote_sync.file_count must match remote tree file entries")
     if tree_lines.get("local tree") and tree_lines.get("remote tree") and tree_lines["local tree"] != tree_lines["remote tree"]:
         failures.append("Archive live evidence local and remote tree listings must match")
     if not failures and not missing:

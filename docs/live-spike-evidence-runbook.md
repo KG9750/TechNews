@@ -263,6 +263,7 @@ Validation rules:
 - `remote_sync.status` must be `synced`.
 - Local and remote file counts must be greater than zero.
 - Local and remote file counts must match.
+- Each `file_count` value must match the number of file entries in its corresponding tree file; directory entries ending in `/` are not counted.
 - Local and remote tree files must exist, be non-empty, and list the same redacted relative package files in the same order.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain private local paths, private sync target paths, tokens, or raw configured secret/env values.
