@@ -1,9 +1,11 @@
 # Live Spike Evidence Runbook
 
 Status: Ready for external validation
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 This runbook explains how to turn the remaining external spikes into evidence that can pass the readiness gate. Generated evidence belongs under `evidence/`, which is ignored by git. Do not commit real credentials, recipient ids, provider responses, or storage paths.
+
+The live spike runners, live readiness preflight, readiness action packet, and final readiness gate load root `.env` values when the file exists. Existing process environment values take precedence over `.env` values.
 
 ## Live Evidence Preflight
 

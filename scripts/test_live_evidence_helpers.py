@@ -62,6 +62,39 @@ def with_env_values(values: dict[str, str]):
     return EnvGuard()
 
 
+def test_readiness_load_env_file_preserves_process_env() -> None:
+    names = ["MODEL_PROVIDER", "MODEL_DEFAULT_MODEL", "MODEL_API_KEY"]
+    old_values = {name: os.environ.get(name) for name in names}
+    try:
+        for name in names:
+            os.environ.pop(name, None)
+        os.environ["MODEL_PROVIDER"] = "process-provider"
+        with tempfile.TemporaryDirectory() as tmp_name:
+            env_path = Path(tmp_name) / ".env"
+            env_path.write_text(
+                "\n".join(
+                    [
+                        "MODEL_PROVIDER=dotenv-provider",
+                        "MODEL_DEFAULT_MODEL=dotenv-model",
+                        "MODEL_API_KEY=dotenv-secret-value-123456789",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            readiness.load_env_file(env_path)
+
+        assert os.environ["MODEL_PROVIDER"] == "process-provider"
+        assert os.environ["MODEL_DEFAULT_MODEL"] == "dotenv-model"
+        assert os.environ["MODEL_API_KEY"] == "dotenv-secret-value-123456789"
+    finally:
+        for name, value in old_values.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
+
+
 def test_preflight_redacts_workspace_and_env_values() -> None:
     secret = "test-secret-value-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -946,6 +979,7 @@ def test_live_evidence_rejects_raw_environment_values() -> None:
 
 
 def main() -> int:
+    test_readiness_load_env_file_preserves_process_env()
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_reports_partial_final_evidence_groups()

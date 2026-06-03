@@ -21,6 +21,8 @@ Current source-owner decision status is 25 valid, 0 invalid, and 0 missing. The 
 
 The live spike evidence procedure is now documented in `docs/live-spike-evidence-runbook.md`. Template evidence files live under `fixtures/live-evidence-templates/`; they are examples only, and `scripts/check_readiness.py` rejects any live evidence that still contains `TEMPLATE_` placeholders or common sensitive leak patterns.
 
+Live spike runners, the preflight packet, the action packet, and the final readiness gate all load root `.env` when present; process environment values take precedence, and `.env` remains ignored by git.
+
 Final live evidence must also include `evidence/readiness-manifest.json`, which declares the evidence set and checks model/archive run metadata consistency; `scripts/spikes/readiness_manifest.py` generates that manifest from the redacted evidence files and can write `evidence/final-redaction-review.md` as an ignored operator checklist before sharing issue updates.
 
 `scripts/spikes/live_readiness_preflight.py` provides a one-command preflight that runs local helper dry-runs, validates model-provider request envelopes as metadata-only, reports missing environment variable names, lists missing evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, inventories dry-run artifacts separately from final evidence, runs the same live evidence validator used by the final gate, and can write ignored Markdown execution packets without printing secret values, including per-spike packets for Feishu, model-provider, and archive-storage issue updates. A `partial` final evidence group means the operator must finish that spike before closing the linked issue or moving readiness forward.

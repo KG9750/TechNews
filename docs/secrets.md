@@ -1,7 +1,7 @@
 # Secrets Inventory
 
 Status: Draft
-Last updated: 2026-06-03
+Last updated: 2026-06-04
 
 Do not store real secrets in this repo. Use `.env.example` for variable names only and configure real values on the Briefing Host.
 
@@ -26,6 +26,7 @@ Do not store real secrets in this repo. Use `.env.example` for variable names on
 ## Handling Rules
 
 - Commit `.env.example`, never `.env`.
+- Live spike runners, preflight, action packets, and the final readiness gate load root `.env` when present; process environment values take precedence.
 - Redact secrets from Feishu, model, and storage spike logs.
 - If a secret is accidentally committed, rotate it immediately and treat the commit as compromised.
 - Spike documents may include response shapes, status codes, and redacted request payloads, but not credentials.

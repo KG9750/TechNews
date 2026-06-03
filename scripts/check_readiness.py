@@ -281,6 +281,17 @@ class CheckFailure(Exception):
     pass
 
 
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
 def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
@@ -1154,8 +1165,10 @@ def check_spike_runners() -> list[str]:
     require("require_clean_tracked_worktree" in manifest_text, "readiness manifest helper must require a clean tracked worktree for final manifests")
     require("tracked_worktree_changes_from_status" in manifest_text, "readiness manifest helper must expose tracked worktree status parsing")
     readiness_text = read("scripts/check_readiness.py")
+    require("load_env_file(ROOT / \".env\")" in readiness_text, "readiness gate CLI must load local .env")
     require("check_utc_iso_timestamp" in readiness_text, "live evidence manifest gate must validate UTC ISO timestamps")
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
+    require("readiness.load_env_file(ROOT / \".env\")" in preflight_text, "live readiness preflight CLI must load local .env")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
     require("--write-spike-packets" in preflight_text, "live readiness preflight must support per-spike packet output")
@@ -1196,6 +1209,7 @@ def check_spike_runners() -> list[str]:
     require("require_clean_worktree=args.strict" in preflight_text, "strict live readiness preflight must require a clean tracked worktree")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
+        "test_readiness_load_env_file_preserves_process_env",
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_reports_partial_final_evidence_groups",
@@ -1345,6 +1359,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "--write-spike-packets",
         "--write-final-review-packet",
         "python3 scripts/check_readiness.py --require-github",
+        "live_preflight.readiness.load_env_file(ROOT / \".env\")",
     ]:
         require(needle in text, f"readiness action packet helper missing: {needle}")
     for needle in [
@@ -2262,6 +2277,7 @@ def main() -> int:
         help="Directory containing redacted live spike evidence.",
     )
     args = parser.parse_args()
+    load_env_file(ROOT / ".env")
     return run(
         require_live=args.require_live,
         require_evidence=args.require_evidence,

@@ -900,6 +900,7 @@ def main() -> int:
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.output)
+    live_preflight.readiness.load_env_file(ROOT / ".env")
     if args.write_source_owner_packets:
         write_source_owner_packets(evidence_root)
     write_packet(output_path, evidence_root)
