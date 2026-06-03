@@ -1156,6 +1156,11 @@ def check_spike_runners() -> list[str]:
     require("FINAL_EVIDENCE_GROUPS" in preflight_text, "live readiness preflight must define final evidence groups")
     require("final_evidence_groups" in preflight_text, "live readiness preflight must summarize final evidence groups")
     require("Final Evidence Group Status" in preflight_text, "live readiness preflight packet must report final evidence group status")
+    require("Closure gate:" in preflight_text, "live readiness spike packets must report issue closure gate status")
+    require(
+        "finish this group before closing the issue" in preflight_text,
+        "live readiness spike packets must block issue closure for partial final evidence groups",
+    )
     require(
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in preflight_text,
         "live readiness preflight packet must document per-spike dry-run packet generation",
@@ -1179,6 +1184,7 @@ def check_spike_runners() -> list[str]:
         "test_preflight_reports_partial_final_evidence_groups",
         "test_preflight_packet_lists_status_without_secret_values",
         "test_preflight_writes_issue_facing_spike_packets",
+        "test_spike_packet_status_blocks_partial_final_evidence_group",
         "test_feishu_dry_run_documents_group_webhook_fallback",
         "test_feishu_group_webhook_payload_redacts_signature",
         "test_preflight_reports_template_evidence_validation_failures",
@@ -1223,6 +1229,8 @@ def check_spike_runners() -> list[str]:
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
+        "Closure gate: blocked",
+        "finish this group before closing the issue",
         "Strict mode requires a clean tracked worktree",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",

@@ -421,6 +421,7 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
 
 def spike_packet_status(summary: dict, spec: dict) -> str:
     env_missing = summary["environment"][spec["env_group"]]["missing"]
+    evidence_group = summary["final_evidence_groups"][spec["evidence_group"]]
     evidence_missing = [
         path
         for path in summary["evidence"]["missing"]
@@ -436,7 +437,7 @@ def spike_packet_status(summary: dict, spec: dict) -> str:
         for item in summary["evidence_validation"]["failures"]
         if matches_any_needle(item, spec["validation_needles"])
     ]
-    if env_missing or evidence_missing or validation_missing or validation_failures:
+    if evidence_group["status"] != "complete" or env_missing or evidence_missing or validation_missing or validation_failures:
         return "blocked"
     return "ready for final gate"
 
@@ -500,6 +501,12 @@ def build_spike_packet(summary: dict, evidence_root: Path, spec: dict) -> str:
             "## Final Evidence Group Status",
             "",
             f"- Status: `{evidence_group['status']}`",
+            f"- Closure gate: {'complete' if evidence_group['status'] == 'complete' else 'blocked'}",
+            (
+                "- Issue closure note: final evidence group is complete."
+                if evidence_group["status"] == "complete"
+                else f"- Issue closure note: final evidence group is `{evidence_group['status']}`; finish this group before closing the issue."
+            ),
             "",
             "Present final evidence:",
             markdown_bullets(evidence_group["present"], empty_label="None present."),

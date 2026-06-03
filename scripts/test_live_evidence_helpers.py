@@ -185,6 +185,48 @@ def test_preflight_writes_issue_facing_spike_packets() -> None:
     assert "Do not paste raw secrets" in archive_packet
 
 
+def test_spike_packet_status_blocks_partial_final_evidence_group() -> None:
+    summary = {
+        "environment": {
+            "feishu": {
+                "present": [
+                    "FEISHU_APP_ID",
+                    "FEISHU_APP_SECRET",
+                    "FEISHU_DEFAULT_USER_OPEN_ID",
+                    "FEISHU_DEFAULT_CHAT_ID",
+                ],
+                "missing": [],
+            }
+        },
+        "evidence": {
+            "present": [
+                "feishu-delivery/user-request.redacted.json",
+                "feishu-delivery/user-response.redacted.json",
+            ],
+            "missing": [],
+        },
+        "final_evidence_groups": {
+            "feishu_delivery": {
+                "status": "partial",
+                "present": ["feishu-delivery/user-request.redacted.json"],
+                "missing": ["feishu-delivery/group-response.redacted.json"],
+            }
+        },
+        "evidence_validation": {
+            "passed": [],
+            "missing": [],
+            "failures": [],
+        },
+        "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
+    }
+    spec = preflight.SPIKE_PACKET_SPECS[0]
+    packet = preflight.build_spike_packet(summary, Path("evidence"), spec)
+
+    assert preflight.spike_packet_status(summary, spec) == "blocked"
+    assert "- Closure gate: blocked" in packet
+    assert "final evidence group is `partial`; finish this group before closing the issue" in packet
+
+
 def test_feishu_dry_run_documents_group_webhook_fallback() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_dir = Path(tmp_name) / "feishu-delivery"
@@ -903,6 +945,7 @@ def main() -> int:
     test_preflight_reports_partial_final_evidence_groups()
     test_preflight_packet_lists_status_without_secret_values()
     test_preflight_writes_issue_facing_spike_packets()
+    test_spike_packet_status_blocks_partial_final_evidence_group()
     test_feishu_dry_run_documents_group_webhook_fallback()
     test_feishu_group_webhook_payload_redacts_signature()
     test_readiness_manifest_dry_run_shape()
