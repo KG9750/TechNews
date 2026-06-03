@@ -33,7 +33,8 @@ jobs:
             scripts/spikes/feishu_delivery_spike.py \
             scripts/spikes/model_provider_spike.py \
             scripts/spikes/readiness_manifest.py \
-            scripts/spikes/live_readiness_preflight.py
+            scripts/spikes/live_readiness_preflight.py \
+            scripts/source_owner_review_decision.py
 
       - name: Verify evidence templates cannot pass as live evidence
         run: |

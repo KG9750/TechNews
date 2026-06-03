@@ -25,16 +25,40 @@ This is a product and compliance review workflow, not legal advice. If source te
 
 ## Owner Review Steps
 
-1. Pick an `open` item from `fixtures/source-ingestion/source-owner-review-queue.json`.
-2. Collect the listed `evidence_required` from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes.
-3. Answer every `owner_questions` item in a dated review note.
-4. Decide one outcome:
+1. List open items:
+
+```bash
+python3 scripts/source_owner_review_decision.py --list-open
+```
+
+2. Pick an `open` item from `fixtures/source-ingestion/source-owner-review-queue.json`.
+3. Generate a fillable owner decision draft:
+
+```bash
+python3 scripts/source_owner_review_decision.py --draft src-the-verge
+```
+
+This writes an ignored file under:
+
+```text
+evidence/source-owner-reviews/
+```
+
+4. Collect the listed `evidence_required` from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes.
+5. Answer every `owner_questions` item in the generated decision file.
+6. Decide one outcome:
    - Keep `needs_review` if permission, license obligations, media rules, or rate limits remain unclear.
    - Move to `eligible` only when metadata-only generated summaries, access method, attribution, rate behavior, and media policy are all approved.
    - Move to `blocked` if automated access or summary reuse is disallowed.
    - Move to `deferred` if the source should remain a seed source but not an MVP production source.
-5. Update all affected artifacts in the same change.
-6. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
+7. Validate the completed decision file:
+
+```bash
+python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json
+```
+
+8. Update all affected artifacts in the same change.
+9. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
 
 ## Artifact Update Rules
 
@@ -81,3 +105,4 @@ Required implementation guardrail: <policy row / connector mode / test expectati
 - Queue connector modes match `fixtures/source-ingestion/source-access-policy.json`.
 - Production auto-ingestion and source media reuse stay disabled while review is open.
 - Manual URL and pending-permission sources use the correct review decision type.
+- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, and validating completed decisions.

@@ -119,6 +119,7 @@ These snippets are metadata-only and intentionally omit full article bodies.
 - Sources with unclear terms remain `needs_review` in the registry until the source eligibility checklist is completed.
 - `fixtures/source-ingestion/source-access-policy.json` turns the review matrix into implementation-facing defaults: 7 eligible metadata-only sources are production-enabled, while 25 `needs_review` sources are locked to probe/manual modes until owner review clears them.
 - `fixtures/source-ingestion/source-owner-review-queue.json` turns those 25 open reviews into owner decision items so they can be resolved without weakening the default connector policy.
+- `scripts/source_owner_review_decision.py` can list open source reviews, draft ignored owner-decision files, and validate completed decisions before tracked policy artifacts are changed.
 
 ## Contract Notes
 

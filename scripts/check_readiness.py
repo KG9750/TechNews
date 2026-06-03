@@ -361,6 +361,7 @@ def check_required_files() -> list[str]:
         "scripts/spikes/model_provider_spike.py",
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
+        "scripts/source_owner_review_decision.py",
     ]
     require_files(files)
     return [f"required files present: {len(files)}"]
@@ -725,6 +726,23 @@ def check_source_owner_review_queue() -> list[str]:
     return [f"source owner review queue: {len(items)} needs_review sources tracked for owner decisions"]
 
 
+def check_source_owner_review_decision_helper() -> list[str]:
+    text = read("scripts/source_owner_review_decision.py")
+    for needle in [
+        "fixtures/source-ingestion/source-owner-review-queue.json",
+        "fixtures/source-ingestion/source-access-policy.json",
+        "evidence/source-owner-reviews",
+        "--list-open",
+        "--draft",
+        "--validate",
+        "TEMPLATE_",
+    ]:
+        require(needle in text, f"source owner review decision helper missing: {needle}")
+    for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
+        require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
+    return ["source owner review decision helper: list, draft, and validation commands present"]
+
+
 def _legacy_source_registry_review_notes() -> list[str]:
     text = read("docs/source-registry.md")
     rows = [line for line in text.splitlines() if line.startswith("| src-") and "| first-version |" in line]
@@ -1002,6 +1020,7 @@ def check_readiness_ci_workflow() -> list[str]:
         "python -m py_compile",
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
+        "scripts/source_owner_review_decision.py",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
         "Expected template evidence validation to fail",
         "--require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu",
@@ -1605,6 +1624,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_source_eligibility_reviews,
         check_source_access_policy,
         check_source_owner_review_queue,
+        check_source_owner_review_decision_helper,
         check_taxonomy_template,
         check_briefing_style_guide,
         check_golden_samples,
