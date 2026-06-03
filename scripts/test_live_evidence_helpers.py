@@ -302,7 +302,7 @@ def write_synthetic_live_evidence(evidence_root: Path) -> None:
     )
     (evidence_root / "feishu-delivery").mkdir(parents=True, exist_ok=True)
     (evidence_root / "feishu-delivery/rendered-message.md").write_text(
-        "Source: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
+        "Archive: https://archive.example.invalid/synthetic\nSource: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
         encoding="utf-8",
     )
 
@@ -417,9 +417,30 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     assert not missing
     assert not failures
     assert "Live evidence manifest: declared files and spike run metadata are consistent" in passed
-    assert "Feishu live evidence: user and group delivery responses present" in passed
+    assert "Feishu live evidence: user and group delivery responses with archive/deep-dive link present" in passed
     assert "Archive live evidence: local write and remote sync success present" in passed
     assert "Model live evidence: three live outputs and usage log valid" in passed
+
+
+def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "feishu-delivery/user-response.redacted.json",
+            {"code": 0, "msg": "success", "data": {"message_id": "REDACTED_MESSAGE_ID_USER"}},
+        )
+        write_json(
+            evidence_root / "feishu-delivery/group-response.redacted.json",
+            {"code": 0, "msg": "success", "data": {"message_id": "REDACTED_MESSAGE_ID_GROUP"}},
+        )
+        (evidence_root / "feishu-delivery/rendered-message.md").write_text(
+            "Source: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
+            encoding="utf-8",
+        )
+        _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Feishu rendered message missing Archive or Deep-Dive link" in failures
 
 
 def test_preflight_accepts_synthetic_valid_evidence() -> None:
@@ -467,6 +488,7 @@ def main() -> int:
     test_model_request_validation_rejects_full_body_metadata()
     test_archive_failure_reason_redacts_private_paths()
     test_synthetic_live_evidence_package_passes_gate()
+    test_feishu_live_evidence_requires_archive_or_deep_dive_link()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()
     print("live evidence helper tests passed")

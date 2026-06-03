@@ -996,7 +996,7 @@ def check_feishu_fixture() -> list[str]:
     request = load_json("fixtures/feishu-delivery/internal-app-send-message.request-shape.json")
     rendered = read("fixtures/feishu-delivery/rendered-message.md")
     card_text = json.dumps(card, ensure_ascii=False)
-    for needle in ["AI / Multimodal AI", "Hardware / AI accelerators", "置信提示", "Source"]:
+    for needle in ["AI / Multimodal AI", "Hardware / AI accelerators", "置信提示", "Source", "Archive"]:
         require(needle in rendered or needle in card_text, f"Feishu fixture missing {needle}")
     require(request["user_delivery"]["query"]["receive_id_type"] == "open_id", "user delivery must use open_id")
     require(request["group_delivery"]["query"]["receive_id_type"] == "chat_id", "group delivery must use chat_id")
@@ -1004,7 +1004,7 @@ def check_feishu_fixture() -> list[str]:
     request_text = json.dumps(request)
     leaked = [value for value in forbidden if value in request_text]
     require(not leaked, f"possible Feishu secret or recipient id leaked: {', '.join(leaked)}")
-    return ["Feishu fixture: user/group request shapes and message content valid"]
+    return ["Feishu fixture: user/group request shapes, archive link, and message content valid"]
 
 
 def check_spike_runners() -> list[str]:
@@ -1053,6 +1053,7 @@ def check_spike_runners() -> list[str]:
         "test_archive_failure_reason_redacts_private_paths",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
+        "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
@@ -1457,8 +1458,10 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
     for needle in ["Source", "置信提示"]:
         if needle not in rendered:
             failures.append(f"Feishu rendered message missing {needle}")
+    if not any(needle in rendered for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
+        failures.append("Feishu rendered message missing Archive or Deep-Dive link")
     if not failures:
-        passed.append("Feishu live evidence: user and group delivery responses present")
+        passed.append("Feishu live evidence: user and group delivery responses with archive/deep-dive link present")
     return passed, missing, failures
 
 
