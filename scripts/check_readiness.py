@@ -1024,17 +1024,21 @@ def check_spike_runners() -> list[str]:
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
+    require("check_live_evidence" in preflight_text, "live readiness preflight must validate live evidence content")
+    require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_packet_lists_status_without_secret_values",
+        "test_preflight_reports_template_evidence_validation_failures",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
+        "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight packet helper, and live evidence tests present"]
+    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight packet helper with live evidence validation, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:

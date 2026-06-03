@@ -2,12 +2,14 @@
 """Preflight the live external spike evidence flow.
 
 This helper runs local dry-runs, checks required environment variable names,
-and summarizes missing live evidence files. It writes only under evidence/.
+summarizes missing live evidence files, and reports live evidence validation
+failures. It writes only under evidence/.
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import subprocess
@@ -18,6 +20,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"unable to load module: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+readiness = load_module("check_readiness", ROOT / "scripts/check_readiness.py")
 
 ENV_GROUPS = {
     "feishu": [
@@ -72,6 +86,15 @@ def evidence_summary(evidence_root: Path) -> dict[str, list[str]]:
     return {
         "present": present,
         "missing": missing,
+    }
+
+
+def evidence_validation_summary(evidence_root: Path) -> dict[str, list[str]]:
+    passed, missing, failures = readiness.check_live_evidence(evidence_root)
+    return {
+        "passed": [redact_text(item) for item in passed],
+        "missing": [redact_text(item) for item in missing],
+        "failures": [redact_text(item) for item in failures],
     }
 
 
@@ -191,6 +214,17 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
             "Missing evidence files:",
             markdown_bullets(summary["evidence"]["missing"], empty_label="None missing."),
             "",
+            "## Evidence Validation Status",
+            "",
+            "Passed checks:",
+            markdown_bullets(summary["evidence_validation"]["passed"], empty_label="None passed yet."),
+            "",
+            "Missing validation inputs:",
+            markdown_bullets(summary["evidence_validation"]["missing"], empty_label="None missing."),
+            "",
+            "Validation failures:",
+            markdown_bullets(summary["evidence_validation"]["failures"], empty_label="None."),
+            "",
             "## Helper Dry-Run Results",
             "",
             "\n".join(dry_run_sections),
@@ -251,6 +285,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "dry_run_commands": dry_run_results,
         "environment": env_summary(),
         "evidence": evidence_summary(evidence_root),
+        "evidence_validation": evidence_validation_summary(evidence_root),
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
         "next_commands": [
             "python3 scripts/spikes/feishu_delivery_spike.py",
@@ -262,7 +297,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "notes": [
             "Environment values are not written, only variable names.",
             "Dry-run outputs are generated under ignored evidence/.",
-            "Strict mode fails until all required environment variables and live evidence files are present.",
+            "Strict mode fails until all required environment variables and valid live evidence files are present.",
         ],
     }
 
@@ -280,17 +315,21 @@ def write_markdown(path: Path, text: str) -> None:
 def has_missing_required(summary: dict) -> bool:
     env_missing = any(group["missing"] for group in summary["environment"].values())
     evidence_missing = bool(summary["evidence"]["missing"])
+    validation_missing = bool(summary["evidence_validation"]["missing"])
+    validation_failed = bool(summary["evidence_validation"]["failures"])
     command_failed = any(result["returncode"] != 0 for result in summary["dry_run_commands"])
-    return env_missing or evidence_missing or command_failed
+    return env_missing or evidence_missing or validation_missing or validation_failed or command_failed
 
 
 def print_summary(path: Path, summary: dict) -> None:
     missing_env_count = sum(len(group["missing"]) for group in summary["environment"].values())
     missing_evidence_count = len(summary["evidence"]["missing"])
+    validation_failure_count = len(summary["evidence_validation"]["failures"])
     failed_commands = [result for result in summary["dry_run_commands"] if result["returncode"] != 0]
     print(f"Preflight summary written to {display_path(path)}")
     print(f"Missing environment variables: {missing_env_count}")
     print(f"Missing live evidence files: {missing_evidence_count}")
+    print(f"Live evidence validation failures: {validation_failure_count}")
     if summary["dry_run_commands"]:
         print(f"Helper dry-runs: {len(summary['dry_run_commands']) - len(failed_commands)} passed, {len(failed_commands)} failed")
     else:
@@ -319,7 +358,7 @@ def main() -> int:
         print(f"Preflight packet written to {display_path(packet_path)}")
     print_summary(output_path, summary)
     if args.strict and has_missing_required(summary):
-        print("STRICT preflight failed: environment variables, failed helper dry-runs, or live evidence files are incomplete")
+        print("STRICT preflight failed: environment variables, failed helper dry-runs, or live evidence validation are incomplete")
         return 2
     return 0
 

@@ -87,6 +87,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "# Live Readiness Execution Packet" in packet
     assert "MODEL_API_KEY" in packet
     assert "readiness-manifest.json" in packet
+    assert "Evidence Validation Status" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
     assert secret not in packet
     assert str(preflight.ROOT) not in packet
@@ -107,6 +108,16 @@ def test_readiness_manifest_dry_run_shape() -> None:
     assert payload["spikes"]["feishu_delivery"]["status"] == "missing"
     assert payload["spikes"]["model_provider"]["provider"] == "not_available_dry_run"
     assert payload["spikes"]["archive_storage"]["run_id"] == "not_available_dry_run"
+
+
+def test_preflight_reports_template_evidence_validation_failures() -> None:
+    evidence_root = ROOT / "fixtures/live-evidence-templates"
+    summary = preflight.build_summary(evidence_root, run_helpers=False)
+
+    assert summary["evidence"]["missing"] == []
+    assert summary["evidence_validation"]["failures"]
+    assert any("TEMPLATE_" in failure for failure in summary["evidence_validation"]["failures"])
+    assert preflight.has_missing_required(summary)
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -293,6 +304,18 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     assert "Model live evidence: three live outputs and usage log valid" in passed
 
 
+def test_preflight_accepts_synthetic_valid_evidence() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        summary = preflight.build_summary(evidence_root, run_helpers=False)
+
+    assert summary["evidence"]["missing"] == []
+    assert summary["evidence_validation"]["missing"] == []
+    assert summary["evidence_validation"]["failures"] == []
+    assert len(summary["evidence_validation"]["passed"]) == 4
+
+
 def test_live_evidence_rejects_raw_environment_values() -> None:
     secret = "live-secret-value-123456789"
     with with_env("FEISHU_APP_SECRET", secret):
@@ -309,7 +332,9 @@ def main() -> int:
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_packet_lists_status_without_secret_values()
     test_readiness_manifest_dry_run_shape()
+    test_preflight_reports_template_evidence_validation_failures()
     test_synthetic_live_evidence_package_passes_gate()
+    test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()
     print("live evidence helper tests passed")
     return 0

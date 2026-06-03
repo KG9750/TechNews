@@ -22,7 +22,7 @@ evidence/live-readiness-packet.md
 evidence/readiness-action-packet.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. The top-level readiness action packet links the live packet, source-owner review index and worksheet, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The top-level readiness action packet links the live packet, source-owner review index and worksheet, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
@@ -30,7 +30,7 @@ After credentials and redacted evidence are configured, use strict mode as a qui
 python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet
 ```
 
-Strict mode fails until all required environment variable names and live evidence files are present. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
+Strict mode fails until all required environment variable names are present and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
 
 CI regression coverage:
 
@@ -38,7 +38,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, a synthetic redacted evidence package that exercises the positive live-evidence validator path, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 
