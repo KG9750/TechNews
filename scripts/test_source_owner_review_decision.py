@@ -264,6 +264,46 @@ def test_review_worksheet_writes_worksheet_file() -> None:
         assert "Open Decision Checklist" in text
 
 
+def test_batch_plan_groups_open_items_and_paths() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        review.write_all_packets(evidence_dir)
+
+        plan = review.review_batch_plan(evidence_dir)
+
+        assert "# Source Owner Review Batch Plan" in plan
+        assert "Batch 1 - Access Path Blockers" in plan
+        assert "Batch 2 - RSS Feed Reuse Scope" in plan
+        assert "Batch 3 - Generated Summary And Media Permission" in plan
+        assert "Batch 4 - License Obligations" in plan
+        assert "| Batch 1 - Access Path Blockers | 3 | 0 | 3 | 0 | automated_access_permission, manual_per_item_review |" in plan
+        assert "| Batch 2 - RSS Feed Reuse Scope | 7 | 0 | 7 | 0 | feed_reuse_scope |" in plan
+        assert "| Batch 3 - Generated Summary And Media Permission | 11 | 0 | 11 | 0 | summary_permission |" in plan
+        assert "| Batch 4 - License Obligations | 4 | 0 | 4 | 0 | license_obligation |" in plan
+        assert "| src-anthropic-news | Anthropic News | AI | official | automated_access_permission |" in plan
+        assert "| src-manual-url | Manual URL Inbox | Technology Industry Progress | administrator | manual_per_item_review |" in plan
+        assert "| src-techcrunch | TechCrunch | Technology Industry Progress | mainstream | feed_reuse_scope |" in plan
+        assert "| src-the-verge | The Verge | Technology Industry Progress | mainstream | summary_permission |" in plan
+        assert "| src-nvidia-blog | NVIDIA Blog | Hardware | official | license_obligation |" in plan
+        assert "evidence/source-owner-reviews/src-the-verge.decision.json" in plan
+        assert "evidence/source-owner-reviews/src-the-verge.packet.md" in plan
+        assert "python3 scripts/source_owner_review_decision.py --batch-plan" in plan
+
+
+def test_batch_plan_writes_batch_plan_file() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        review.write_batch_plan(evidence_dir)
+
+        batch_plan_path = evidence_dir / "batch-plan.md"
+        assert batch_plan_path.exists()
+        text = batch_plan_path.read_text(encoding="utf-8")
+        assert "Source Owner Review Batch Plan" in text
+        assert "Batch Summary" in text
+
+
 def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -406,6 +446,8 @@ def main() -> int:
     test_packet_index_writes_index_file()
     test_review_worksheet_includes_decision_fields_and_prompts()
     test_review_worksheet_writes_worksheet_file()
+    test_batch_plan_groups_open_items_and_paths()
+    test_batch_plan_writes_batch_plan_file()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_status_reports_template_drafts_as_invalid()
     test_status_reports_completed_drafts_as_valid()

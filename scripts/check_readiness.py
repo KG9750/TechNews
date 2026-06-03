@@ -745,6 +745,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "--packet-all",
         "--packet-index",
         "--worksheet",
+        "--batch-plan",
         "--refresh-context-all",
         "--validate",
         "--validate-all",
@@ -764,6 +765,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_packet_index_writes_index_file",
         "test_review_worksheet_includes_decision_fields_and_prompts",
         "test_review_worksheet_writes_worksheet_file",
+        "test_batch_plan_groups_open_items_and_paths",
+        "test_batch_plan_writes_batch_plan_file",
         "test_refresh_context_all_updates_existing_drafts_without_overwriting_answers",
         "test_status_reports_template_drafts_as_invalid",
         "test_status_reports_completed_drafts_as_valid",
@@ -779,7 +782,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         require(needle in test_text, f"source owner review decision tests missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, index and worksheet, batch validation, batch apply, and regression tests present"]
+    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, index, worksheet, batch plan, batch validation, batch apply, and regression tests present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:
@@ -1098,11 +1101,13 @@ def check_readiness_action_packet_helper() -> list[str]:
         "live-spike-packets",
         "source-owner-reviews/index.md",
         "source-owner-reviews/worksheet.md",
+        "source-owner-reviews/batch-plan.md",
         "readiness-manifest.json",
         "GitHub Issue Links",
         "MVP Issue Unlock Matrix",
         "MVP_ISSUE_UNLOCKS",
         "mvp_issue_unlock_rows",
+        "batch_plan_path",
         "https://github.com/KG9750/TechNews/issues/3",
         "build_packet",
         "source_owner_summary",
@@ -1115,6 +1120,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "test_action_packet_summarizes_blockers_without_secret_values",
         "test_action_packet_writes_markdown",
         "MVP Issue Unlock Matrix",
+        "source-owner-reviews/batch-plan.md",
     ]:
         require(needle in test_text, f"readiness action packet tests missing: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md"]:

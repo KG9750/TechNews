@@ -21,6 +21,7 @@ DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
+SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
@@ -153,6 +154,7 @@ def source_owner_summary(evidence_root: Path) -> dict:
         "by_decision_needed": by_decision_needed,
         "index_path": display_path(evidence_root / SOURCE_OWNER_INDEX_RELATIVE),
         "worksheet_path": display_path(evidence_root / SOURCE_OWNER_WORKSHEET_RELATIVE),
+        "batch_plan_path": display_path(evidence_root / SOURCE_OWNER_BATCH_PLAN_RELATIVE),
     }
 
 
@@ -390,6 +392,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Live preflight summary: `{display_path(evidence_root / 'live-readiness-preflight.json')}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
+            f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
             "",
             "## GitHub Issue Links",
             "",
@@ -418,6 +421,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "python3 scripts/source_owner_review_decision.py --packet-all",
             "python3 scripts/source_owner_review_decision.py --packet-index",
             "python3 scripts/source_owner_review_decision.py --worksheet",
+            "python3 scripts/source_owner_review_decision.py --batch-plan",
             "python3 scripts/readiness_action_packet.py",
             "python3 scripts/spikes/feishu_delivery_spike.py",
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",

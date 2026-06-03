@@ -20,6 +20,32 @@ REVIEW_PATH = ROOT / "docs/source-eligibility-reviews.md"
 REGISTRY_PATH = ROOT / "docs/source-registry.md"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/source-owner-reviews"
 VALID_DECISIONS = {"eligible", "needs_review", "blocked", "deferred"}
+SOURCE_REVIEW_BATCHES = [
+    {
+        "title": "Batch 1 - Access Path Blockers",
+        "decision_needed": ["automated_access_permission", "manual_per_item_review"],
+        "goal": "Decide whether an automated access path exists before connector work starts.",
+        "default_if_unresolved": "Keep manual-only or per-item review behavior with production auto-ingestion disabled.",
+    },
+    {
+        "title": "Batch 2 - RSS Feed Reuse Scope",
+        "decision_needed": ["feed_reuse_scope"],
+        "goal": "Confirm feed metadata reuse and generated-summary boundaries for public RSS connectors.",
+        "default_if_unresolved": "Keep RSS sources probe-only and disable production auto-ingestion.",
+    },
+    {
+        "title": "Batch 3 - Generated Summary And Media Permission",
+        "decision_needed": ["summary_permission"],
+        "goal": "Confirm generated-summary, source-media, and brand/attribution rules for media and company sources.",
+        "default_if_unresolved": "Allow fixture/manual validation only; keep generated summaries and media blocked for production.",
+    },
+    {
+        "title": "Batch 4 - License Obligations",
+        "decision_needed": ["license_obligation"],
+        "goal": "Resolve NC, share-alike, non-commercial, or explicit permission obligations.",
+        "default_if_unresolved": "Keep source locked, blocked, or deferred rather than enabling automated ingestion.",
+    },
+]
 
 
 class ReviewError(Exception):
@@ -196,6 +222,10 @@ def packet_index_path(evidence_dir: Path) -> Path:
 
 def worksheet_path(evidence_dir: Path) -> Path:
     return evidence_dir / "worksheet.md"
+
+
+def batch_plan_path(evidence_dir: Path) -> Path:
+    return evidence_dir / "batch-plan.md"
 
 
 def markdown_bullets(items: list[str]) -> str:
@@ -542,6 +572,124 @@ def write_worksheet(evidence_dir: Path) -> int:
     return 0
 
 
+def review_batch_plan(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
+    items = load_queue_items()
+    batch_sections = []
+    summary_rows = []
+    assigned_source_ids: set[str] = set()
+
+    for batch in SOURCE_REVIEW_BATCHES:
+        decision_types = set(batch["decision_needed"])
+        source_ids = [
+            source_id
+            for source_id in open_source_ids()
+            if items[source_id]["decision_needed"] in decision_types
+        ]
+        assigned_source_ids.update(source_ids)
+        status_counts = {"valid": 0, "invalid": 0, "missing": 0}
+        rows = []
+        for source_id in source_ids:
+            item = items[source_id]
+            registry = markdown_table_row(REGISTRY_PATH, source_id)
+            state = decision_file_state(evidence_dir, source_id)
+            status_counts[state["status"]] += 1
+            rows.append(
+                "| "
+                + " | ".join(
+                    [
+                        markdown_cell(source_id),
+                        markdown_cell(registry["Source"]),
+                        markdown_cell(registry["Primary section"]),
+                        markdown_cell(registry["Trust tier"]),
+                        markdown_cell(item["decision_needed"]),
+                        markdown_cell(item["default_connector_mode"]),
+                        markdown_cell(state["status"]),
+                        markdown_cell(decision_path(evidence_dir, source_id).relative_to(ROOT)),
+                        markdown_cell(packet_path(evidence_dir, source_id).relative_to(ROOT)),
+                        markdown_cell(item["next_action"]),
+                    ]
+                )
+                + " |"
+            )
+
+        summary_rows.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(batch["title"]),
+                    markdown_cell(len(source_ids)),
+                    markdown_cell(status_counts["valid"]),
+                    markdown_cell(status_counts["invalid"]),
+                    markdown_cell(status_counts["missing"]),
+                    markdown_cell(", ".join(batch["decision_needed"])),
+                    markdown_cell(batch["goal"]),
+                ]
+            )
+            + " |"
+        )
+        batch_sections.extend(
+            [
+                f"## {batch['title']}",
+                "",
+                f"- Goal: {batch['goal']}",
+                f"- Default if unresolved: {batch['default_if_unresolved']}",
+                "",
+                "| Source ID | Source | Primary section | Trust tier | Decision needed | Connector mode | Draft status | Decision file | Packet | Next action |",
+                "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+                *rows,
+                "",
+            ]
+        )
+
+    unassigned = sorted(set(open_source_ids()) - assigned_source_ids)
+    if unassigned:
+        batch_sections.extend(
+            [
+                "## Unassigned Review Items",
+                "",
+                markdown_bullets(unassigned),
+                "",
+            ]
+        )
+
+    return "\n".join(
+        [
+            "# Source Owner Review Batch Plan",
+            "",
+            "This plan is context only. Complete the JSON decision files; do not edit this plan as the source of truth.",
+            "",
+            "## Batch Summary",
+            "",
+            "| Batch | Open items | Valid drafts | Invalid drafts | Missing drafts | Decision types | Goal |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
+            *summary_rows,
+            "",
+            "## Recommended Review Loop",
+            "",
+            "```bash",
+            "python3 scripts/source_owner_review_decision.py --status",
+            "python3 scripts/source_owner_review_decision.py --draft-all",
+            "python3 scripts/source_owner_review_decision.py --packet-all",
+            "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --worksheet",
+            "python3 scripts/source_owner_review_decision.py --batch-plan",
+            "python3 scripts/source_owner_review_decision.py --validate-all",
+            "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+            "```",
+            "",
+            *batch_sections,
+        ]
+    )
+
+
+def write_batch_plan(evidence_dir: Path) -> int:
+    output = batch_plan_path(evidence_dir)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(review_batch_plan(evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner review batch plan written to {output.relative_to(ROOT)}")
+    return 0
+
+
 def refresh_context(path: Path) -> str:
     payload = read_json(path)
     source_id = payload.get("source_id")
@@ -828,6 +976,7 @@ def main() -> int:
     group.add_argument("--packet-all", action="store_true", help="Write derived Markdown review packets for all open owner reviews.")
     group.add_argument("--packet-index", action="store_true", help="Write a derived Markdown review index under evidence/.")
     group.add_argument("--worksheet", action="store_true", help="Write a consolidated owner review worksheet under evidence/.")
+    group.add_argument("--batch-plan", action="store_true", help="Write a prioritized owner review batch plan under evidence/.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
@@ -854,6 +1003,8 @@ def main() -> int:
             return write_packet_index(Path(args.evidence_dir))
         if args.worksheet:
             return write_worksheet(Path(args.evidence_dir))
+        if args.batch_plan:
+            return write_batch_plan(Path(args.evidence_dir))
         if args.refresh_context_all:
             return refresh_all_context(Path(args.evidence_dir))
         if args.validate:
