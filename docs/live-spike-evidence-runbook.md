@@ -29,6 +29,14 @@ python3 scripts/spikes/live_readiness_preflight.py --strict
 
 Strict mode fails until all required environment variable names and live evidence files are present. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
 
+CI regression coverage:
+
+```bash
+python3 scripts/test_live_evidence_helpers.py
+```
+
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, and readiness manifest dry-run shape.
+
 ## Final Gate Command
 
 After credentials and live evidence are available, run:

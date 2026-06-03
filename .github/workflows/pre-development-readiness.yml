@@ -34,8 +34,12 @@ jobs:
             scripts/spikes/model_provider_spike.py \
             scripts/spikes/readiness_manifest.py \
             scripts/spikes/live_readiness_preflight.py \
+            scripts/test_live_evidence_helpers.py \
             scripts/source_owner_review_decision.py \
             scripts/test_source_owner_review_decision.py
+
+      - name: Test live evidence helpers
+        run: python scripts/test_live_evidence_helpers.py
 
       - name: Test source owner review decision helper
         run: python scripts/test_source_owner_review_decision.py
