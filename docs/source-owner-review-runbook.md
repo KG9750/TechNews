@@ -84,6 +84,8 @@ This writes an ignored file under:
 evidence/source-owner-reviews/
 ```
 
+Keep each decision filename matched to its `source_id`, for example `src-the-verge.decision.json` must contain `"source_id": "src-the-verge"`.
+
 9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include exactly one `evidence_checked` entry for each required item, with no duplicates or unlisted evidence labels.
 10. Answer every `owner_questions` item in the generated decision file.
 11. Use real ISO dates: `reviewed_at` and every evidence `checked_at` must be valid `YYYY-MM-DD` dates, and evidence `checked_at` must be on or before `reviewed_at`.

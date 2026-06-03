@@ -761,6 +761,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "evidence_checked has unexpected required_evidence values",
         "parse_review_date",
         "checked_at must be on or before reviewed_at",
+        "expected_source_id_from_path",
+        "decision source_id must match expected source",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -788,6 +790,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_decision_rejects_evidence_checked_after_review_date",
         "test_decision_rejects_placeholder_reviewer",
         "test_decision_rejects_placeholder_policy_field",
+        "test_decision_rejects_mismatched_source_id_filename",
         "test_apply_all_rejects_template_drafts_without_writing",
         "test_apply_all_dry_run_validates_without_writing",
         "test_apply_all_applies_completed_open_reviews",

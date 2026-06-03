@@ -380,7 +380,7 @@ def decision_file_state(evidence_dir: Path, source_id: str) -> dict[str, str]:
     try:
         payload = read_json(path)
         decision = str(payload.get("decision", ""))
-        validated_payload(path)
+        validated_payload(path, expected_source_id=source_id)
     except (ReviewError, json.JSONDecodeError) as error:
         return {
             "status": "invalid",
@@ -789,10 +789,21 @@ def require_markdown_cell(value: object, label: str) -> None:
     require("|" not in value, f"{label} must not contain markdown table pipes")
 
 
-def validated_payload(path: Path) -> dict:
+def expected_source_id_from_path(path: Path) -> str | None:
+    suffix = ".decision.json"
+    if path.name.endswith(suffix):
+        return path.name[: -len(suffix)]
+    return None
+
+
+def validated_payload(path: Path, expected_source_id: str | None = None) -> dict:
     items = load_queue_items()
     payload = read_json(path)
     source_id = payload.get("source_id")
+    if expected_source_id is None:
+        expected_source_id = expected_source_id_from_path(path)
+    if expected_source_id is not None:
+        require(source_id == expected_source_id, f"decision source_id must match expected source: {expected_source_id}")
     require(source_id in items, f"decision source is not in owner review queue: {source_id}")
     item = items[source_id]
     require(item.get("review_status") == "open", f"source owner review is not open: {source_id}")
@@ -873,7 +884,7 @@ def checked_decision_payloads(evidence_dir: Path) -> tuple[list[dict], int, int]
             print(f"MISSING source owner decision: {source_id} -> {path.relative_to(ROOT)}")
             continue
         try:
-            payload = validated_payload(path)
+            payload = validated_payload(path, expected_source_id=source_id)
         except (ReviewError, json.JSONDecodeError) as error:
             invalid += 1
             print(f"INVALID source owner decision: {source_id} -> {error}")

@@ -464,6 +464,16 @@ def test_decision_rejects_placeholder_policy_field() -> None:
         assert_review_error(path, "policy_after_decision.summary_policy must be a concrete review note")
 
 
+def test_decision_rejects_mismatched_source_id_filename() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload_for_source("src-techcrunch", "needs_review")
+        path = tmp / "evidence/source-owner-reviews/src-the-verge.decision.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        assert_review_error(path, "decision source_id must match expected source: src-the-verge")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -560,6 +570,7 @@ def main() -> int:
     test_decision_rejects_evidence_checked_after_review_date()
     test_decision_rejects_placeholder_reviewer()
     test_decision_rejects_placeholder_policy_field()
+    test_decision_rejects_mismatched_source_id_filename()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()
