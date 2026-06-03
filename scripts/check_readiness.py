@@ -1043,6 +1043,9 @@ def check_spike_runners() -> list[str]:
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     require("DRY_RUN_ARTIFACT_FILES" in preflight_text, "live readiness preflight must define dry-run artifact inventory")
     require("dry_run_artifacts" in preflight_text, "live readiness preflight must summarize dry-run artifacts separately")
+    require("FINAL_EVIDENCE_GROUPS" in preflight_text, "live readiness preflight must define final evidence groups")
+    require("final_evidence_groups" in preflight_text, "live readiness preflight must summarize final evidence groups")
+    require("Final Evidence Group Status" in preflight_text, "live readiness preflight packet must report final evidence group status")
     require(
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in preflight_text,
         "live readiness preflight packet must document per-spike dry-run packet generation",
@@ -1056,6 +1059,7 @@ def check_spike_runners() -> list[str]:
     for needle in [
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
+        "test_preflight_reports_partial_final_evidence_groups",
         "test_preflight_packet_lists_status_without_secret_values",
         "test_preflight_writes_issue_facing_spike_packets",
         "test_feishu_dry_run_documents_group_webhook_fallback",
@@ -1073,12 +1077,14 @@ def check_spike_runners() -> list[str]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
     for needle in [
         "summary[\"dry_run_artifacts\"][\"present\"]",
+        "summary[\"final_evidence_groups\"][\"feishu_delivery\"]",
         "They do not count as final live evidence.",
+        "some final evidence files exist",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
     ]:
         require(needle in test_text, f"live evidence helper tests missing dry-run inventory assertion: {needle}")
-    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation, dry-run artifact inventory, per-spike packets, and live evidence tests present"]
+    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation, dry-run artifact inventory, final evidence group status, per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:

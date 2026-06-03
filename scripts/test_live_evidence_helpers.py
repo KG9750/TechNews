@@ -97,6 +97,34 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
         assert "feishu-delivery/user-response.redacted.json" in summary["evidence"]["missing"]
 
 
+def test_preflight_reports_partial_final_evidence_groups() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        rendered_message = evidence_root / "feishu-delivery/rendered-message.md"
+        rendered_message.parent.mkdir(parents=True, exist_ok=True)
+        rendered_message.write_text(
+            "Archive: https://archive.example.invalid/live\nSource: Example Source\n置信提示: Example notice.\n",
+            encoding="utf-8",
+        )
+        summary = preflight.build_summary(evidence_root, run_helpers=False)
+        packet = preflight.build_markdown_packet(
+            summary,
+            evidence_root,
+            evidence_root / "summary.json",
+            evidence_root / "packet.md",
+        )
+
+    feishu_group = summary["final_evidence_groups"]["feishu_delivery"]
+    assert feishu_group["status"] == "partial"
+    assert "feishu-delivery/rendered-message.md" in feishu_group["present"]
+    assert "feishu-delivery/user-response.redacted.json" in feishu_group["missing"]
+    assert "feishu-delivery/group-response.redacted.json" in feishu_group["missing"]
+    assert summary["final_evidence_groups"]["model_provider"]["status"] == "missing"
+    assert "Final Evidence Group Status" in packet
+    assert "some final evidence files exist" in packet
+    assert "- Status: `partial`" in packet
+
+
 def test_preflight_packet_lists_status_without_secret_values() -> None:
     secret = "packet-secret-value-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -113,6 +141,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "# Live Readiness Execution Packet" in packet
     assert "MODEL_API_KEY" in packet
     assert "readiness-manifest.json" in packet
+    assert "Final Evidence Group Status" in packet
     assert "Dry-Run Artifact Inventory" in packet
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
@@ -467,6 +496,9 @@ def test_preflight_accepts_synthetic_valid_evidence() -> None:
             packet = preflight.build_spike_packet(summary, evidence_root, preflight.SPIKE_PACKET_SPECS[0])
 
     assert summary["evidence"]["missing"] == []
+    assert summary["final_evidence_groups"]["feishu_delivery"]["status"] == "complete"
+    assert summary["final_evidence_groups"]["model_provider"]["status"] == "complete"
+    assert summary["final_evidence_groups"]["archive_storage"]["status"] == "complete"
     assert summary["evidence_validation"]["missing"] == []
     assert summary["evidence_validation"]["failures"] == []
     assert len(summary["evidence_validation"]["passed"]) == 4
@@ -487,6 +519,7 @@ def test_live_evidence_rejects_raw_environment_values() -> None:
 def main() -> int:
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
+    test_preflight_reports_partial_final_evidence_groups()
     test_preflight_packet_lists_status_without_secret_values()
     test_preflight_writes_issue_facing_spike_packets()
     test_feishu_dry_run_documents_group_webhook_fallback()

@@ -64,6 +64,27 @@ EVIDENCE_FILES = [
     "archive-storage/local-tree.txt",
     "archive-storage/remote-tree.txt",
 ]
+FINAL_EVIDENCE_GROUPS = {
+    "readiness_manifest": [
+        "readiness-manifest.json",
+    ],
+    "feishu_delivery": [
+        "feishu-delivery/user-response.redacted.json",
+        "feishu-delivery/group-response.redacted.json",
+        "feishu-delivery/rendered-message.md",
+    ],
+    "model_provider": [
+        "model-provider/outputs/high-confidence-news.json",
+        "model-provider/outputs/low-confidence-news.json",
+        "model-provider/outputs/academic-paper.json",
+        "model-provider/usage-log.json",
+    ],
+    "archive_storage": [
+        "archive-storage/sync-result.json",
+        "archive-storage/local-tree.txt",
+        "archive-storage/remote-tree.txt",
+    ],
+}
 DRY_RUN_ARTIFACT_FILES = [
     "readiness-manifest.dry-run.json",
     "feishu-delivery/dry-run-request-shape.redacted.json",
@@ -82,6 +103,7 @@ SPIKE_PACKET_SPECS = [
         "title": "Feishu Delivery",
         "issue_url": "https://github.com/KG9750/TechNews/issues/3",
         "env_group": "feishu",
+        "evidence_group": "feishu_delivery",
         "evidence_prefixes": ["feishu-delivery/"],
         "validation_needles": ["feishu", "feishu-delivery"],
         "commands": [
@@ -96,6 +118,7 @@ SPIKE_PACKET_SPECS = [
         "title": "Model Provider",
         "issue_url": "https://github.com/KG9750/TechNews/issues/5",
         "env_group": "model_provider",
+        "evidence_group": "model_provider",
         "evidence_prefixes": ["model-provider/"],
         "validation_needles": ["model", "model-provider"],
         "commands": [
@@ -110,6 +133,7 @@ SPIKE_PACKET_SPECS = [
         "title": "Archive Storage",
         "issue_url": "https://github.com/KG9750/TechNews/issues/6",
         "env_group": "archive_sync",
+        "evidence_group": "archive_storage",
         "evidence_prefixes": ["archive-storage/"],
         "validation_needles": ["archive", "archive-storage"],
         "commands": [
@@ -140,6 +164,25 @@ def evidence_summary(evidence_root: Path) -> dict[str, list[str]]:
         "present": present,
         "missing": missing,
     }
+
+
+def final_evidence_group_summary(evidence_root: Path) -> dict[str, dict[str, str | list[str]]]:
+    summary = {}
+    for group, files in FINAL_EVIDENCE_GROUPS.items():
+        present = [path for path in files if (evidence_root / path).exists()]
+        missing = [path for path in files if not (evidence_root / path).exists()]
+        if not present:
+            status = "missing"
+        elif missing:
+            status = "partial"
+        else:
+            status = "complete"
+        summary[group] = {
+            "status": status,
+            "present": present,
+            "missing": missing,
+        }
+    return summary
 
 
 def dry_run_artifact_summary(evidence_root: Path) -> dict[str, list[str]]:
@@ -268,6 +311,23 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
     else:
         dry_run_sections.append("- Helper dry-runs were skipped.")
 
+    final_evidence_group_sections = []
+    for group, group_summary in summary["final_evidence_groups"].items():
+        final_evidence_group_sections.extend(
+            [
+                f"### {group}",
+                "",
+                f"- Status: `{group_summary['status']}`",
+                "",
+                "Present final evidence:",
+                markdown_bullets(group_summary["present"], empty_label="None present."),
+                "",
+                "Missing final evidence:",
+                markdown_bullets(group_summary["missing"], empty_label="None missing."),
+                "",
+            ]
+        )
+
     return "\n".join(
         [
             "# Live Readiness Execution Packet",
@@ -291,6 +351,11 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
             "Missing evidence files:",
             markdown_bullets(summary["evidence"]["missing"], empty_label="None missing."),
             "",
+            "## Final Evidence Group Status",
+            "",
+            "A `partial` group means some final evidence files exist, but the spike is still incomplete and must not be closed.",
+            "",
+            *final_evidence_group_sections,
             "## Dry-Run Artifact Inventory",
             "",
             "These files are generated helper outputs. They do not count as final live evidence.",
@@ -365,6 +430,7 @@ def spike_packet_status(summary: dict, spec: dict) -> str:
 
 def build_spike_packet(summary: dict, evidence_root: Path, spec: dict) -> str:
     env = summary["environment"][spec["env_group"]]
+    evidence_group = summary["final_evidence_groups"][spec["evidence_group"]]
     evidence_present = [
         path
         for path in summary["evidence"]["present"]
@@ -417,6 +483,16 @@ def build_spike_packet(summary: dict, evidence_root: Path, spec: dict) -> str:
             "",
             "Missing files:",
             markdown_bullets(evidence_missing, empty_label="None missing."),
+            "",
+            "## Final Evidence Group Status",
+            "",
+            f"- Status: `{evidence_group['status']}`",
+            "",
+            "Present final evidence:",
+            markdown_bullets(evidence_group["present"], empty_label="None present."),
+            "",
+            "Missing final evidence:",
+            markdown_bullets(evidence_group["missing"], empty_label="None missing."),
             "",
             "## Validation Status",
             "",
@@ -474,6 +550,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "dry_run_commands": dry_run_results,
         "environment": env_summary(),
         "evidence": evidence_summary(evidence_root),
+        "final_evidence_groups": final_evidence_group_summary(evidence_root),
         "dry_run_artifacts": dry_run_artifact_summary(evidence_root),
         "evidence_validation": evidence_validation_summary(evidence_root),
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
@@ -525,10 +602,16 @@ def print_summary(path: Path, summary: dict) -> None:
     missing_env_count = sum(len(group["missing"]) for group in summary["environment"].values())
     missing_evidence_count = len(summary["evidence"]["missing"])
     validation_failure_count = len(summary["evidence_validation"]["failures"])
+    partial_groups = [
+        name
+        for name, group in summary["final_evidence_groups"].items()
+        if group["status"] == "partial"
+    ]
     failed_commands = [result for result in summary["dry_run_commands"] if result["returncode"] != 0]
     print(f"Preflight summary written to {display_path(path)}")
     print(f"Missing environment variables: {missing_env_count}")
     print(f"Missing live evidence files: {missing_evidence_count}")
+    print(f"Partial final evidence groups: {len(partial_groups)}")
     print(f"Live evidence validation failures: {validation_failure_count}")
     if summary["dry_run_commands"]:
         print(f"Helper dry-runs: {len(summary['dry_run_commands']) - len(failed_commands)} passed, {len(failed_commands)} failed")
