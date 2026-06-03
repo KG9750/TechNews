@@ -60,6 +60,7 @@ LIVE_WORKSTREAMS = [
         "key": "feishu_delivery",
         "label": "Feishu delivery",
         "env_group": "feishu",
+        "evidence_group": "feishu_delivery",
         "evidence_prefixes": ["feishu-delivery/"],
         "validation_needles": ["feishu", "feishu-delivery"],
     },
@@ -67,6 +68,7 @@ LIVE_WORKSTREAMS = [
         "key": "model_provider",
         "label": "Model provider",
         "env_group": "model_provider",
+        "evidence_group": "model_provider",
         "evidence_prefixes": ["model-provider/"],
         "validation_needles": ["model", "model-provider"],
     },
@@ -74,6 +76,7 @@ LIVE_WORKSTREAMS = [
         "key": "archive_sync",
         "label": "Archive sync",
         "env_group": "archive_sync",
+        "evidence_group": "archive_storage",
         "evidence_prefixes": ["archive-storage/"],
         "validation_needles": ["archive", "archive-storage"],
     },
@@ -204,6 +207,7 @@ def live_workstream_rows(live_summary: dict) -> list[dict[str, object]]:
     for spec in LIVE_WORKSTREAMS:
         env_group = spec["env_group"]
         env_missing = live_summary["environment"][env_group]["missing"]
+        final_group_status = live_summary["final_evidence_groups"][spec["evidence_group"]]["status"]
         files_missing = [
             path
             for path in evidence_missing
@@ -222,7 +226,8 @@ def live_workstream_rows(live_summary: dict) -> list[dict[str, object]]:
         rows.append(
             {
                 "workstream": spec["label"],
-                "status": "blocked" if env_missing or files_missing or validation_missing or validation_failures else "ready for final gate",
+                "status": "blocked" if final_group_status != "complete" or env_missing or files_missing or validation_missing or validation_failures else "ready for final gate",
+                "final_group_status": final_group_status,
                 "missing_env": len(env_missing),
                 "missing_evidence": len(files_missing),
                 "missing_validation": len(validation_missing),
@@ -237,6 +242,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
     for spec in LIVE_WORKSTREAMS:
         row = next(row for row in live_workstream_rows(live_summary) if row["workstream"] == spec["label"])
         blockers = []
+        if row["final_group_status"] != "complete":
+            blockers.append(f"final evidence group {row['final_group_status']}")
         if row["missing_env"]:
             blockers.append(count_phrase(int(row["missing_env"]), "env var", "env vars"))
         if row["missing_evidence"]:
@@ -252,6 +259,11 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
 
     live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
     live_evidence_missing = len(live_summary["evidence"]["missing"])
+    incomplete_final_groups = [
+        group
+        for group, group_summary in live_summary["final_evidence_groups"].items()
+        if group_summary["status"] != "complete"
+    ]
     validation_missing = len(live_summary["evidence_validation"]["missing"])
     validation_failures = len(live_summary["evidence_validation"]["failures"])
     final_blockers = []
@@ -259,6 +271,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
         final_blockers.append(count_phrase(live_env_missing, "env var", "env vars"))
     if live_evidence_missing:
         final_blockers.append(count_phrase(live_evidence_missing, "evidence file", "evidence files"))
+    if incomplete_final_groups:
+        final_blockers.append(count_phrase(len(incomplete_final_groups), "incomplete final evidence group", "incomplete final evidence groups"))
     if validation_missing:
         final_blockers.append(count_phrase(validation_missing, "validation input", "validation inputs"))
     if validation_failures:
@@ -420,6 +434,11 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     source_summary = source_owner_summary(evidence_root)
     live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
     live_evidence_missing = len(live_summary["evidence"]["missing"])
+    incomplete_final_groups = [
+        group
+        for group, group_summary in live_summary["final_evidence_groups"].items()
+        if group_summary["status"] != "complete"
+    ]
     live_validation_missing = len(live_summary["evidence_validation"]["missing"])
     live_validation_failures = len(live_summary["evidence_validation"]["failures"])
     workstream_rows = live_workstream_rows(live_summary)
@@ -446,8 +465,8 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         )
 
     table_rows = [
-        "| Workstream | Status | Missing env vars | Missing evidence files | Missing validation inputs | Validation failures |",
-        "| --- | --- | --- | --- | --- | --- |",
+        "| Workstream | Status | Final evidence group | Missing env vars | Missing evidence files | Missing validation inputs | Validation failures |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in workstream_rows:
         table_rows.append(
@@ -456,6 +475,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                 [
                     markdown_cell(row["workstream"]),
                     markdown_cell(row["status"]),
+                    markdown_cell(row["final_group_status"]),
                     markdown_cell(row["missing_env"]),
                     markdown_cell(row["missing_evidence"]),
                     markdown_cell(row["missing_validation"]),
@@ -479,7 +499,8 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         + " | ".join(
             [
                 "Readiness manifest",
-                "blocked" if "readiness-manifest.json" in live_summary["evidence"]["missing"] or manifest_validation_missing or manifest_validation_failures else "ready for final gate",
+                "blocked" if live_summary["final_evidence_groups"]["readiness_manifest"]["status"] != "complete" or "readiness-manifest.json" in live_summary["evidence"]["missing"] or manifest_validation_missing or manifest_validation_failures else "ready for final gate",
+                live_summary["final_evidence_groups"]["readiness_manifest"]["status"],
                 "0",
                 "1" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "0",
                 str(len(manifest_validation_missing)),
@@ -494,6 +515,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             [
                 "Source owner decisions",
                 "blocked" if source_summary["counts"]["invalid"] or source_summary["counts"]["missing"] else "ready to apply",
+                "not applicable",
                 "0",
                 f"{source_summary['counts']['invalid']} invalid, {source_summary['counts']['missing']} missing",
                 "0",
@@ -522,6 +544,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "",
             f"- Missing live environment variables: {live_env_missing}",
             f"- Missing live evidence files: {live_evidence_missing}",
+            f"- Incomplete final evidence groups: {len(incomplete_final_groups)}",
             f"- Missing live evidence validation inputs: {live_validation_missing}",
             f"- Live evidence validation failures: {live_validation_failures}",
             f"- Open source owner decisions: {source_summary['open']}",

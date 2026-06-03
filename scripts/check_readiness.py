@@ -1299,6 +1299,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "MVP_ISSUE_UNLOCKS",
         "mvp_issue_unlock_rows",
         "mvp_issue_statuses",
+        "evidence_group",
+        "final_group_status",
+        "incomplete final evidence group",
         "write_mvp_issue_packets",
         "--write-mvp-issue-packets",
         "batch_plan_path",
@@ -1316,9 +1319,12 @@ def check_readiness_action_packet_helper() -> list[str]:
         require(needle in text, f"readiness action packet helper missing: {needle}")
     for needle in [
         "test_action_packet_summarizes_blockers_without_secret_values",
+        "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
         "test_mvp_issue_packets_are_written_with_label_guardrails",
         "MVP Issue Unlock Matrix",
+        "Final evidence group",
+        "Feishu delivery spike: final evidence group partial",
         "External Input Request Checklist",
         "FEISHU_APP_ID, FEISHU_APP_SECRET",
         "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET",

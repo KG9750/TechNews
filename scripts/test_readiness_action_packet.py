@@ -48,11 +48,13 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
 
     assert "# Pre-development Readiness Action Packet" in text
     assert "Missing live environment variables:" in text
+    assert "Incomplete final evidence groups:" in text
     assert "Missing live evidence validation inputs:" in text
     assert "Open source owner decisions: 25" in text
     assert "Missing source owner decisions: 25" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
-    assert "Readiness manifest | blocked | 0 | 1" in text
+    assert "Final evidence group | Missing env vars" in text
+    assert "Readiness manifest | blocked | missing | 0 | 1" in text
     assert "Missing validation inputs | Validation failures" in text
     assert "## External Input Request Checklist" in text
     assert "Use this checklist to request missing live-spike inputs without collecting real values" in text
@@ -86,6 +88,38 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text
+
+
+def test_action_packet_blocks_unlocks_on_partial_final_evidence_group() -> None:
+    live_summary = {
+        "environment": {
+            "feishu": {"present": [], "missing": []},
+            "model_provider": {"present": [], "missing": []},
+            "archive_sync": {"present": [], "missing": []},
+        },
+        "evidence": {"present": [], "missing": []},
+        "final_evidence_groups": {
+            "readiness_manifest": {"status": "complete", "present": [], "missing": []},
+            "feishu_delivery": {"status": "partial", "present": [], "missing": []},
+            "model_provider": {"status": "complete", "present": [], "missing": []},
+            "archive_storage": {"status": "complete", "present": [], "missing": []},
+        },
+        "evidence_validation": {"passed": [], "missing": [], "failures": []},
+    }
+    source_summary = {
+        "counts": {"valid": 0, "invalid": 0, "missing": 0},
+    }
+
+    states = packet.prerequisite_states(live_summary, source_summary)
+    statuses = packet.mvp_issue_statuses(live_summary, source_summary)
+    feishu_issue = next(status for status in statuses if status["issue"] == "#17")
+
+    assert states["feishu_delivery"]["status"] == "blocked"
+    assert "final evidence group partial" in states["feishu_delivery"]["detail"]
+    assert states["final_readiness_gate"]["status"] == "blocked"
+    assert "1 incomplete final evidence group" in states["final_readiness_gate"]["detail"]
+    assert feishu_issue["issue_specific_status"] == "blocked"
+    assert "Feishu delivery spike: final evidence group partial" in feishu_issue["blocker_details"]
 
 
 def test_action_packet_writes_markdown() -> None:
@@ -130,6 +164,7 @@ def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
 
 def main() -> int:
     test_action_packet_summarizes_blockers_without_secret_values()
+    test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
     test_mvp_issue_packets_are_written_with_label_guardrails()
     print("readiness action packet tests passed")
