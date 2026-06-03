@@ -127,8 +127,9 @@ def redact_text(text: str) -> str:
 
 
 def display_path(path: Path) -> str:
+    comparable_path = path if path.is_absolute() else ROOT / path
     try:
-        return str(path.relative_to(ROOT))
+        return str(comparable_path.resolve().relative_to(ROOT))
     except ValueError:
         return "REDACTED_EXTERNAL_PATH"
 

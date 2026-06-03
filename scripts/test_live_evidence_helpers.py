@@ -91,6 +91,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert secret not in packet
     assert str(preflight.ROOT) not in packet
     assert str(Path.home()) not in packet
+    assert preflight.display_path(Path("evidence/packet.md")) == "evidence/packet.md"
 
 
 def test_readiness_manifest_dry_run_shape() -> None:
