@@ -12,6 +12,7 @@ The MVP needs reliable ingestion from controlled source types without global cra
 - Normalize every source result into `CandidateItem`.
 - Record connector status, failures, timeouts, and late connector behavior.
 - Respect source eligibility notes, conservative rate limits, and metadata-only storage.
+- Load `fixtures/source-ingestion/source-access-policy.json` and prevent `needs_review` sources from production auto-ingestion.
 
 ## Out of scope
 
@@ -25,6 +26,7 @@ The MVP needs reliable ingestion from controlled source types without global cra
 - Connector failures are recorded and do not abort the whole run.
 - Late connectors can be cut off at the Delivery Deadline.
 - Candidate Items preserve Original Source Anchors and do not store complete copyrighted article bodies.
+- Sources with `production_auto_ingestion: false` are skipped, probe-only, or manual-only according to their policy row.
 
 ## Test expectations
 
@@ -38,6 +40,7 @@ The MVP needs reliable ingestion from controlled source types without global cra
 - `docs/spikes/source-ingestion.md`
 - `docs/source-registry.md`
 - `docs/source-eligibility-checklist.md`
+- `fixtures/source-ingestion/source-access-policy.json`
 - `docs/schemas/minimal-contracts.md`
 
 ## Dependencies

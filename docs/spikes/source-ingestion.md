@@ -12,6 +12,7 @@ Prove that First-Version Sources can be normalized into `CandidateItem` records 
 - Minimal contracts: `docs/schemas/minimal-contracts.md`
 - Source registry: `docs/source-registry.md`
 - Eligibility checklist: `docs/source-eligibility-checklist.md`
+- Connector enforcement policy: `fixtures/source-ingestion/source-access-policy.json`
 
 ## Source Types To Prove
 
@@ -34,6 +35,7 @@ Prove that First-Version Sources can be normalized into `CandidateItem` records 
 - [x] One manual URL normalizes to a CandidateItem.
 - [x] Every sample has `source_name`, `original_title`, `source_url`, `discovered_at`, `source_type`, and eligibility state.
 - [x] No sample stores full article body text.
+- [x] Every first-version source has a machine-readable access policy row that blocks production auto-ingestion while `needs_review`.
 
 ## Evidence To Attach
 
@@ -113,6 +115,7 @@ These snippets are metadata-only and intentionally omit full article bodies.
 - `https://openai.com/index/hello-gpt-4o/` returned HTTP 403 to the metadata-only script. Manual URL ingestion needs graceful failure status and may require browser/manual metadata fallback for some protected sites.
 - `https://huggingface.co/blog/lerobot` returned HTTP 404 during this run, so that golden sample URL should be reviewed before it is used as a live ingestion fixture.
 - Sources with unclear terms remain `needs_review` in the registry until the source eligibility checklist is completed.
+- `fixtures/source-ingestion/source-access-policy.json` turns the review matrix into implementation-facing defaults: 7 eligible metadata-only sources are production-enabled, while 25 `needs_review` sources are locked to probe/manual modes until owner review clears them.
 
 ## Contract Notes
 

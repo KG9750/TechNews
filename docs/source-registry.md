@@ -1,7 +1,7 @@
 # Source Registry
 
 Status: Seed
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 This registry is a starting point for the Source Ingestion Spike. Feed URLs and access terms must be validated before a source is marked fully eligible.
 
@@ -51,3 +51,4 @@ This registry is a starting point for the Source Ingestion Spike. Feed URLs and 
 - Sources without reliable feeds may still be handled through Manual URL Inbox during the MVP.
 - Every first-version source must pass `docs/source-eligibility-checklist.md` before automated ingestion.
 - Current per-source eligibility state is tracked in `docs/source-eligibility-reviews.md`.
+- Implementation-facing connector gates are tracked in `fixtures/source-ingestion/source-access-policy.json`; `needs_review` sources must not be production auto-ingested until their policy rows are updated after owner review.

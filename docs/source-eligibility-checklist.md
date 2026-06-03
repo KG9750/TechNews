@@ -1,7 +1,7 @@
 # Source Eligibility Checklist
 
 Status: Draft
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 Use this checklist before marking a source as first-version eligible in `docs/source-registry.md`.
 
@@ -18,6 +18,20 @@ Use this checklist before marking a source as first-version eligible in `docs/so
 | Attribution | Must preserve source name, original title, and source URL. |
 | Disallowed behavior | Must list scraping, login bypass, paywall bypass, or media reuse limits when relevant. |
 | Eligibility state | `eligible`, `needs_review`, `deferred`, or `blocked`. |
+
+## Connector Enforcement Policy
+
+After review rows are recorded, mirror the implementation-facing decision in `fixtures/source-ingestion/source-access-policy.json`.
+
+Required policy behavior:
+
+- Every first-version source must have a policy row.
+- Policy `eligibility_state` must match `docs/source-eligibility-reviews.md`.
+- `needs_review` sources must have `production_auto_ingestion: false`.
+- `eligible` sources may be enabled only for metadata-only ingestion.
+- Manual URL sources must require per-item review.
+- Full article text must remain `not_stored`.
+- Source media must not be blanket-allowed; media use stays text-only or attribution-gated until source-specific rights are approved.
 
 ## Conservative Defaults
 

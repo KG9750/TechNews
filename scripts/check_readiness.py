@@ -110,6 +110,7 @@ def check_required_files() -> list[str]:
         "docs/source-registry.md",
         "docs/source-eligibility-reviews.md",
         "docs/source-eligibility-checklist.md",
+        "fixtures/source-ingestion/source-access-policy.json",
         "docs/taxonomy/technology-domain-template.md",
         "docs/briefing-style-guide.md",
         "docs/secrets.md",
@@ -255,6 +256,70 @@ def check_source_eligibility_reviews() -> list[str]:
     ]
 
 
+def check_source_access_policy() -> list[str]:
+    registry_rows = parse_markdown_table("docs/source-registry.md")
+    first_version = {row["ID"]: row for row in registry_rows if row["MVP state"] == "first-version"}
+    review_by_id = {row["ID"]: row for row in parse_source_eligibility_reviews()}
+    policy = load_json("fixtures/source-ingestion/source-access-policy.json")
+    require(policy.get("policy_version"), "source access policy must include policy_version")
+    source_policies = policy.get("sources")
+    require(isinstance(source_policies, list), "source access policy must include sources list")
+    policy_by_id = {row["source_id"]: row for row in source_policies}
+    require(len(policy_by_id) == len(source_policies), "source access policy source_id values must be unique")
+
+    missing = sorted(set(first_version) - set(policy_by_id))
+    extra = sorted(set(policy_by_id) - set(first_version))
+    require(not missing, f"source access policy missing first-version sources: {', '.join(missing)}")
+    require(not extra, f"source access policy includes non-first-version sources: {', '.join(extra)}")
+
+    allowed_modes = {
+        "rss_metadata_probe",
+        "rss_metadata_only",
+        "arxiv_api_metadata_only",
+        "manual_url_metadata_per_item_review",
+        "manual_url_metadata_pending_permission",
+        "public_metadata_probe",
+    }
+    production_enabled = 0
+    needs_review_locked = 0
+    for source_id, source in policy_by_id.items():
+        registry = first_version[source_id]
+        review = review_by_id[source_id]
+        require(source["source_type"] == registry["Type"], f"{source_id}: source_type must match registry")
+        require(
+            source["eligibility_state"] == review["Eligibility state"],
+            f"{source_id}: eligibility_state must match source review",
+        )
+        require(source["connector_mode"] in allowed_modes, f"{source_id}: invalid connector_mode")
+        require(source["full_text_storage"] == "not_stored", f"{source_id}: full_text_storage must be not_stored")
+        require(source["media_policy"] != "source_media_allowed", f"{source_id}: media reuse cannot be blanket allowed")
+
+        if source["eligibility_state"] == "eligible":
+            require(source["production_auto_ingestion"] is True, f"{source_id}: eligible source should be enabled")
+            require(source["requires_owner_review"] is False, f"{source_id}: eligible source should not require owner review")
+            production_enabled += 1
+        if source["eligibility_state"] == "needs_review":
+            require(
+                source["production_auto_ingestion"] is False,
+                f"{source_id}: needs_review source must not be production auto-ingested",
+            )
+            require(source["requires_owner_review"] is True, f"{source_id}: needs_review source must require owner review")
+            needs_review_locked += 1
+        if source_id == "src-manual-url":
+            require(source["requires_per_item_review"] is True, "manual URL policy must require per-item review")
+            require(
+                source["connector_mode"] == "manual_url_metadata_per_item_review",
+                "manual URL policy must use per-item review connector mode",
+            )
+        if source["connector_mode"] == "arxiv_api_metadata_only":
+            require("arxiv" in source["rate_policy"], f"{source_id}: arXiv policy must use arXiv rate guidance")
+
+    return [
+        f"source access policy: {len(source_policies)} first-version sources covered",
+        f"source access policy: production-enabled={production_enabled}, needs-review-locked={needs_review_locked}",
+    ]
+
+
 def _legacy_source_registry_review_notes() -> list[str]:
     text = read("docs/source-registry.md")
     rows = [line for line in text.splitlines() if line.startswith("| src-") and "| first-version |" in line]
@@ -306,6 +371,7 @@ def check_golden_samples() -> list[str]:
 def check_json_fixtures() -> list[str]:
     paths = [
         "fixtures/source-ingestion/candidate-items.json",
+        "fixtures/source-ingestion/source-access-policy.json",
         "fixtures/archive-storage/local-archive/2026-06-01/technology/metadata.json",
         "fixtures/feishu-delivery/push-briefing-card-content.json",
         "fixtures/feishu-delivery/internal-app-send-message.request-shape.json",
@@ -740,6 +806,7 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
         check_live_evidence_templates,
         check_source_registry,
         check_source_eligibility_reviews,
+        check_source_access_policy,
         check_golden_samples,
         check_archive_fixture,
         check_model_fixtures,
