@@ -9,6 +9,7 @@ required external environment variables are not present.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -427,6 +428,34 @@ def check_spike_runners() -> list[str]:
     return ["spike runners: Feishu, archive, and model-provider helpers present"]
 
 
+def check_feishu_runner_redaction() -> list[str]:
+    path = ROOT / "scripts/spikes/feishu_delivery_spike.py"
+    spec = importlib.util.spec_from_file_location("feishu_delivery_spike", path)
+    require(spec and spec.loader, "unable to load Feishu delivery spike module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    payload = {
+        "receive_id": "ou_syntheticuserid12345",
+        "receive_id_type": "open_id",
+        "open_id": "ou_syntheticuserid12345",
+        "chat_id": "oc_syntheticchatid12345",
+        "app_id": "cli_syntheticappid12345",
+        "headers": {"Authorization": "Bearer syntheticBearerToken1234567890"},
+        "nested": ["ok", "oc_syntheticchatid98765"],
+    }
+    redacted = module.redact(payload)
+    redacted_text = json.dumps(redacted, ensure_ascii=False)
+    leaked = [
+        pattern_label
+        for pattern_label, pattern in LIVE_EVIDENCE_SECRET_PATTERNS
+        if pattern.search(redacted_text)
+    ]
+    require(not leaked, f"Feishu runner redaction leaked patterns: {', '.join(leaked)}")
+    require(redacted["receive_id"] == "REDACTED", "Feishu runner must redact receive_id")
+    require(redacted["receive_id_type"] == "open_id", "Feishu runner must preserve receive_id_type")
+    return ["Feishu runner redaction: ids and bearer tokens are scrubbed"]
+
+
 def check_readiness_ci_workflow() -> list[str]:
     text = read(".github/workflows/pre-development-readiness.yml")
     for needle in [
@@ -716,6 +745,7 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
         check_model_fixtures,
         check_feishu_fixture,
         check_spike_runners,
+        check_feishu_runner_redaction,
         check_live_evidence_redaction_negative_fixture,
         check_readiness_ci_workflow,
         check_adrs,

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -23,6 +24,24 @@ CARD_PATH = ROOT / "fixtures/feishu-delivery/push-briefing-card-content.json"
 RENDERED_PATH = ROOT / "fixtures/feishu-delivery/rendered-message.md"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/feishu-delivery"
 FEISHU_BASE_URL = "https://open.feishu.cn"
+SENSITIVE_KEY_PARTS = [
+    "authorization",
+    "secret",
+    "token",
+    "tenant",
+]
+SENSITIVE_KEY_EXACT = {
+    "receive_id",
+    "open_id",
+    "chat_id",
+    "app_id",
+}
+SENSITIVE_VALUE_PATTERNS = [
+    re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
+    re.compile(r"\bou_[A-Za-z0-9]{8,}\b"),
+    re.compile(r"\boc_[A-Za-z0-9]{8,}\b"),
+    re.compile(r"\bcli_[A-Za-z0-9]{8,}\b"),
+]
 
 
 class SpikeError(Exception):
@@ -105,13 +124,17 @@ def redact(value):
         redacted = {}
         for key, child in value.items():
             lowered = key.lower()
-            if any(part in lowered for part in ["secret", "token", "authorization", "receive_id"]):
+            if lowered in SENSITIVE_KEY_EXACT or any(part in lowered for part in SENSITIVE_KEY_PARTS):
                 redacted[key] = "REDACTED"
             else:
                 redacted[key] = redact(child)
         return redacted
     if isinstance(value, list):
         return [redact(item) for item in value]
+    if isinstance(value, str):
+        for pattern in SENSITIVE_VALUE_PATTERNS:
+            if pattern.search(value):
+                return "REDACTED"
     return value
 
 

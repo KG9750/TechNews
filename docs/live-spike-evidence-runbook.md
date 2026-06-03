@@ -55,6 +55,7 @@ Validation rules:
 - Rendered message must include a source line and a Confidence Notice.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw tokens, Feishu recipient ids, app ids, authorization headers, private local paths, or raw configured secret/env values.
+- The Feishu runner redacts common sensitive response keys and values before writing evidence; still inspect output and run the final gate before sharing.
 
 Template files:
 
