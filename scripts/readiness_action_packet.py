@@ -2,8 +2,8 @@
 """Generate a top-level pre-development readiness action packet.
 
 This helper writes an ignored Markdown file that points reviewers to the live
-evidence packet and source owner review index. It does not collect credentials
-or replace the authoritative readiness gate.
+evidence packet, source owner review index, and owner worksheet. It does not
+collect credentials or replace the authoritative readiness gate.
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
+SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
@@ -94,6 +95,7 @@ def source_owner_summary(evidence_root: Path) -> dict:
         "counts": counts,
         "by_decision_needed": by_decision_needed,
         "index_path": display_path(evidence_root / SOURCE_OWNER_INDEX_RELATIVE),
+        "worksheet_path": display_path(evidence_root / SOURCE_OWNER_WORKSHEET_RELATIVE),
     }
 
 
@@ -218,6 +220,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Live execution packet: `{display_path(evidence_root / 'live-readiness-packet.md')}`",
             f"- Live preflight summary: `{display_path(evidence_root / 'live-readiness-preflight.json')}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
+            f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             "",
             "## GitHub Issue Links",
             "",
@@ -241,6 +244,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "python3 scripts/source_owner_review_decision.py --draft-all",
             "python3 scripts/source_owner_review_decision.py --packet-all",
             "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --worksheet",
             "python3 scripts/readiness_action_packet.py",
             "python3 scripts/spikes/feishu_delivery_spike.py",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",

@@ -194,6 +194,10 @@ def packet_index_path(evidence_dir: Path) -> Path:
     return evidence_dir / "index.md"
 
 
+def worksheet_path(evidence_dir: Path) -> Path:
+    return evidence_dir / "worksheet.md"
+
+
 def markdown_bullets(items: list[str]) -> str:
     if not items:
         return "- None recorded."
@@ -415,6 +419,7 @@ def review_packet_index(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
             "python3 scripts/source_owner_review_decision.py --draft-all",
             "python3 scripts/source_owner_review_decision.py --packet-all",
             "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --worksheet",
             "python3 scripts/source_owner_review_decision.py --validate-all",
             "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
             "```",
@@ -431,6 +436,109 @@ def write_packet_index(evidence_dir: Path) -> int:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(review_packet_index(evidence_dir) + "\n", encoding="utf-8")
     print(f"Source owner review packet index written to {output.relative_to(ROOT)}")
+    return 0
+
+
+def review_worksheet(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
+    items = load_queue_items()
+    rows = []
+    prompt_sections = []
+    for source_id in open_source_ids():
+        item = items[source_id]
+        registry = markdown_table_row(REGISTRY_PATH, source_id)
+        state = decision_file_state(evidence_dir, source_id)
+        decision_file = decision_path(evidence_dir, source_id).relative_to(ROOT)
+        packet_file = packet_path(evidence_dir, source_id).relative_to(ROOT)
+        evidence_required = item.get("evidence_required", [])
+        owner_questions = item.get("owner_questions", [])
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(source_id),
+                    markdown_cell(registry["Source"]),
+                    markdown_cell(state["status"]),
+                    markdown_cell(item["decision_needed"]),
+                    markdown_cell(decision_file),
+                    markdown_cell(packet_file),
+                    markdown_cell(len(evidence_required)),
+                    markdown_cell(len(owner_questions)),
+                    markdown_cell(item["next_action"]),
+                ]
+            )
+            + " |"
+        )
+        prompt_sections.extend(
+            [
+                f"### {source_id} - {registry['Source']}",
+                "",
+                f"- Decision file: `{decision_file}`",
+                f"- Packet: `{packet_file}`",
+                f"- Current draft status: {state['status']}",
+                f"- Decision needed: {item['decision_needed']}",
+                f"- Default connector mode: {item['default_connector_mode']}",
+                f"- Next action: {item['next_action']}",
+                "",
+                "Evidence required:",
+                "",
+                markdown_bullets(evidence_required),
+                "",
+                "Owner questions:",
+                "",
+                markdown_bullets(owner_questions),
+                "",
+            ]
+        )
+
+    return "\n".join(
+        [
+            "# Source Owner Review Worksheet",
+            "",
+            "This worksheet is context only. Complete the JSON decision files; do not edit this worksheet as the source of truth.",
+            "",
+            f"- Open decisions: {len(rows)}",
+            f"- Decision directory: `{evidence_dir.relative_to(ROOT)}`",
+            "",
+            "## Batch Commands",
+            "",
+            "```bash",
+            "python3 scripts/source_owner_review_decision.py --status",
+            "python3 scripts/source_owner_review_decision.py --draft-all",
+            "python3 scripts/source_owner_review_decision.py --packet-all",
+            "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --worksheet",
+            "python3 scripts/source_owner_review_decision.py --validate-all",
+            "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+            "```",
+            "",
+            "## Decision Fields To Complete",
+            "",
+            "- `reviewed_at` and `reviewed_by`",
+            "- `decision`: one of `eligible`, `needs_review`, `blocked`, or `deferred`",
+            "- every `evidence_checked` item",
+            "- every `owner_question_answers` item",
+            "- `policy_after_decision` with full text storage still `not_stored`",
+            "- `implementation_guardrail`",
+            "- `artifact_updates` Markdown cell text",
+            "",
+            "## Open Decision Checklist",
+            "",
+            "| Source ID | Source | Draft status | Decision needed | Decision file | Packet | Evidence items | Owner questions | Next action |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+            *rows,
+            "",
+            "## Per-Source Prompts",
+            "",
+            *prompt_sections,
+        ]
+    )
+
+
+def write_worksheet(evidence_dir: Path) -> int:
+    output = worksheet_path(evidence_dir)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(review_worksheet(evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner review worksheet written to {output.relative_to(ROOT)}")
     return 0
 
 
@@ -719,6 +827,7 @@ def main() -> int:
     group.add_argument("--packet", metavar="SOURCE_ID", help="Write a derived Markdown review packet under evidence/.")
     group.add_argument("--packet-all", action="store_true", help="Write derived Markdown review packets for all open owner reviews.")
     group.add_argument("--packet-index", action="store_true", help="Write a derived Markdown review index under evidence/.")
+    group.add_argument("--worksheet", action="store_true", help="Write a consolidated owner review worksheet under evidence/.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
@@ -743,6 +852,8 @@ def main() -> int:
             return write_all_packets(Path(args.evidence_dir))
         if args.packet_index:
             return write_packet_index(Path(args.evidence_dir))
+        if args.worksheet:
+            return write_worksheet(Path(args.evidence_dir))
         if args.refresh_context_all:
             return refresh_all_context(Path(args.evidence_dir))
         if args.validate:

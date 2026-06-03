@@ -744,6 +744,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "--packet",
         "--packet-all",
         "--packet-index",
+        "--worksheet",
         "--refresh-context-all",
         "--validate",
         "--validate-all",
@@ -761,6 +762,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_packet_all_writes_every_open_packet",
         "test_packet_index_groups_status_and_paths",
         "test_packet_index_writes_index_file",
+        "test_review_worksheet_includes_decision_fields_and_prompts",
+        "test_review_worksheet_writes_worksheet_file",
         "test_refresh_context_all_updates_existing_drafts_without_overwriting_answers",
         "test_status_reports_template_drafts_as_invalid",
         "test_status_reports_completed_drafts_as_valid",
@@ -776,7 +779,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         require(needle in test_text, f"source owner review decision tests missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, status, context-rich batch draft, review packets and index, batch validation, batch apply, and regression tests present"]
+    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, index and worksheet, batch validation, batch apply, and regression tests present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:
@@ -1069,6 +1072,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "readiness-action-packet.md",
         "live-readiness-packet.md",
         "source-owner-reviews/index.md",
+        "source-owner-reviews/worksheet.md",
         "readiness-manifest.json",
         "GitHub Issue Links",
         "https://github.com/KG9750/TechNews/issues/3",

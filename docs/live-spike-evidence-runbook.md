@@ -22,7 +22,7 @@ evidence/live-readiness-packet.md
 evidence/readiness-action-packet.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. The top-level readiness action packet links the live packet, source-owner review index, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. The top-level readiness action packet links the live packet, source-owner review index and worksheet, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 

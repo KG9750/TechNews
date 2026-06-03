@@ -232,6 +232,38 @@ def test_packet_index_writes_index_file() -> None:
         assert "Open Items By Decision Needed" in text
 
 
+def test_review_worksheet_includes_decision_fields_and_prompts() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        review.write_all_packets(evidence_dir)
+
+        worksheet = review.review_worksheet(evidence_dir)
+
+        assert "# Source Owner Review Worksheet" in worksheet
+        assert "- Open decisions: 25" in worksheet
+        assert "## Decision Fields To Complete" in worksheet
+        assert "`policy_after_decision` with full text storage still `not_stored`" in worksheet
+        assert "| src-the-verge | The Verge | invalid | summary_permission |" in worksheet
+        assert "### src-the-verge - The Verge" in worksheet
+        assert "Vox Media/The Verge terms or permission path" in worksheet
+        assert "Can RSS metadata be used for internal generated summaries?" in worksheet
+        assert "python3 scripts/source_owner_review_decision.py --worksheet" in worksheet
+
+
+def test_review_worksheet_writes_worksheet_file() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        review.write_worksheet(evidence_dir)
+
+        worksheet_path = evidence_dir / "worksheet.md"
+        assert worksheet_path.exists()
+        text = worksheet_path.read_text(encoding="utf-8")
+        assert "Source Owner Review Worksheet" in text
+        assert "Open Decision Checklist" in text
+
+
 def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -372,6 +404,8 @@ def main() -> int:
     test_packet_all_writes_every_open_packet()
     test_packet_index_groups_status_and_paths()
     test_packet_index_writes_index_file()
+    test_review_worksheet_includes_decision_fields_and_prompts()
+    test_review_worksheet_writes_worksheet_file()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_status_reports_template_drafts_as_invalid()
     test_status_reports_completed_drafts_as_valid()
