@@ -1117,6 +1117,14 @@ def check_spike_runners() -> list[str]:
         "usage tasks must match expected output fixtures and input fixture ids" in model_provider_text,
         "model provider runner must validate usage-log task coverage",
     )
+    require(
+        "briefing_item.run_id must match usage-log run_id" in model_provider_text,
+        "model provider runner must validate output run ids against usage log",
+    )
+    require(
+        "model_usage.provider must match usage-log provider" in model_provider_text,
+        "model provider runner must validate output provider metadata against usage log",
+    )
     require("evidence still contains TEMPLATE_ placeholder" in model_provider_text, "model provider runner must reject template evidence")
     require("may leak model provider token" in model_provider_text, "model provider runner must reject leaky evidence")
     manifest_text = read("scripts/spikes/readiness_manifest.py")
@@ -1169,6 +1177,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
         "test_model_usage_log_requires_expected_tasks",
+        "test_model_live_evidence_requires_usage_metadata_consistency",
         "test_model_live_evidence_rejects_full_body_keys",
         "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
@@ -1197,6 +1206,8 @@ def check_spike_runners() -> list[str]:
         "feishu_spike.validate_evidence",
         "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
+        "briefing_item.run_id must match usage-log run_id",
+        "model_usage.provider must match usage-log provider",
         "must not include full-body keys",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",
@@ -1810,6 +1821,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
     missing: list[str] = []
     failures: list[str] = []
     passed: list[str] = []
+    outputs: list[tuple[Path, dict]] = []
     samples = golden_sample_by_id()
     if not output_dir.exists():
         missing.append(f"Model live evidence missing output directory: {output_dir}")
@@ -1820,6 +1832,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
             continue
         check_live_evidence_file(path, failures, f"Model live evidence {profile} output")
         payload = load_json_path(path)
+        outputs.append((path, payload))
         disallowed = sorted(nested_keys(payload) & DISALLOWED_FULL_BODY_KEYS)
         if disallowed:
             failures.append(f"{path}: model live evidence must not include full-body keys: {', '.join(disallowed)}")
@@ -1863,6 +1876,8 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
             failures.append(f"{path}: model_usage.model must identify a live model")
         if int(usage.get("request_count") or 0) <= 0:
             failures.append(f"{path}: model_usage.request_count must be > 0")
+        if usage.get("task_type") != "briefing_item_generation":
+            failures.append(f"{path}: model_usage.task_type must be briefing_item_generation")
     if not usage_path.exists():
         missing.append(f"Model live evidence missing usage log: {usage_path}")
     else:
@@ -1896,6 +1911,15 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
                 failures.append("Model usage log every task request_count must be > 0")
             if "latency_ms" not in task:
                 failures.append("Model usage log every task must include latency_ms")
+        for path, output in outputs:
+            item = output.get("briefing_item", {})
+            usage = output.get("model_usage", {})
+            if item.get("run_id") != usage_log.get("run_id"):
+                failures.append(f"{path}: briefing_item.run_id must match usage-log run_id")
+            if usage.get("provider") != usage_log.get("provider"):
+                failures.append(f"{path}: model_usage.provider must match usage-log provider")
+            if usage.get("model") != usage_log.get("model"):
+                failures.append(f"{path}: model_usage.model must match usage-log model")
     if not failures and not missing:
         passed.append("Model live evidence: three live outputs and usage log valid")
     return passed, missing, failures

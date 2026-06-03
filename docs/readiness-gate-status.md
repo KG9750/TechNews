@@ -167,6 +167,7 @@ Required evidence:
 
 - Redacted request/response for high-confidence news, low-confidence news, and academic paper examples.
 - Provider/model name.
+- Output run ids and output model usage provider/model values matching `usage-log.json`.
 - Request count, token usage when available, latency, and failure reason when present.
 
 Expected evidence files:

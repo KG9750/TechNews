@@ -266,7 +266,7 @@ def validate_requests(evidence_dir: Path) -> int:
     return 0
 
 
-def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> None:
+def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> dict:
     check_evidence_redaction(path)
     payload = json.loads(read_evidence_text(path))
     check_no_full_body_keys(path, payload)
@@ -307,11 +307,14 @@ def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> No
         raise SpikeError(f"{path}: model_usage.model must identify a live model")
     if int(usage.get("request_count") or 0) <= 0:
         raise SpikeError(f"{path}: model_usage.request_count must be > 0")
+    if usage.get("task_type") != "briefing_item_generation":
+        raise SpikeError(f"{path}: model_usage.task_type must be briefing_item_generation")
     if usage.get("failure_reason"):
         raise SpikeError(f"{path}: successful live output must not include failure_reason")
+    return payload
 
 
-def validate_usage_log(path: Path) -> None:
+def validate_usage_log(path: Path) -> dict:
     check_evidence_redaction(path)
     payload = json.loads(read_evidence_text(path))
     check_no_full_body_keys(path, payload)
@@ -337,6 +340,19 @@ def validate_usage_log(path: Path) -> None:
             raise SpikeError(f"{path}: every task request_count must be > 0")
         if "latency_ms" not in task:
             raise SpikeError(f"{path}: every task must include latency_ms")
+    return payload
+
+
+def validate_output_usage_consistency(outputs: dict[Path, dict], usage_log: dict) -> None:
+    for path, payload in outputs.items():
+        item = payload.get("briefing_item", {})
+        usage = payload.get("model_usage", {})
+        if item.get("run_id") != usage_log.get("run_id"):
+            raise SpikeError(f"{path}: briefing_item.run_id must match usage-log run_id")
+        if usage.get("provider") != usage_log.get("provider"):
+            raise SpikeError(f"{path}: model_usage.provider must match usage-log provider")
+        if usage.get("model") != usage_log.get("model"):
+            raise SpikeError(f"{path}: model_usage.model must match usage-log model")
 
 
 def validate_evidence(evidence_dir: Path) -> int:
@@ -345,9 +361,12 @@ def validate_evidence(evidence_dir: Path) -> int:
     output_dir = evidence_dir / "outputs"
     if not output_dir.exists():
         raise SpikeError(f"missing live output directory: {output_dir}")
+    outputs = {}
     for profile_name, fixture_id in PROFILES:
-        validate_briefing_output(output_dir / f"{profile_name}.json", samples[fixture_id], profile_name)
-    validate_usage_log(evidence_dir / "usage-log.json")
+        path = output_dir / f"{profile_name}.json"
+        outputs[path] = validate_briefing_output(path, samples[fixture_id], profile_name)
+    usage_log = validate_usage_log(evidence_dir / "usage-log.json")
+    validate_output_usage_consistency(outputs, usage_log)
     print(f"LIVE model evidence validates: {evidence_dir}")
     return 0
 

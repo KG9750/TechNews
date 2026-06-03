@@ -217,6 +217,9 @@ Validation rules:
 - Each output must preserve the exact Original Source Anchor from its input fixture.
 - Each output must contain three or four Chinese bullets.
 - Low-confidence output must remain `low` and include a Confidence Notice.
+- Each output `briefing_item.run_id` must match `usage-log.json` `run_id`.
+- Each output `model_usage.provider` and `model_usage.model` must match the usage log provider/model.
+- Each output `model_usage.task_type` must be `briefing_item_generation`.
 - Usage log must include three tasks with `request_count > 0` and `latency_ms`.
 - Usage log tasks must use `briefing_item_generation` and exactly match the three expected output fixtures and input fixture ids.
 - Evidence must not contain `TEMPLATE_` placeholders.
