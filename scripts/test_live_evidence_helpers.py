@@ -25,6 +25,7 @@ def load_module(name: str, path: Path):
 preflight = load_module("live_readiness_preflight", ROOT / "scripts/spikes/live_readiness_preflight.py")
 manifest = load_module("readiness_manifest", ROOT / "scripts/spikes/readiness_manifest.py")
 readiness = load_module("check_readiness", ROOT / "scripts/check_readiness.py")
+model_spike = load_module("model_provider_spike", ROOT / "scripts/spikes/model_provider_spike.py")
 
 
 def with_env(name: str, value: str):
@@ -80,10 +81,11 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         results = preflight.run_dry_runs(evidence_root, run_helpers=True)
-        assert len(results) == 4
+        assert len(results) == 5
         assert all(result["returncode"] == 0 for result in results)
         assert (evidence_root / "feishu-delivery/dry-run-request-shape.redacted.json").exists()
         assert (evidence_root / "model-provider/dry-run-summary.json").exists()
+        assert any("--validate-requests" in result["command"] for result in results)
         assert (evidence_root / "archive-storage/dry-run-sync-result.json").exists()
         assert (evidence_root / "readiness-manifest.dry-run.json").exists()
 
@@ -156,6 +158,31 @@ def test_preflight_reports_template_evidence_validation_failures() -> None:
     assert summary["evidence_validation"]["failures"]
     assert any("TEMPLATE_" in failure for failure in summary["evidence_validation"]["failures"])
     assert preflight.has_missing_required(summary)
+
+
+def test_model_request_envelopes_validate_metadata_only() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_dir = Path(tmp_name) / "model-provider"
+        assert model_spike.dry_run(evidence_dir) == 0
+        assert model_spike.validate_requests(evidence_dir) == 0
+        request = json.loads((evidence_dir / "requests/high-confidence-news.request.json").read_text(encoding="utf-8"))
+        summary = json.loads((evidence_dir / "dry-run-summary.json").read_text(encoding="utf-8"))
+
+    assert request["candidate_item"]["raw_metadata"]["raw_metadata_only"] is True
+    assert request["candidate_item"]["source_media"] is None
+    assert summary["request_validation"] == "passed"
+
+
+def test_model_request_validation_rejects_full_body_metadata() -> None:
+    fixture = model_spike.load_golden_samples()["sample-001-openai-gpt-4o"]
+    envelope = model_spike.build_request_envelope("high-confidence-news", fixture)
+    envelope["candidate_item"]["raw_metadata"]["article_body"] = "Synthetic full article body should never enter model spike requests."
+    try:
+        model_spike.validate_request_envelope(envelope, fixture)
+    except model_spike.SpikeError as error:
+        assert "disallowed full-body keys" in str(error)
+    else:
+        raise AssertionError("expected full-body metadata to fail request validation")
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -381,6 +408,8 @@ def main() -> int:
     test_preflight_writes_issue_facing_spike_packets()
     test_readiness_manifest_dry_run_shape()
     test_preflight_reports_template_evidence_validation_failures()
+    test_model_request_envelopes_validate_metadata_only()
+    test_model_request_validation_rejects_full_body_metadata()
     test_synthetic_live_evidence_package_passes_gate()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

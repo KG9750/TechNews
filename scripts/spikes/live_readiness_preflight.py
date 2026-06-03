@@ -89,6 +89,7 @@ SPIKE_PACKET_SPECS = [
         "validation_needles": ["model", "model-provider"],
         "commands": [
             "python3 scripts/spikes/model_provider_spike.py --dry-run",
+            "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
         ],
@@ -154,6 +155,12 @@ def dry_run_commands(evidence_root: Path) -> list[list[str]]:
         [
             "scripts/spikes/model_provider_spike.py",
             "--dry-run",
+            "--evidence-dir",
+            str(evidence_root / "model-provider"),
+        ],
+        [
+            "scripts/spikes/model_provider_spike.py",
+            "--validate-requests",
             "--evidence-dir",
             str(evidence_root / "model-provider"),
         ],
@@ -285,6 +292,7 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
                 [
                     "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet",
                     "python3 scripts/spikes/feishu_delivery_spike.py",
+                    "python3 scripts/spikes/model_provider_spike.py --validate-requests",
                     "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
                     "python3 scripts/spikes/archive_storage_spike.py",
                     "python3 scripts/spikes/readiness_manifest.py",
@@ -440,6 +448,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
         "next_commands": [
             "python3 scripts/spikes/feishu_delivery_spike.py",
+            "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/archive_storage_spike.py",
             "python3 scripts/spikes/readiness_manifest.py",

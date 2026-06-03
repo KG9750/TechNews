@@ -51,6 +51,7 @@ This is observability only. It does not introduce budget caps or automatic low-c
 - [ ] One high-confidence news item produces a valid BriefingItem from a live provider call.
 - [ ] One low-confidence item produces a valid BriefingItem with Confidence Notice from a live provider call.
 - [ ] One academic item produces a valid BriefingItem from a live provider call.
+- [x] Dry-run request envelopes validate as metadata-only before live provider calls.
 - [x] Fixture output references source anchors from inputs only.
 - [x] Fixture output does not invent source media or citations.
 - [x] Usage metadata shape is recorded for every model task.
@@ -61,6 +62,7 @@ This is observability only. It does not introduce budget caps or automatic low-c
 - Structured output examples: `fixtures/model-provider/outputs/`.
 - Usage metadata shape: `fixtures/model-provider/usage-log.json`.
 - Dry-run request envelopes: `python3 scripts/spikes/model_provider_spike.py --dry-run`.
+- Request-envelope validation: `python3 scripts/spikes/model_provider_spike.py --validate-requests`.
 - Live evidence validation: `python3 scripts/spikes/model_provider_spike.py --validate-evidence`.
 - Pending: redacted live request and response examples.
 - Pending: live notes on schema or style-guide changes required by model behavior.

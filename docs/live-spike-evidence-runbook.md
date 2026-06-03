@@ -41,7 +41,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 
@@ -153,7 +153,10 @@ Dry-run request generation:
 
 ```bash
 python3 scripts/spikes/model_provider_spike.py --dry-run
+python3 scripts/spikes/model_provider_spike.py --validate-requests
 ```
+
+`--validate-requests` checks that generated provider-neutral request envelopes preserve the Original Source Anchor, remain metadata-only, omit `source_media`, and do not include full-body keys such as `article_body`, `full_text`, `html`, or `transcript`.
 
 After the chosen provider returns redacted outputs:
 

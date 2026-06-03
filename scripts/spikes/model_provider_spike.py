@@ -30,6 +30,15 @@ PROFILES = [
     ("low-confidence-news", "sample-020-single-source-leak"),
     ("academic-paper", "sample-018-rt-2"),
 ]
+DISALLOWED_RAW_METADATA_KEYS = {
+    "article_body",
+    "body",
+    "content",
+    "full_text",
+    "html",
+    "text",
+    "transcript",
+}
 
 
 class SpikeError(Exception):
@@ -125,6 +134,55 @@ def build_request_envelope(profile_name: str, fixture: dict) -> dict:
     }
 
 
+def nested_keys(value) -> set[str]:
+    if isinstance(value, dict):
+        keys = set(value)
+        for child in value.values():
+            keys.update(nested_keys(child))
+        return keys
+    if isinstance(value, list):
+        keys = set()
+        for child in value:
+            keys.update(nested_keys(child))
+        return keys
+    return set()
+
+
+def validate_request_envelope(envelope: dict, fixture: dict) -> None:
+    if envelope.get("input_fixture_id") != fixture["fixture_id"]:
+        raise SpikeError(f"{envelope.get('profile', 'request')}: input_fixture_id must be {fixture['fixture_id']}")
+    if envelope.get("run_id") != RUN_ID:
+        raise SpikeError(f"{envelope.get('profile', 'request')}: run_id must be {RUN_ID}")
+    if envelope.get("task_type") != "briefing_item_generation":
+        raise SpikeError(f"{envelope.get('profile', 'request')}: task_type must be briefing_item_generation")
+
+    candidate = envelope.get("candidate_item")
+    if not isinstance(candidate, dict):
+        raise SpikeError(f"{envelope.get('profile', 'request')}: candidate_item is required")
+    expected_anchor = fixture["raw_source_metadata"]
+    anchor = candidate.get("original_source_anchor", {})
+    for field in ["source_name", "original_title", "source_url"]:
+        if candidate.get(field) != expected_anchor[field]:
+            raise SpikeError(f"{envelope['profile']}: candidate_item.{field} changed from fixture metadata")
+        if anchor.get(field) != expected_anchor[field]:
+            raise SpikeError(f"{envelope['profile']}: original_source_anchor.{field} changed from fixture metadata")
+
+    raw_metadata = candidate.get("raw_metadata", {})
+    if raw_metadata.get("raw_metadata_only") is not True:
+        raise SpikeError(f"{envelope['profile']}: raw_metadata.raw_metadata_only must be true")
+    disallowed = sorted(nested_keys(raw_metadata) & DISALLOWED_RAW_METADATA_KEYS)
+    if disallowed:
+        raise SpikeError(f"{envelope['profile']}: raw_metadata includes disallowed full-body keys: {', '.join(disallowed)}")
+    if candidate.get("source_media") is not None:
+        raise SpikeError(f"{envelope['profile']}: model spike request must not include source_media")
+
+    style_rules = envelope.get("style_rules", {})
+    if style_rules.get("no_full_article_body_storage") is not True:
+        raise SpikeError(f"{envelope['profile']}: style_rules.no_full_article_body_storage must be true")
+    if style_rules.get("do_not_invent_media_or_citations") is not True:
+        raise SpikeError(f"{envelope['profile']}: style_rules.do_not_invent_media_or_citations must be true")
+
+
 def dry_run(evidence_dir: Path) -> int:
     samples = load_golden_samples()
     request_dir = evidence_dir / "requests"
@@ -132,6 +190,7 @@ def dry_run(evidence_dir: Path) -> int:
     shutil.copyfile(PROMPT_CONTRACT_PATH, evidence_dir / "prompt-contract.md")
     for profile_name, fixture_id in PROFILES:
         envelope = build_request_envelope(profile_name, samples[fixture_id])
+        validate_request_envelope(envelope, samples[fixture_id])
         write_json(request_dir / f"{profile_name}.request.json", envelope)
     write_json(
         evidence_dir / "dry-run-summary.json",
@@ -140,10 +199,24 @@ def dry_run(evidence_dir: Path) -> int:
             "dry_run": True,
             "generated_at_epoch": int(time.time()),
             "request_count": len(PROFILES),
+            "request_validation": "passed",
             "next_step": "Run these request envelopes with the chosen provider and place redacted outputs under evidence/model-provider/outputs/.",
         },
     )
-    print(f"DRY-RUN wrote model request envelopes to {evidence_dir}")
+    print(f"DRY-RUN wrote validated model request envelopes to {evidence_dir}")
+    return 0
+
+
+def validate_requests(evidence_dir: Path) -> int:
+    samples = load_golden_samples()
+    request_dir = evidence_dir / "requests"
+    if not request_dir.exists():
+        raise SpikeError(f"missing request directory: {request_dir}")
+    for profile_name, fixture_id in PROFILES:
+        path = request_dir / f"{profile_name}.request.json"
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+        validate_request_envelope(envelope, samples[fixture_id])
+    print(f"Model request envelopes validate as metadata-only: {request_dir}")
     return 0
 
 
@@ -221,6 +294,7 @@ def validate_evidence(evidence_dir: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Generate provider-neutral request envelopes.")
+    parser.add_argument("--validate-requests", action="store_true", help="Validate generated request envelopes before live provider calls.")
     parser.add_argument("--validate-evidence", action="store_true", help="Validate redacted live provider evidence.")
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     args = parser.parse_args()
@@ -229,9 +303,11 @@ def main() -> int:
     try:
         if args.dry_run:
             return dry_run(evidence_dir)
+        if args.validate_requests:
+            return validate_requests(evidence_dir)
         if args.validate_evidence:
             return validate_evidence(evidence_dir)
-        print("Choose --dry-run or --validate-evidence")
+        print("Choose --dry-run, --validate-requests, or --validate-evidence")
         return 1
     except (FileNotFoundError, json.JSONDecodeError, SpikeError) as error:
         print(f"ERROR {error}")

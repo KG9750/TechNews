@@ -420,6 +420,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "python3 scripts/source_owner_review_decision.py --worksheet",
             "python3 scripts/readiness_action_packet.py",
             "python3 scripts/spikes/feishu_delivery_spike.py",
+            "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/archive_storage_spike.py",
             "python3 scripts/spikes/readiness_manifest.py",
