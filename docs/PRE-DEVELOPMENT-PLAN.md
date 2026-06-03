@@ -26,7 +26,7 @@ Purpose: make the planning work durable before external setup begins.
 Tasks:
 
 - Confirm `gh auth status` succeeds for an account with push and issue-management access.
-- Confirm `git remote -v` points to `https://github.com/KG9750/TechNews.git`.
+- Confirm `git remote -v` points to `KG9750/TechNews` through a canonical HTTPS or SSH remote URL.
 - Commit `AGENTS.md`, `CONTEXT.md`, docs, ADRs, schemas, spike templates, source registry, and fixtures.
 - Push the baseline to GitHub.
 - Create labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`.
@@ -39,7 +39,7 @@ Verification:
 - The GitHub repo contains the pushed baseline.
 - Labels and milestones exist.
 - The tracking issue links to `docs/PRE-DEVELOPMENT-PLAN.md` and `docs/PRD.md`.
-- `python3 scripts/check_readiness.py --require-github` passes when run by a maintainer with `gh` access.
+- `python3 scripts/check_readiness.py --require-github` passes when run by a maintainer with `gh` access, confirming auth, origin remote, default branch, push-capable permission, labels, milestones, and tracker issue state.
 
 ## Phase 1: Minimum Contracts First
 

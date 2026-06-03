@@ -60,6 +60,13 @@ LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/archive-storage/local-tree.txt",
     "fixtures/live-evidence-templates/archive-storage/remote-tree.txt",
 ]
+EXPECTED_GITHUB_REPO = "KG9750/TechNews"
+ALLOWED_ORIGIN_URLS = {
+    "https://github.com/KG9750/TechNews.git",
+    "git@github.com:KG9750/TechNews.git",
+    "ssh://git@github.com/KG9750/TechNews.git",
+}
+GITHUB_WRITE_PERMISSIONS = {"ADMIN", "MAINTAIN", "WRITE"}
 REQUIRED_GITHUB_LABELS = {
     "needs-triage",
     "needs-info",
@@ -90,6 +97,22 @@ def load_json(path: str):
 
 def load_json_path(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def run_command(args: list[str], failure_message: str) -> subprocess.CompletedProcess[str]:
+    try:
+        result = subprocess.run(
+            args,
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise CheckFailure(failure_message) from exc
+    if result.returncode != 0:
+        raise CheckFailure(failure_message)
+    return result
 
 
 def run_gh_json(args: list[str]):
@@ -616,6 +639,29 @@ def check_mvp_issue_drafts() -> list[str]:
 
 
 def check_github_tracker() -> list[str]:
+    run_command(["gh", "auth", "status", "--hostname", "github.com"], "gh auth status must succeed for github.com")
+    origin_url = run_command(["git", "remote", "get-url", "origin"], "git origin remote must exist").stdout.strip()
+    require(
+        origin_url in ALLOWED_ORIGIN_URLS,
+        f"git origin must point to {EXPECTED_GITHUB_REPO} via SSH or HTTPS",
+    )
+
+    repo = run_gh_json(
+        [
+            "repo",
+            "view",
+            EXPECTED_GITHUB_REPO,
+            "--json",
+            "defaultBranchRef,viewerPermission,nameWithOwner",
+        ]
+    )
+    require(repo["nameWithOwner"] == EXPECTED_GITHUB_REPO, f"GitHub repo must be {EXPECTED_GITHUB_REPO}")
+    require(repo["defaultBranchRef"]["name"] == "main", "GitHub default branch must be main")
+    require(
+        repo["viewerPermission"] in GITHUB_WRITE_PERMISSIONS,
+        "GitHub viewer must have write, maintain, or admin permission",
+    )
+
     label_rows = run_gh_json(["label", "list", "--limit", "100", "--json", "name"])
     labels = {row["name"] for row in label_rows}
     missing_labels = sorted(REQUIRED_GITHUB_LABELS - labels)
@@ -671,6 +717,8 @@ def check_github_tracker() -> list[str]:
     require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
 
     return [
+        f"GitHub tracker: origin targets {EXPECTED_GITHUB_REPO} and default branch is main",
+        f"GitHub tracker: viewer permission is {repo['viewerPermission']}",
         f"GitHub tracker: {len(REQUIRED_GITHUB_LABELS)} triage labels present",
         f"GitHub tracker: {len(REQUIRED_GITHUB_MILESTONES)} milestones open",
         f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage",

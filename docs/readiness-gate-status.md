@@ -27,7 +27,7 @@ The GitHub issue tracker gate is checked manually because it requires `gh` acces
 python3 scripts/check_readiness.py --require-github
 ```
 
-This verifies the required triage labels, milestones, pre-development issues, and MVP issue labels. The default CI workflow intentionally does not require this external access.
+This verifies GitHub auth, origin remote identity, default branch, push-capable permission, required triage labels, milestones, pre-development issues, and MVP issue labels. The default CI workflow intentionally does not require this external access.
 
 Local evidence can be checked with:
 
@@ -60,7 +60,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Requirement | Status | Evidence | Remaining gap |
 | --- | --- | --- | --- |
 | Baseline docs are committed and pushed | Passed | Baseline commit `6fa77b1`; current `main` is verified by the latest Pre-development readiness CI and optional GitHub tracker gate | None |
-| GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1; `python3 scripts/check_readiness.py --require-github` verifies tracker state | None |
+| GitHub repo access, labels, milestones, and tracking issue exist | Passed | `--require-github` verifies `gh auth status`, origin remote identity, default branch `main`, push-capable repo permission, labels, milestones, and tracking issue #1 | None |
 | Pre-development readiness CI exists | Passed | `.github/workflows/pre-development-readiness.yml`; `scripts/check_readiness.py` verifies workflow coverage | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; issue #2 closed | None |
 | Feishu delivery spike passes for one user and one group | Blocked | Fixtures in `fixtures/feishu-delivery/`; live evidence template in `fixtures/live-evidence-templates/feishu-delivery/`; issue #3 open `needs-info` | Need Feishu app credentials, user open_id, group chat_id, live send evidence under `evidence/feishu-delivery/` |
