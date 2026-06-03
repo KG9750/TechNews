@@ -999,6 +999,7 @@ def check_spike_runners() -> list[str]:
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
+        "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
     return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight helpers, and live evidence tests present"]

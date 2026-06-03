@@ -35,7 +35,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, readiness manifest dry-run shape, and a synthetic redacted evidence package that exercises the positive live-evidence validator path.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, readiness manifest dry-run shape, a synthetic redacted evidence package that exercises the positive live-evidence validator path, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 

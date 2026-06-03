@@ -270,11 +270,23 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     assert "Model live evidence: three live outputs and usage log valid" in passed
 
 
+def test_live_evidence_rejects_raw_environment_values() -> None:
+    secret = "live-secret-value-123456789"
+    with with_env("FEISHU_APP_SECRET", secret):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            path = Path(tmp_name) / "evidence.json"
+            path.write_text(f'{{"redacted": "{secret}"}}\n', encoding="utf-8")
+            failures: list[str] = []
+            readiness.check_no_sensitive_live_evidence(path, failures, "Synthetic evidence")
+    assert any("contains raw environment value FEISHU_APP_SECRET" in failure for failure in failures)
+
+
 def main() -> int:
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
     test_readiness_manifest_dry_run_shape()
     test_synthetic_live_evidence_package_passes_gate()
+    test_live_evidence_rejects_raw_environment_values()
     print("live evidence helper tests passed")
     return 0
 
