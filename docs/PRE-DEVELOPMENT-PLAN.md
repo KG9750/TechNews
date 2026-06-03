@@ -153,6 +153,7 @@ Verification:
 
 - Every required secret has a variable name, purpose, owner, and setup note.
 - No real secrets are stored in the repo.
+- `python3 scripts/check_readiness.py` verifies `.env.example`, `docs/secrets.md`, and `.gitignore` stay aligned.
 
 ## Phase 3: Product Inputs
 

@@ -39,14 +39,36 @@ LIVE_EVIDENCE_SECRET_PATTERNS = [
     ("private tmp path", re.compile(r"(?<![A-Za-z0-9_./-])/private/")),
     ("iCloud workspace path", re.compile(r"Mobile Documents/com~apple~CloudDocs")),
 ]
+EXPECTED_ENV_EXAMPLE_VARS = [
+    "FEISHU_APP_ID",
+    "FEISHU_APP_SECRET",
+    "FEISHU_TENANT_KEY",
+    "FEISHU_DEFAULT_USER_OPEN_ID",
+    "FEISHU_DEFAULT_CHAT_ID",
+    "FEISHU_GROUP_WEBHOOK_URL",
+    "FEISHU_GROUP_WEBHOOK_SECRET",
+    "MODEL_PROVIDER",
+    "MODEL_API_KEY",
+    "MODEL_DEFAULT_MODEL",
+    "ARCHIVE_LOCAL_ROOT",
+    "ARCHIVE_SYNC_TARGET",
+    "ADMIN_USERNAME",
+    "ADMIN_PASSWORD_HASH",
+    "SESSION_SECRET",
+]
 SENSITIVE_ENV_NAMES = [
     "FEISHU_APP_ID",
     "FEISHU_APP_SECRET",
+    "FEISHU_TENANT_KEY",
     "FEISHU_DEFAULT_USER_OPEN_ID",
     "FEISHU_DEFAULT_CHAT_ID",
+    "FEISHU_GROUP_WEBHOOK_URL",
+    "FEISHU_GROUP_WEBHOOK_SECRET",
     "MODEL_API_KEY",
     "ARCHIVE_LOCAL_ROOT",
     "ARCHIVE_SYNC_TARGET",
+    "ADMIN_PASSWORD_HASH",
+    "SESSION_SECRET",
 ]
 LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
@@ -190,6 +212,68 @@ def check_live_evidence_templates() -> list[str]:
     for path in LIVE_EVIDENCE_TEMPLATE_FILES:
         require(TEMPLATE_MARKER in read(path), f"{path} must contain a TEMPLATE_ placeholder")
     return [f"live evidence templates: {len(LIVE_EVIDENCE_TEMPLATE_FILES)} files present, parseable, and marked"]
+
+
+def parse_env_example() -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line_number, line in enumerate(read(".env.example").splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        require("=" in stripped, f".env.example line {line_number} must be KEY=")
+        key, value = stripped.split("=", 1)
+        require(key and re.match(r"^[A-Z0-9_]+$", key), f".env.example line {line_number} has invalid key")
+        require(key not in values, f".env.example duplicates {key}")
+        values[key] = value
+    return values
+
+
+def parse_secrets_table() -> dict[str, dict[str, str]]:
+    rows: dict[str, dict[str, str]] = {}
+    header: list[str] | None = None
+    for line in read("docs/secrets.md").splitlines():
+        if not line.startswith("|"):
+            continue
+        columns = [part.strip() for part in line.strip().strip("|").split("|")]
+        if columns and columns[0] == "Variable":
+            header = columns
+            continue
+        if not header or not columns or columns[0].startswith("---"):
+            continue
+        variable = columns[0].strip("`")
+        if variable.startswith("_"):
+            continue
+        require(variable and re.match(r"^[A-Z0-9_]+$", variable), f"docs/secrets.md invalid variable row: {columns[0]}")
+        require(len(columns) == len(header), f"docs/secrets.md row {variable} has wrong column count")
+        require(variable not in rows, f"docs/secrets.md duplicates {variable}")
+        rows[variable] = dict(zip(header, columns))
+    return rows
+
+
+def check_secrets_inventory() -> list[str]:
+    expected = set(EXPECTED_ENV_EXAMPLE_VARS)
+    env_values = parse_env_example()
+    env_vars = set(env_values)
+    require(env_vars == expected, ".env.example variables differ from expected secrets inventory")
+    non_empty = sorted(key for key, value in env_values.items() if value)
+    require(not non_empty, ".env.example must not contain real or placeholder values: " + ", ".join(non_empty))
+
+    secrets_rows = parse_secrets_table()
+    secret_vars = set(secrets_rows)
+    require(secret_vars == expected, "docs/secrets.md variables differ from .env.example")
+    for variable, row in secrets_rows.items():
+        for column in ["Purpose", "Required for", "Owner", "Setup note"]:
+            require(row[column].strip(), f"docs/secrets.md {variable} missing {column}")
+        require(row["Owner"] == "Briefing Administrator", f"docs/secrets.md {variable} owner must be Briefing Administrator")
+
+    gitignore = read(".gitignore")
+    for needle in [".env", ".env.*", "!.env.example"]:
+        require(needle in gitignore, f".gitignore missing {needle}")
+    handling = read("docs/secrets.md")
+    for needle in ["Commit `.env.example`, never `.env`", "Redact secrets", "rotate it immediately"]:
+        require(needle in handling, f"docs/secrets.md missing handling rule: {needle}")
+
+    return [f"secrets inventory: {len(expected)} variables documented with empty .env.example values"]
 
 
 def check_source_registry() -> list[str]:
@@ -951,6 +1035,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_required_files,
         check_json_fixtures,
         check_live_evidence_templates,
+        check_secrets_inventory,
         check_source_registry,
         check_source_eligibility_reviews,
         check_source_access_policy,

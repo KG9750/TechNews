@@ -1,7 +1,7 @@
 # Secrets Inventory
 
 Status: Draft
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 Do not store real secrets in this repo. Use `.env.example` for variable names only and configure real values on the Briefing Host.
 
