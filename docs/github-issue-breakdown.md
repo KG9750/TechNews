@@ -21,6 +21,7 @@ Use this breakdown to create GitHub issues after the remaining external spike ev
 ## MVP Issue Drafts
 
 Every draft below contains the required sections: Problem, Scope, Out of scope, Acceptance criteria, Test expectations, Relevant docs, Dependencies, and Triage label.
+`python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, `needs-triage` labels, and the acceptance coverage map.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |

@@ -103,6 +103,44 @@ REQUIRED_GITHUB_MILESTONES = {
 }
 PREDEVELOPMENT_ISSUES = set(range(1, 10))
 MVP_ISSUES = set(range(10, 21))
+MVP_ISSUE_DRAFTS = {
+    10: "docs/issues/mvp/01-repo-ci-foundation.md",
+    11: "docs/issues/mvp/02-contract-schemas.md",
+    12: "docs/issues/mvp/03-taxonomy-source-registry.md",
+    13: "docs/issues/mvp/04-source-connectors.md",
+    14: "docs/issues/mvp/05-ranking-selection-rationale.md",
+    15: "docs/issues/mvp/06-briefing-generation-confidence.md",
+    16: "docs/issues/mvp/07-archive-package.md",
+    17: "docs/issues/mvp/08-feishu-delivery.md",
+    18: "docs/issues/mvp/09-operations-console.md",
+    19: "docs/issues/mvp/10-deployment-secrets.md",
+    20: "docs/issues/mvp/11-e2e-mvp-acceptance.md",
+}
+MVP_ISSUE_REQUIRED_SECTIONS = [
+    "Problem",
+    "Scope",
+    "Out of scope",
+    "Acceptance criteria",
+    "Test expectations",
+    "Relevant docs",
+    "Dependencies",
+    "Triage label",
+]
+MVP_COVERAGE_KEYWORDS = [
+    "First-Version Source type",
+    "Automatic Briefing Run",
+    "Delivery Deadline",
+    "Feishu user",
+    "Feishu group",
+    "Archived Briefing",
+    "Deep-Dive Detail",
+    "Confidence Notice",
+    "Source Media",
+    "without source media",
+    "Related History",
+    "run status",
+    "delivery status",
+]
 CONTRACT_REQUIRED_FIELDS = {
     "CandidateItem": {
         "id",
@@ -395,9 +433,9 @@ def check_secrets_inventory() -> list[str]:
     return [f"secrets inventory: {len(expected)} variables documented with empty .env.example values"]
 
 
-def markdown_section(text: str, heading: str) -> str:
+def markdown_section(text: str, heading: str, context: str = "minimal contracts") -> str:
     match = re.search(rf"^## {re.escape(heading)}\s*$", text, re.MULTILINE)
-    require(match is not None, f"minimal contracts missing section: {heading}")
+    require(match is not None, f"{context} missing section: {heading}")
     next_match = re.search(r"^##\s+", text[match.end() :], re.MULTILINE)
     end = match.end() + next_match.start() if next_match else len(text)
     return text[match.end() : end]
@@ -957,28 +995,106 @@ def check_adrs() -> list[str]:
     ]
 
 
+def markdown_bullet_count(section: str) -> int:
+    return sum(1 for line in section.splitlines() if line.strip().startswith("- "))
+
+
+def parse_issue_markdown_table(section: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for line in section.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if not cells or all(not cell for cell in cells):
+            continue
+        if all(set(cell) <= {"-", ":", " "} for cell in cells):
+            continue
+        rows.append(cells)
+    return rows
+
+
+def check_issue_relevant_docs(path_label: str, section: str) -> None:
+    refs = re.findall(r"`([^`]+)`", section)
+    require(refs, f"{path_label} Relevant docs must include backticked repo paths")
+    for ref in refs:
+        require(
+            ref.startswith(("docs/", "fixtures/", ".env.example", ".gitignore")),
+            f"{path_label} Relevant docs contains unsupported path: {ref}",
+        )
+        require((ROOT / ref).exists(), f"{path_label} Relevant docs path does not exist: {ref}")
+
+
 def check_mvp_issue_drafts() -> list[str]:
     files = sorted((ROOT / "docs/issues/mvp").glob("*.md"))
-    require(len(files) == 11, f"expected 11 MVP issue drafts, found {len(files)}")
-    required = [
-        "## Problem",
-        "## Scope",
-        "## Out of scope",
-        "## Acceptance criteria",
-        "## Test expectations",
-        "## Relevant docs",
-        "## Dependencies",
-        "## Triage label",
-    ]
-    for path in files:
+    expected_paths = {ROOT / path for path in MVP_ISSUE_DRAFTS.values()}
+    actual_paths = set(files)
+    missing_paths = sorted(path.relative_to(ROOT).as_posix() for path in expected_paths - actual_paths)
+    extra_paths = sorted(path.relative_to(ROOT).as_posix() for path in actual_paths - expected_paths)
+    require(not missing_paths, "MVP issue drafts missing: " + ", ".join(missing_paths))
+    require(not extra_paths, "unexpected MVP issue drafts: " + ", ".join(extra_paths))
+
+    for number, draft_path in MVP_ISSUE_DRAFTS.items():
+        path = ROOT / draft_path
+        path_label = path.relative_to(ROOT).as_posix()
         text = path.read_text(encoding="utf-8")
-        for heading in required:
-            require(heading in text, f"{path.relative_to(ROOT)} missing {heading}")
-        require("`needs-triage`" in text, f"{path.relative_to(ROOT)} must stay needs-triage")
+        require(text.startswith("# MVP: "), f"{path_label} must start with an MVP issue title")
+        sections = {
+            heading: markdown_section(text, heading, path_label).strip()
+            for heading in MVP_ISSUE_REQUIRED_SECTIONS
+        }
+        for heading, section in sections.items():
+            require(section, f"{path_label} {heading} section must not be empty")
+            require("TODO" not in section, f"{path_label} {heading} section must not contain TODO")
+        require(len(sections["Problem"].split()) >= 8, f"{path_label} Problem section is too thin")
+        for heading in ["Scope", "Out of scope", "Acceptance criteria", "Test expectations"]:
+            require(markdown_bullet_count(sections[heading]) >= 2, f"{path_label} {heading} must have at least two bullets")
+        require(markdown_bullet_count(sections["Acceptance criteria"]) >= 3, f"{path_label} Acceptance criteria must be concrete")
+        require(markdown_bullet_count(sections["Relevant docs"]) >= 1, f"{path_label} Relevant docs must list repo paths")
+        require(markdown_bullet_count(sections["Dependencies"]) >= 1, f"{path_label} Dependencies must name blockers or prerequisites")
+        check_issue_relevant_docs(path_label, sections["Relevant docs"])
+        require("`needs-triage`" in sections["Triage label"], f"{path_label} must stay needs-triage")
+        require("ready-for-agent" not in sections["Triage label"], f"{path_label} must not be ready-for-agent yet")
+
     breakdown = read("docs/github-issue-breakdown.md")
-    for number in range(10, 21):
-        require(f"#{number}" in breakdown, f"issue breakdown missing #{number}")
-    return ["MVP issue drafts: 11 complete drafts linked to #10-#20"]
+    issue_rows = parse_issue_markdown_table(markdown_section(breakdown, "MVP Issue Drafts", "docs/github-issue-breakdown.md"))
+    issue_rows = [row for row in issue_rows if row[0] != "Module"]
+    for number, draft_path in MVP_ISSUE_DRAFTS.items():
+        matching_rows = [row for row in issue_rows if f"#{number}" in row and f"`{draft_path}`" in row]
+        require(matching_rows, f"issue breakdown missing #{number} mapped to {draft_path}")
+        row_text = " | ".join(matching_rows[0])
+        require("`needs-triage`" in row_text, f"issue breakdown #{number} must stay needs-triage")
+        require("ready-for-agent" not in row_text, f"issue breakdown #{number} must not be ready-for-agent yet")
+
+    coverage_section = markdown_section(breakdown, "Acceptance Coverage Map", "docs/github-issue-breakdown.md")
+    coverage_rows = parse_issue_markdown_table(coverage_section)
+    coverage_rows = [row for row in coverage_rows if row[0] != "MVP acceptance item"]
+    checklist_items = [
+        line
+        for line in markdown_section(read("docs/MVP-SCOPE.md"), "MVP Acceptance Checklist", "docs/MVP-SCOPE.md").splitlines()
+        if line.strip().startswith("- ")
+    ]
+    require(
+        len(coverage_rows) == len(checklist_items),
+        f"acceptance coverage map must have {len(checklist_items)} rows, found {len(coverage_rows)}",
+    )
+    known_stems = {Path(path).stem for path in MVP_ISSUE_DRAFTS.values()}
+    for row in coverage_rows:
+        require(len(row) >= 2, "acceptance coverage map rows must include item and primary issue draft")
+        item, primary = row[0], row[1]
+        require(item and primary, "acceptance coverage map rows must not be empty")
+        require("TODO" not in item and "TODO" not in primary, "acceptance coverage map must not contain TODO")
+        require(
+            any(stem in primary for stem in known_stems),
+            f"acceptance coverage row must reference a known MVP issue draft: {item}",
+        )
+    for keyword in MVP_COVERAGE_KEYWORDS:
+        require(keyword in coverage_section, f"acceptance coverage map missing keyword: {keyword}")
+
+    return [
+        f"MVP issue drafts: {len(MVP_ISSUE_DRAFTS)} mapped drafts linked to #10-#20",
+        "MVP issue drafts: required sections, relevant docs, dependencies, labels, and acceptance coverage verified",
+    ]
 
 
 def check_github_tracker() -> list[str]:

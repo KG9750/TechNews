@@ -223,11 +223,13 @@ Every issue must include:
 - Acceptance criteria.
 - Test expectations.
 - Relevant docs.
+- Dependencies.
 - Triage label.
 
 Verification:
 
 - Every MVP acceptance checklist item maps to at least one issue.
+- `python3 scripts/check_readiness.py` verifies the 11 MVP issue-body drafts, required sections, relevant doc paths, dependency sections, `needs-triage` labels, and acceptance coverage map.
 - Issues with unresolved ADR dependencies stay `needs-triage`.
 - Only decision-complete issues receive `ready-for-agent`.
 - `python3 scripts/check_readiness.py --require-github` confirms MVP issues #10-#20 remain `needs-triage` until the readiness gate passes.
