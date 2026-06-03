@@ -1,0 +1,40 @@
+{
+  "input_fixture_id": "sample-001-openai-gpt-4o",
+  "briefing_item": {
+    "id": "brief_leaky_high_confidence",
+    "run_id": "run_negative_model_provider_redaction",
+    "candidate_id": "cand_openai_gpt4o",
+    "section": "AI",
+    "subcategory": "Multimodal AI",
+    "title_zh": "Synthetic high confidence redaction negative title",
+    "bullets_zh": [
+      "Synthetic negative bullet one.",
+      "Synthetic negative bullet two.",
+      "Synthetic negative bullet three."
+    ],
+    "original_source_anchor": {
+      "source_name": "OpenAI News",
+      "original_title": "Hello GPT-4o",
+      "source_url": "https://openai.com/index/hello-gpt-4o/"
+    },
+    "selection_rationale": {
+      "summary": "Synthetic redaction-negative rationale.",
+      "signals": ["source_trust", "event_impact", "timeliness"]
+    },
+    "confidence_level": "high",
+    "confidence_notice": null,
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "synthetic-live-provider",
+    "model": "synthetic-live-model",
+    "task_type": "briefing_item_generation",
+    "request_count": 1,
+    "input_tokens": 10,
+    "output_tokens": 20,
+    "latency_ms": 100,
+    "failure_reason": "Authorization: Bearer syntheticModelProviderToken1234567890"
+  },
+  "guardrail_notes": ["Synthetic negative fixture intentionally leaks a bearer token."]
+}

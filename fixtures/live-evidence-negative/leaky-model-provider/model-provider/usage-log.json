@@ -1,0 +1,38 @@
+{
+  "run_id": "run_negative_model_provider_redaction",
+  "status": "completed",
+  "provider": "synthetic-live-provider",
+  "model": "synthetic-live-model",
+  "tasks": [
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-001-openai-gpt-4o",
+      "output_fixture": "outputs/high-confidence-news.json",
+      "request_count": 1,
+      "input_tokens": 10,
+      "output_tokens": 20,
+      "latency_ms": 100,
+      "failure_reason": "Bearer syntheticUsageLogToken1234567890"
+    },
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-020-single-source-leak",
+      "output_fixture": "outputs/low-confidence-news.json",
+      "request_count": 1,
+      "input_tokens": 10,
+      "output_tokens": 20,
+      "latency_ms": 100,
+      "failure_reason": null
+    },
+    {
+      "task_type": "briefing_item_generation",
+      "input_fixture_id": "sample-018-rt-2",
+      "output_fixture": "outputs/academic-paper.json",
+      "request_count": 1,
+      "input_tokens": 10,
+      "output_tokens": 20,
+      "latency_ms": 100,
+      "failure_reason": null
+    }
+  ]
+}

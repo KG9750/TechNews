@@ -155,13 +155,15 @@ Template files:
 fixtures/live-evidence-templates/feishu-delivery/
 ```
 
-Synthetic leak-test fixture:
+Synthetic leak-test fixtures:
 
 ```text
 fixtures/live-evidence-negative/leaky-feishu/
+fixtures/live-evidence-negative/leaky-model-provider/
+fixtures/live-evidence-negative/leaky-archive-storage/
 ```
 
-This fixture intentionally contains fake Feishu ids, a fake bearer token, and a fake local path. It must fail validation and is used by CI to prove the redaction scanner is active.
+These fixtures intentionally contain fake Feishu ids, fake bearer tokens, and fake private paths across Feishu, Model Provider, and Archive/storage evidence. They must fail validation and are used by CI to prove the redaction scanner is active across every external evidence workstream.
 
 ## Model Provider
 
@@ -267,3 +269,4 @@ fixtures/live-evidence-templates/archive-storage/
 - Do not replace required fields with `TEMPLATE_...`; the readiness checker rejects template markers in live evidence.
 - Prefer stable redaction labels such as `REDACTED`, `REDACTED_MESSAGE_ID`, `REDACTED_LOCAL_PATH`, and `REDACTED_SYNC_TARGET`.
 - The readiness checker rejects common leak patterns including `Bearer ...`, Feishu `ou_...`/`oc_...`/`cli_...` ids, `/Users/...`, `/private/...`, iCloud workspace paths, and raw values from configured sensitive environment variables.
+- CI runs negative live evidence checks for Feishu, Model Provider, and Archive/storage leak fixtures; each root must fail with the expected validation exit code.

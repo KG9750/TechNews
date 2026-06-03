@@ -1186,7 +1186,10 @@ def check_readiness_ci_workflow() -> list[str]:
         "scripts/test_source_owner_review_decision.py",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
         "Expected template evidence validation to fail",
-        "--require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu",
+        "--require-evidence --evidence-root \"$root\"",
+        "fixtures/live-evidence-negative/leaky-feishu",
+        "fixtures/live-evidence-negative/leaky-model-provider",
+        "fixtures/live-evidence-negative/leaky-archive-storage",
         "Expected leaky evidence validation to fail",
     ]:
         require(needle in text, f"readiness CI workflow missing: {needle}")
@@ -1514,12 +1517,21 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
 
 
 def check_live_evidence_redaction_negative_fixture() -> list[str]:
-    evidence_root = ROOT / "fixtures/live-evidence-negative/leaky-feishu"
-    _, missing, failures = check_feishu_live_evidence(evidence_root)
-    require(not missing, "live evidence redaction negative fixture must include all Feishu files")
-    leak_failures = [failure for failure in failures if "may leak" in failure]
-    require(leak_failures, "live evidence redaction negative fixture must fail on sensitive leak patterns")
-    return [f"live evidence redaction negative fixture: {len(leak_failures)} leak checks fire"]
+    fixture_specs = [
+        ("Feishu", ROOT / "fixtures/live-evidence-negative/leaky-feishu", check_feishu_live_evidence),
+        ("Model", ROOT / "fixtures/live-evidence-negative/leaky-model-provider", check_model_live_evidence),
+        ("Archive", ROOT / "fixtures/live-evidence-negative/leaky-archive-storage", check_archive_live_evidence),
+    ]
+    total_leaks = 0
+    fixture_summaries = []
+    for label, evidence_root, checker in fixture_specs:
+        _, missing, failures = checker(evidence_root)
+        require(not missing, f"live evidence redaction negative fixture must include all {label} files")
+        leak_failures = [failure for failure in failures if "may leak" in failure]
+        require(leak_failures, f"live evidence redaction negative fixture must fail on {label} sensitive leak patterns")
+        total_leaks += len(leak_failures)
+        fixture_summaries.append(f"{label.lower()}={len(leak_failures)}")
+    return [f"live evidence redaction negative fixtures: {total_leaks} leak checks fire ({', '.join(fixture_summaries)})"]
 
 
 def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:

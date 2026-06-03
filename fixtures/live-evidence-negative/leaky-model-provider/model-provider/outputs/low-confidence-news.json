@@ -1,0 +1,40 @@
+{
+  "input_fixture_id": "sample-020-single-source-leak",
+  "briefing_item": {
+    "id": "brief_leaky_low_confidence",
+    "run_id": "run_negative_model_provider_redaction",
+    "candidate_id": "cand_synthetic_low_confidence_ai_hardware",
+    "section": "Hardware",
+    "subcategory": "AI accelerators",
+    "title_zh": "Synthetic low confidence redaction negative title",
+    "bullets_zh": [
+      "Synthetic low confidence negative bullet one.",
+      "Synthetic low confidence negative bullet two.",
+      "Synthetic low confidence negative bullet three."
+    ],
+    "original_source_anchor": {
+      "source_name": "Synthetic Manual URL Fixture",
+      "original_title": "Synthetic single-source report about an unreleased AI hardware product",
+      "source_url": "https://example.invalid/manual-low-confidence-fixture"
+    },
+    "selection_rationale": {
+      "summary": "Synthetic redaction-negative low-confidence rationale.",
+      "signals": ["low_source_count", "manual_url", "synthetic_behavior_exercise"]
+    },
+    "confidence_level": "low",
+    "confidence_notice": "Synthetic confidence notice for a redaction negative fixture.",
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "synthetic-live-provider",
+    "model": "synthetic-live-model",
+    "task_type": "briefing_item_generation",
+    "request_count": 1,
+    "input_tokens": 10,
+    "output_tokens": 20,
+    "latency_ms": 100,
+    "failure_reason": null
+  },
+  "guardrail_notes": ["Synthetic negative fixture keeps schema valid."]
+}

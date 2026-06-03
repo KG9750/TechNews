@@ -62,11 +62,17 @@ jobs:
 
       - name: Verify leaky evidence cannot pass as live evidence
         run: |
-          set +e
-          python scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu
-          status=$?
-          set -e
-          if [ "$status" -ne 1 ]; then
-            echo "Expected leaky evidence validation to fail with exit code 1, got $status"
-            exit 1
-          fi
+          for root in \
+            fixtures/live-evidence-negative/leaky-feishu \
+            fixtures/live-evidence-negative/leaky-model-provider \
+            fixtures/live-evidence-negative/leaky-archive-storage
+          do
+            set +e
+            python scripts/check_readiness.py --require-evidence --evidence-root "$root"
+            status=$?
+            set -e
+            if [ "$status" -ne 1 ]; then
+              echo "Expected leaky evidence validation to fail with exit code 1 for $root, got $status"
+              exit 1
+            fi
+          done

@@ -1,0 +1,40 @@
+{
+  "input_fixture_id": "sample-018-rt-2",
+  "briefing_item": {
+    "id": "brief_leaky_academic",
+    "run_id": "run_negative_model_provider_redaction",
+    "candidate_id": "cand_arxiv_rt2",
+    "section": "Embodied Intelligence",
+    "subcategory": "Recent papers",
+    "title_zh": "Synthetic academic redaction negative title",
+    "bullets_zh": [
+      "Synthetic academic negative bullet one.",
+      "Synthetic academic negative bullet two.",
+      "Synthetic academic negative bullet three."
+    ],
+    "original_source_anchor": {
+      "source_name": "arXiv",
+      "original_title": "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control",
+      "source_url": "https://arxiv.org/abs/2307.15818"
+    },
+    "selection_rationale": {
+      "summary": "Synthetic redaction-negative academic rationale.",
+      "signals": ["academic_source", "embodied_intelligence", "historical_context"]
+    },
+    "confidence_level": "high",
+    "confidence_notice": null,
+    "media_attribution": null,
+    "related_history": []
+  },
+  "model_usage": {
+    "provider": "synthetic-live-provider",
+    "model": "synthetic-live-model",
+    "task_type": "briefing_item_generation",
+    "request_count": 1,
+    "input_tokens": 10,
+    "output_tokens": 20,
+    "latency_ms": 100,
+    "failure_reason": null
+  },
+  "guardrail_notes": ["Synthetic negative fixture keeps schema valid."]
+}

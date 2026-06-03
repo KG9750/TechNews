@@ -1,0 +1,14 @@
+{
+  "run_id": "run_negative_archive_storage_redaction",
+  "local_archive": {
+    "status": "written",
+    "package_path": "/Users/example/private/archive/2026-06-01/technology",
+    "file_count": 4
+  },
+  "remote_sync": {
+    "status": "synced",
+    "target": "/private/tmp/synthetic-nas-target/2026-06-01/technology",
+    "file_count": 4,
+    "retryable": false
+  }
+}
