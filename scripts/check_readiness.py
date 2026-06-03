@@ -347,7 +347,9 @@ def check_required_files() -> list[str]:
         "docs/source-registry.md",
         "docs/source-eligibility-reviews.md",
         "docs/source-eligibility-checklist.md",
+        "docs/source-owner-review-runbook.md",
         "fixtures/source-ingestion/source-access-policy.json",
+        "fixtures/source-ingestion/source-owner-review-queue.json",
         "docs/taxonomy/technology-domain-template.md",
         "docs/briefing-style-guide.md",
         "docs/secrets.md",
@@ -672,6 +674,54 @@ def check_source_access_policy() -> list[str]:
     ]
 
 
+def check_source_owner_review_queue() -> list[str]:
+    review_rows = parse_source_eligibility_reviews()
+    needs_review = {row["ID"]: row for row in review_rows if row["Eligibility state"] == "needs_review"}
+    policy = load_json("fixtures/source-ingestion/source-access-policy.json")
+    policy_by_id = {row["source_id"]: row for row in policy["sources"]}
+    queue = load_json("fixtures/source-ingestion/source-owner-review-queue.json")
+    require(queue.get("queue_version"), "source owner review queue must include queue_version")
+    require(queue.get("default_owner") == "Briefing Administrator", "source owner review queue owner must be Briefing Administrator")
+    require(queue.get("source") == "docs/source-eligibility-reviews.md", "source owner review queue must cite review matrix")
+    items = queue.get("items")
+    require(isinstance(items, list), "source owner review queue must include items list")
+    item_by_id = {item.get("source_id"): item for item in items}
+    require(len(item_by_id) == len(items), "source owner review queue source_id values must be unique")
+    missing = sorted(set(needs_review) - set(item_by_id))
+    extra = sorted(set(item_by_id) - set(needs_review))
+    require(not missing, "source owner review queue missing needs_review sources: " + ", ".join(missing))
+    require(not extra, "source owner review queue includes non-needs_review sources: " + ", ".join(extra))
+
+    allowed_decisions = {
+        "summary_permission",
+        "feed_reuse_scope",
+        "license_obligation",
+        "automated_access_permission",
+        "manual_per_item_review",
+    }
+    for source_id, item in item_by_id.items():
+        source_label = f"source owner review queue {source_id}"
+        policy_row = policy_by_id[source_id]
+        require(item.get("review_owner") == "Briefing Administrator", f"{source_label}: wrong review_owner")
+        require(item.get("default_connector_mode") == policy_row["connector_mode"], f"{source_label}: default_connector_mode must match access policy")
+        require(item.get("production_auto_ingestion_until_resolved") is False, f"{source_label}: production auto-ingestion must stay false")
+        require(item.get("media_use_until_resolved") == "none_until_approved", f"{source_label}: media must stay blocked until approved")
+        decision = item.get("decision_needed")
+        require(decision in allowed_decisions, f"{source_label}: invalid decision_needed {decision}")
+        evidence_required = item.get("evidence_required")
+        owner_questions = item.get("owner_questions")
+        require(isinstance(evidence_required, list) and evidence_required, f"{source_label}: evidence_required must be a non-empty list")
+        require(isinstance(owner_questions, list) and owner_questions, f"{source_label}: owner_questions must be a non-empty list")
+        require(item.get("review_status") == "open", f"{source_label}: review_status must remain open")
+        require(item.get("next_action"), f"{source_label}: missing next_action")
+        if source_id == "src-manual-url":
+            require(decision == "manual_per_item_review", f"{source_label}: manual URL must require per-item review")
+        if policy_row["connector_mode"] == "manual_url_metadata_pending_permission":
+            require(decision == "automated_access_permission", f"{source_label}: pending-permission sources need automated access approval")
+
+    return [f"source owner review queue: {len(items)} needs_review sources tracked for owner decisions"]
+
+
 def _legacy_source_registry_review_notes() -> list[str]:
     text = read("docs/source-registry.md")
     rows = [line for line in text.splitlines() if line.startswith("| src-") and "| first-version |" in line]
@@ -789,6 +839,7 @@ def check_json_fixtures() -> list[str]:
     paths = [
         "fixtures/source-ingestion/candidate-items.json",
         "fixtures/source-ingestion/source-access-policy.json",
+        "fixtures/source-ingestion/source-owner-review-queue.json",
         "fixtures/archive-storage/local-archive/2026-06-01/technology/metadata.json",
         "fixtures/feishu-delivery/push-briefing-card-content.json",
         "fixtures/feishu-delivery/internal-app-send-message.request-shape.json",
@@ -1415,6 +1466,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_source_registry,
         check_source_eligibility_reviews,
         check_source_access_policy,
+        check_source_owner_review_queue,
         check_taxonomy_template,
         check_briefing_style_guide,
         check_golden_samples,

@@ -52,3 +52,4 @@ This registry is a starting point for the Source Ingestion Spike. Feed URLs and 
 - Every first-version source must pass `docs/source-eligibility-checklist.md` before automated ingestion.
 - Current per-source eligibility state is tracked in `docs/source-eligibility-reviews.md`.
 - Implementation-facing connector gates are tracked in `fixtures/source-ingestion/source-access-policy.json`; `needs_review` sources must not be production auto-ingested until their policy rows are updated after owner review.
+- Open owner decisions for `needs_review` sources are tracked in `fixtures/source-ingestion/source-owner-review-queue.json` and closed using `docs/source-owner-review-runbook.md`.

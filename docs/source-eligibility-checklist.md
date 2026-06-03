@@ -22,12 +22,14 @@ Use this checklist before marking a source as first-version eligible in `docs/so
 ## Connector Enforcement Policy
 
 After review rows are recorded, mirror the implementation-facing decision in `fixtures/source-ingestion/source-access-policy.json`.
+For every `needs_review` row, also keep one open owner decision item in `fixtures/source-ingestion/source-owner-review-queue.json`; use `docs/source-owner-review-runbook.md` to close or update those items.
 
 Required policy behavior:
 
 - Every first-version source must have a policy row.
 - Policy `eligibility_state` must match `docs/source-eligibility-reviews.md`.
 - `needs_review` sources must have `production_auto_ingestion: false`.
+- `needs_review` sources must have an open owner review queue item.
 - `eligible` sources may be enabled only for metadata-only ingestion.
 - Manual URL sources must require per-item review.
 - Full article text must remain `not_stored`.

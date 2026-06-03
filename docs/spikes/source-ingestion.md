@@ -13,6 +13,7 @@ Prove that First-Version Sources can be normalized into `CandidateItem` records 
 - Source registry: `docs/source-registry.md`
 - Eligibility checklist: `docs/source-eligibility-checklist.md`
 - Connector enforcement policy: `fixtures/source-ingestion/source-access-policy.json`
+- Owner review queue: `fixtures/source-ingestion/source-owner-review-queue.json`
 
 ## Source Types To Prove
 
@@ -36,6 +37,7 @@ Prove that First-Version Sources can be normalized into `CandidateItem` records 
 - [x] Every sample has `source_name`, `original_title`, `source_url`, `discovered_at`, `source_type`, and eligibility state.
 - [x] No sample stores full article body text.
 - [x] Every first-version source has a machine-readable access policy row that blocks production auto-ingestion while `needs_review`.
+- [x] Every `needs_review` first-version source has an owner review queue item with required evidence and decision questions.
 
 ## Evidence To Attach
 
@@ -116,6 +118,7 @@ These snippets are metadata-only and intentionally omit full article bodies.
 - `https://huggingface.co/blog/lerobot` returned HTTP 404 during this run, so that golden sample URL should be reviewed before it is used as a live ingestion fixture.
 - Sources with unclear terms remain `needs_review` in the registry until the source eligibility checklist is completed.
 - `fixtures/source-ingestion/source-access-policy.json` turns the review matrix into implementation-facing defaults: 7 eligible metadata-only sources are production-enabled, while 25 `needs_review` sources are locked to probe/manual modes until owner review clears them.
+- `fixtures/source-ingestion/source-owner-review-queue.json` turns those 25 open reviews into owner decision items so they can be resolved without weakening the default connector policy.
 
 ## Contract Notes
 
