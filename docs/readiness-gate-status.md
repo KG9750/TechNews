@@ -1,7 +1,7 @@
 # Development Readiness Gate Status
 
 Status: Not passed
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 This file is the current audit trail for the readiness gate in `docs/PRE-DEVELOPMENT-PLAN.md`. It records evidence that has been verified and the remaining evidence required before formal MVP implementation issues can move out of `needs-triage`.
 
@@ -17,7 +17,7 @@ Additional review item:
 
 - Source eligibility: 32 first-version seed sources are covered in `docs/source-eligibility-reviews.md`; all first-version sources now have source-specific evidence or per-URL review rules recorded, and `scripts/check_readiness.py` rejects generic terms-evidence placeholders. 7 metadata/text-only sources are `eligible`, and 25 public/company/manual sources remain `needs_review` before automated production ingestion.
 
-The live spike evidence procedure is now documented in `docs/live-spike-evidence-runbook.md`. Template evidence files live under `fixtures/live-evidence-templates/`; they are examples only, and `scripts/check_readiness.py` rejects any live evidence that still contains `TEMPLATE_` placeholders or common sensitive leak patterns. A synthetic leaky fixture under `fixtures/live-evidence-negative/leaky-feishu/` proves the redaction scanner fails unsafe evidence.
+The live spike evidence procedure is now documented in `docs/live-spike-evidence-runbook.md`. Template evidence files live under `fixtures/live-evidence-templates/`; they are examples only, and `scripts/check_readiness.py` rejects any live evidence that still contains `TEMPLATE_` placeholders or common sensitive leak patterns. A synthetic leaky fixture under `fixtures/live-evidence-negative/leaky-feishu/` proves the redaction scanner fails unsafe evidence. The Feishu spike runner also redacts common sensitive response keys and values before writing evidence, and readiness verifies that recipient ids are scrubbed while `receive_id_type` remains reviewable.
 
 Pre-development readiness is also protected in GitHub Actions by `.github/workflows/pre-development-readiness.yml`. The workflow runs the local readiness checker, compiles the readiness/spike scripts, and proves the tracked evidence templates cannot pass as live evidence. It intentionally does not require live external credentials.
 
@@ -51,7 +51,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 
 | Requirement | Status | Evidence | Remaining gap |
 | --- | --- | --- | --- |
-| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `76a9f74` | None |
+| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `3499f0f` | None |
 | GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1 | None |
 | Pre-development readiness CI exists | Passed | `.github/workflows/pre-development-readiness.yml`; `scripts/check_readiness.py` verifies workflow coverage | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; issue #2 closed | None |
@@ -59,7 +59,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Source ingestion spike normalizes every First-Version Source type | Passed | `docs/spikes/source-ingestion.md`; `fixtures/source-ingestion/candidate-items.json`; issue #4 closed | None |
 | Archive/storage spike passes | Blocked | Local archive fixture in `fixtures/archive-storage/`; live evidence template in `fixtures/live-evidence-templates/archive-storage/`; issue #6 open `needs-info` | Need real NAS/cloud sync target success evidence under `evidence/archive-storage/` |
 | Model Provider spike passes structured output and usage metadata checks | Blocked | Prompt/output fixtures in `fixtures/model-provider/`; live evidence template in `fixtures/live-evidence-templates/model-provider/`; issue #5 open `needs-info` | Need live provider/model, redacted outputs, token/latency/failure metadata under `evidence/model-provider/` |
-| Live evidence runbook and template-negative gate exist | Passed | `docs/live-spike-evidence-runbook.md`; `fixtures/live-evidence-templates/`; `fixtures/live-evidence-negative/leaky-feishu/`; `scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-templates` fails on `TEMPLATE_` placeholders; live evidence also scans for common token/id/path leaks | None |
+| Live evidence runbook and template-negative gate exist | Passed | `docs/live-spike-evidence-runbook.md`; `fixtures/live-evidence-templates/`; `fixtures/live-evidence-negative/leaky-feishu/`; `scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-templates` fails on `TEMPLATE_` placeholders; live evidence scans for common token/id/path leaks; Feishu runner redaction is covered by readiness | None |
 | Technology Domain Template and briefing style guide are drafted | Passed | `docs/taxonomy/technology-domain-template.md`; `docs/briefing-style-guide.md`; issue #7 closed | None |
 | Source registry contains at least 30 seed sources | Passed | `docs/source-registry.md`; 37 total seed sources, 32 first-version, 5 deferred | None |
 | Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; 32 first-version sources covered, 7 `eligible`, 25 `needs_review`; no first-version source remains without recorded evidence or per-URL review rules; placeholder regression is checked by `scripts/check_readiness.py` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
