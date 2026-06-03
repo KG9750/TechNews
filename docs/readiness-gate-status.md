@@ -51,7 +51,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 
 | Requirement | Status | Evidence | Remaining gap |
 | --- | --- | --- | --- |
-| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `3499f0f` | None |
+| Baseline docs are committed and pushed | Passed | Commit `6fa77b1`; current `main` pushed through `63a8d69` | None |
 | GitHub labels, milestones, and tracking issue exist | Passed | Labels and milestones created; tracking issue #1 | None |
 | Pre-development readiness CI exists | Passed | `.github/workflows/pre-development-readiness.yml`; `scripts/check_readiness.py` verifies workflow coverage | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; issue #2 closed | None |
