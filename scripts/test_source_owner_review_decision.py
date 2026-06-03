@@ -171,6 +171,36 @@ def test_draft_all_writes_every_open_review_without_overwriting_existing() -> No
         assert review.contains_template_marker(generated)
 
 
+def test_packet_includes_review_context_and_commands() -> None:
+    packet = review.review_packet("src-the-verge")
+
+    assert "# Source Owner Review Packet: src-the-verge" in packet
+    assert "This packet is context only. Complete the JSON decision file" in packet
+    assert "The Verge" in packet
+    assert "Vox Media/The Verge terms or permission path" in packet
+    assert "Can RSS metadata be used for internal generated summaries?" in packet
+    assert "python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json" in packet
+    assert "python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run" in packet
+
+
+def test_packet_all_writes_every_open_packet() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        review.write_all_packets(evidence_dir)
+
+        open_ids = review.open_source_ids()
+        packet_ids = {
+            path.name.removesuffix(".packet.md")
+            for path in evidence_dir.glob("*.packet.md")
+        }
+        packet_text = (evidence_dir / "src-the-verge.packet.md").read_text(encoding="utf-8")
+
+        assert set(open_ids) == packet_ids
+        assert "The Verge" in packet_text
+        assert "evidence/source-owner-reviews/src-the-verge.decision.json" in packet_text
+
+
 def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -307,6 +337,8 @@ def main() -> int:
     test_draft_requires_owner_input()
     test_draft_includes_current_artifact_context()
     test_draft_all_writes_every_open_review_without_overwriting_existing()
+    test_packet_includes_review_context_and_commands()
+    test_packet_all_writes_every_open_packet()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_status_reports_template_drafts_as_invalid()
     test_status_reports_completed_drafts_as_valid()

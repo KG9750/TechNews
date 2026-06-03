@@ -739,6 +739,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "--status",
         "--draft",
         "--draft-all",
+        "--packet",
+        "--packet-all",
         "--refresh-context-all",
         "--validate",
         "--validate-all",
@@ -752,6 +754,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
     for needle in [
         "test_draft_includes_current_artifact_context",
         "test_draft_all_writes_every_open_review_without_overwriting_existing",
+        "test_packet_includes_review_context_and_commands",
+        "test_packet_all_writes_every_open_packet",
         "test_refresh_context_all_updates_existing_drafts_without_overwriting_answers",
         "test_status_reports_template_drafts_as_invalid",
         "test_status_reports_completed_drafts_as_valid",
@@ -767,7 +771,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         require(needle in test_text, f"source owner review decision tests missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, status, context-rich batch draft, batch validation, batch apply, and regression tests present"]
+    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, batch validation, batch apply, and regression tests present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:

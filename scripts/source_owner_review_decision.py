@@ -186,6 +186,131 @@ def write_all_drafts(evidence_dir: Path) -> int:
     return 0
 
 
+def packet_path(evidence_dir: Path, source_id: str) -> Path:
+    return evidence_dir / f"{source_id}.packet.md"
+
+
+def markdown_bullets(items: list[str]) -> str:
+    if not items:
+        return "- None recorded."
+    return "\n".join(f"- {item}" for item in items)
+
+
+def markdown_fields(row: dict, fields: list[str]) -> str:
+    return "\n".join(f"- {field}: {row.get(field, '')}" for field in fields)
+
+
+def review_packet(source_id: str, evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
+    payload = draft_payload(source_id)
+    context = payload["current_artifact_context"]
+    review_row = context["review_matrix_row"]
+    registry_row = context["source_registry_row"]
+    policy = context["source_access_policy"]
+    item = context["owner_review_queue_item"]
+    decision_file = decision_path(evidence_dir, source_id).relative_to(ROOT)
+
+    return "\n".join(
+        [
+            f"# Source Owner Review Packet: {source_id}",
+            "",
+            "This packet is context only. Complete the JSON decision file; do not edit this packet as the source of truth.",
+            "",
+            f"Decision file: `{decision_file}`",
+            "",
+            "## Source Registry Context",
+            "",
+            markdown_fields(
+                registry_row,
+                [
+                    "Source",
+                    "Type",
+                    "URL or feed",
+                    "Primary section",
+                    "Secondary sections",
+                    "Trust tier",
+                    "Media",
+                    "Eligibility notes",
+                ],
+            ),
+            "",
+            "## Current Eligibility Review",
+            "",
+            markdown_fields(
+                review_row,
+                [
+                    "Eligibility state",
+                    "Access method",
+                    "Terms evidence",
+                    "Summary/storage",
+                    "Media use",
+                    "Rate limit",
+                    "Attribution",
+                    "Disallowed behavior",
+                    "Next action",
+                ],
+            ),
+            "",
+            "## Current Access Policy",
+            "",
+            "\n".join(
+                [
+                    f"- connector_mode: {policy.get('connector_mode', '')}",
+                    f"- production_auto_ingestion: {policy.get('production_auto_ingestion', '')}",
+                    f"- summary_policy: {policy.get('summary_policy', '')}",
+                    f"- media_policy: {policy.get('media_policy', '')}",
+                    f"- rate_policy: {policy.get('rate_policy', '')}",
+                ]
+            ),
+            "",
+            "## Owner Decision Needed",
+            "",
+            "\n".join(
+                [
+                    f"- decision_needed: {item['decision_needed']}",
+                    f"- default_connector_mode: {item['default_connector_mode']}",
+                    f"- next_action: {item['next_action']}",
+                    f"- production_auto_ingestion_until_resolved: {item['production_auto_ingestion_until_resolved']}",
+                    f"- media_use_until_resolved: {item['media_use_until_resolved']}",
+                ]
+            ),
+            "",
+            "## Evidence Required",
+            "",
+            markdown_bullets(item.get("evidence_required", [])),
+            "",
+            "## Owner Questions",
+            "",
+            markdown_bullets(item.get("owner_questions", [])),
+            "",
+            "## Suggested Commands",
+            "",
+            "```bash",
+            f"python3 scripts/source_owner_review_decision.py --validate {decision_file}",
+            f"python3 scripts/source_owner_review_decision.py --apply {decision_file} --dry-run",
+            f"python3 scripts/source_owner_review_decision.py --apply {decision_file}",
+            "```",
+        ]
+    )
+
+
+def write_packet(source_id: str, evidence_dir: Path) -> int:
+    output = packet_path(evidence_dir, source_id)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(review_packet(source_id, evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner review packet written to {output.relative_to(ROOT)}")
+    return 0
+
+
+def write_all_packets(evidence_dir: Path) -> int:
+    source_ids = open_source_ids()
+    for source_id in source_ids:
+        output = packet_path(evidence_dir, source_id)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(review_packet(source_id, evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner review packets prepared: {len(source_ids)} written, {len(source_ids)} open items")
+    return 0
+
+
 def refresh_context(path: Path) -> str:
     payload = read_json(path)
     source_id = payload.get("source_id")
@@ -473,6 +598,8 @@ def main() -> int:
     group.add_argument("--status", action="store_true", help="Report status for every open owner review decision file.")
     group.add_argument("--draft", metavar="SOURCE_ID", help="Write a fillable decision draft under evidence/.")
     group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
+    group.add_argument("--packet", metavar="SOURCE_ID", help="Write a derived Markdown review packet under evidence/.")
+    group.add_argument("--packet-all", action="store_true", help="Write derived Markdown review packets for all open owner reviews.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
@@ -491,6 +618,10 @@ def main() -> int:
             return write_draft(args.draft, Path(args.evidence_dir))
         if args.draft_all:
             return write_all_drafts(Path(args.evidence_dir))
+        if args.packet:
+            return write_packet(args.packet, Path(args.evidence_dir))
+        if args.packet_all:
+            return write_all_packets(Path(args.evidence_dir))
         if args.refresh_context_all:
             return refresh_all_context(Path(args.evidence_dir))
         if args.validate:
