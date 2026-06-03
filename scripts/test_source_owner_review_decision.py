@@ -313,6 +313,41 @@ def test_batch_plan_writes_batch_plan_file() -> None:
         assert "Batch Summary" in text
 
 
+def test_request_packet_groups_batches_and_owner_prompts() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        packet = review.review_request_packet(evidence_dir)
+
+        assert "# Source Owner Decision Request Packet" in packet
+        assert "- Open decisions: 25" in packet
+        assert "Do not enable production auto-ingestion while a source remains `needs_review`." in packet
+        assert "Batch 1 - Access Path Blockers" in packet
+        assert "Batch 2 - RSS Feed Reuse Scope" in packet
+        assert "Batch 3 - Generated Summary And Media Permission" in packet
+        assert "Batch 4 - License Obligations" in packet
+        assert "| src-the-verge | The Verge | summary_permission |" in packet
+        assert "Vox Media/The Verge terms or permission path" in packet
+        assert "Can RSS metadata be used for internal generated summaries?" in packet
+        assert "evidence/source-owner-reviews/src-the-verge.decision.json" in packet
+        assert "python3 scripts/source_owner_review_decision.py --request-packet" in packet
+        assert "python3 scripts/source_owner_review_decision.py --validate-all" in packet
+        assert "python3 scripts/check_readiness.py" in packet
+
+
+def test_request_packet_writes_request_packet_file() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        review.write_request_packet(evidence_dir)
+
+        request_path = evidence_dir / "request-packet.md"
+        assert request_path.exists()
+        text = request_path.read_text(encoding="utf-8")
+        assert "Source Owner Decision Request Packet" in text
+        assert "Owner Prompts" in text
+
+
 def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -628,6 +663,8 @@ def main() -> int:
     test_review_worksheet_writes_worksheet_file()
     test_batch_plan_groups_open_items_and_paths()
     test_batch_plan_writes_batch_plan_file()
+    test_request_packet_groups_batches_and_owner_prompts()
+    test_request_packet_writes_request_packet_file()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_status_reports_template_drafts_as_invalid()
     test_status_reports_completed_drafts_as_valid()

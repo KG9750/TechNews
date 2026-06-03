@@ -283,6 +283,10 @@ def batch_plan_path(evidence_dir: Path) -> Path:
     return evidence_dir / "batch-plan.md"
 
 
+def request_packet_path(evidence_dir: Path) -> Path:
+    return evidence_dir / "request-packet.md"
+
+
 def markdown_bullets(items: list[str]) -> str:
     if not items:
         return "- None recorded."
@@ -745,6 +749,134 @@ def write_batch_plan(evidence_dir: Path) -> int:
     return 0
 
 
+def review_request_packet(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
+    queue = read_json(QUEUE_PATH)
+    items = load_queue_items()
+    batch_sections = []
+    assigned_source_ids: set[str] = set()
+
+    for batch in SOURCE_REVIEW_BATCHES:
+        decision_types = set(batch["decision_needed"])
+        source_ids = [
+            source_id
+            for source_id in open_source_ids()
+            if items[source_id]["decision_needed"] in decision_types
+        ]
+        assigned_source_ids.update(source_ids)
+        rows = []
+        prompt_sections = []
+        for source_id in source_ids:
+            item = items[source_id]
+            registry = markdown_table_row(REGISTRY_PATH, source_id)
+            rows.append(
+                "| "
+                + " | ".join(
+                    [
+                        markdown_cell(source_id),
+                        markdown_cell(registry["Source"]),
+                        markdown_cell(item["decision_needed"]),
+                        markdown_cell(decision_path(evidence_dir, source_id).relative_to(ROOT)),
+                        markdown_cell(packet_path(evidence_dir, source_id).relative_to(ROOT)),
+                        markdown_cell(item["next_action"]),
+                    ]
+                )
+                + " |"
+            )
+            prompt_sections.extend(
+                [
+                    f"### {source_id} - {registry['Source']}",
+                    "",
+                    f"- Decision file: `{decision_path(evidence_dir, source_id).relative_to(ROOT)}`",
+                    f"- Review packet: `{packet_path(evidence_dir, source_id).relative_to(ROOT)}`",
+                    f"- Default connector mode: {item['default_connector_mode']}",
+                    f"- Default media use: {item['media_use_until_resolved']}",
+                    "",
+                    "Evidence required:",
+                    "",
+                    markdown_bullets(item.get("evidence_required", [])),
+                    "",
+                    "Owner questions:",
+                    "",
+                    markdown_bullets(item.get("owner_questions", [])),
+                    "",
+                ]
+            )
+
+        batch_sections.extend(
+            [
+                f"## {batch['title']}",
+                "",
+                f"- Goal: {batch['goal']}",
+                f"- Default if unresolved: {batch['default_if_unresolved']}",
+                f"- Decision types: {', '.join(batch['decision_needed'])}",
+                f"- Open items in this batch: {len(source_ids)}",
+                "",
+                "| Source ID | Source | Decision needed | Decision file | Review packet | Next action |",
+                "| --- | --- | --- | --- | --- | --- |",
+                *rows,
+                "",
+                "### Owner Prompts",
+                "",
+                *prompt_sections,
+            ]
+        )
+
+    unassigned = sorted(set(open_source_ids()) - assigned_source_ids)
+    if unassigned:
+        batch_sections.extend(
+            [
+                "## Unassigned Review Items",
+                "",
+                markdown_bullets(unassigned),
+                "",
+            ]
+        )
+
+    return "\n".join(
+        [
+            "# Source Owner Decision Request Packet",
+            "",
+            "This ignored packet is for requesting owner decisions. It summarizes what the owner must decide; complete the JSON decision files as the source of truth.",
+            "",
+            f"- Open decisions: {len(open_source_ids())}",
+            f"- Default owner: {queue.get('default_owner', 'Briefing Administrator')}",
+            f"- Default policy until resolved: {queue.get('default_policy_until_resolved', '')}",
+            f"- Decision directory: `{evidence_dir.relative_to(ROOT)}`",
+            "",
+            "## Request Guardrails",
+            "",
+            "- Do not enable production auto-ingestion while a source remains `needs_review`.",
+            "- Do not store full article bodies.",
+            "- Do not reuse source media unless the completed decision explicitly approves it.",
+            "- If permission, rate, license, or media scope stays unclear, keep the source `needs_review`, `blocked`, or `deferred`.",
+            "",
+            "## Commands",
+            "",
+            "```bash",
+            "python3 scripts/source_owner_review_decision.py --draft-all",
+            "python3 scripts/source_owner_review_decision.py --packet-all",
+            "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --worksheet",
+            "python3 scripts/source_owner_review_decision.py --batch-plan",
+            "python3 scripts/source_owner_review_decision.py --request-packet",
+            "python3 scripts/source_owner_review_decision.py --validate-all",
+            "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+            "python3 scripts/check_readiness.py",
+            "```",
+            "",
+            *batch_sections,
+        ]
+    )
+
+
+def write_request_packet(evidence_dir: Path) -> int:
+    output = request_packet_path(evidence_dir)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(review_request_packet(evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner decision request packet written to {output.relative_to(ROOT)}")
+    return 0
+
+
 def refresh_context(path: Path) -> str:
     payload = read_json(path)
     source_id = payload.get("source_id")
@@ -1123,6 +1255,7 @@ def main() -> int:
     group.add_argument("--packet-index", action="store_true", help="Write a derived Markdown review index under evidence/.")
     group.add_argument("--worksheet", action="store_true", help="Write a consolidated owner review worksheet under evidence/.")
     group.add_argument("--batch-plan", action="store_true", help="Write a prioritized owner review batch plan under evidence/.")
+    group.add_argument("--request-packet", action="store_true", help="Write a shareable owner decision request packet under evidence/.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
@@ -1151,6 +1284,8 @@ def main() -> int:
             return write_worksheet(Path(args.evidence_dir))
         if args.batch_plan:
             return write_batch_plan(Path(args.evidence_dir))
+        if args.request_packet:
+            return write_request_packet(Path(args.evidence_dir))
         if args.refresh_context_all:
             return refresh_all_context(Path(args.evidence_dir))
         if args.validate:

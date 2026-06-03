@@ -72,6 +72,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "source-owner-reviews/index.md" in text
     assert "source-owner-reviews/worksheet.md" in text
     assert "source-owner-reviews/batch-plan.md" in text
+    assert "source-owner-reviews/request-packet.md" in text
     assert "mvp-issue-packets" in text
     assert "live-spike-packets" in text
     assert "external-input-request.md" in text

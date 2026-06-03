@@ -66,7 +66,7 @@ Verification:
 
 Purpose: prove external dependencies before product code is built around them.
 
-Before live execution, run `scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets` and `scripts/readiness_action_packet.py --write-mvp-issue-packets` to aggregate helper dry-runs, missing environment variable names, an external input request checklist and ignored request packet, missing evidence files, partial final evidence groups, final redaction review packet, live evidence validation failures, per-spike issue-facing packets, source-owner review status, source-owner batch plan, the MVP issue unlock matrix, per-MVP-issue triage packets, and next commands without printing secret values.
+Before live execution, run `scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets` and `scripts/readiness_action_packet.py --write-mvp-issue-packets` to aggregate helper dry-runs, missing environment variable names, an external input request checklist and ignored request packet, missing evidence files, partial final evidence groups, final redaction review packet, live evidence validation failures, per-spike issue-facing packets, source-owner review status, source-owner batch plan and request packet, the MVP issue unlock matrix, per-MVP-issue triage packets, and next commands without printing secret values.
 
 Final live evidence for these spikes must include `evidence/readiness-manifest.json`, declaring the Feishu, model-provider, and archive-storage evidence files and matching live model/archive run metadata, current git `HEAD`, and a clean tracked worktree.
 

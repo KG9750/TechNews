@@ -23,6 +23,7 @@ EXTERNAL_INPUT_REQUEST_RELATIVE = "external-input-request.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
+SOURCE_OWNER_REQUEST_PACKET_RELATIVE = "source-owner-reviews/request-packet.md"
 MVP_ISSUE_PACKET_DIR_RELATIVE = "mvp-issue-packets"
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
@@ -199,6 +200,7 @@ def source_owner_summary(evidence_root: Path) -> dict:
         "index_path": display_path(evidence_root / SOURCE_OWNER_INDEX_RELATIVE),
         "worksheet_path": display_path(evidence_root / SOURCE_OWNER_WORKSHEET_RELATIVE),
         "batch_plan_path": display_path(evidence_root / SOURCE_OWNER_BATCH_PLAN_RELATIVE),
+        "request_packet_path": display_path(evidence_root / SOURCE_OWNER_REQUEST_PACKET_RELATIVE),
     }
 
 
@@ -640,6 +642,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
+            f"- Source owner request packet: `{source_summary['request_packet_path']}`",
             f"- MVP issue triage packets: `{display_path(evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE)}`",
             "",
             "## GitHub Issue Links",

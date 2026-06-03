@@ -783,6 +783,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "--packet-index",
         "--worksheet",
         "--batch-plan",
+        "--request-packet",
         "--refresh-context-all",
         "--validate",
         "--validate-all",
@@ -807,6 +808,10 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "ELIGIBLE_CONNECTOR_MODE_BY_SOURCE_TYPE",
         "eligible decisions for {source_type} must use connector_mode",
         "decisions must keep connector_mode at default",
+        "request-packet.md",
+        "review_request_packet",
+        "write_request_packet",
+        "Source Owner Decision Request Packet",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -820,6 +825,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_review_worksheet_writes_worksheet_file",
         "test_batch_plan_groups_open_items_and_paths",
         "test_batch_plan_writes_batch_plan_file",
+        "test_request_packet_groups_batches_and_owner_prompts",
+        "test_request_packet_writes_request_packet_file",
         "test_refresh_context_all_updates_existing_drafts_without_overwriting_answers",
         "test_status_reports_template_drafts_as_invalid",
         "test_status_reports_completed_drafts_as_valid",
@@ -853,7 +860,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         require(needle in test_text, f"source owner review decision tests missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, index, worksheet, batch plan, batch validation, batch apply, and regression tests present"]
+    return ["source owner review decision helper: list, status, context-rich batch draft, review packets, index, worksheet, batch plan, owner request packet, batch validation, batch apply, and regression tests present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:
@@ -1295,6 +1302,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source-owner-reviews/index.md",
         "source-owner-reviews/worksheet.md",
         "source-owner-reviews/batch-plan.md",
+        "source-owner-reviews/request-packet.md",
         "mvp-issue-packets",
         "readiness-manifest.json",
         "final-redaction-review.md",
@@ -1346,6 +1354,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "FEISHU_APP_ID, FEISHU_APP_SECRET",
         "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET",
         "source-owner-reviews/batch-plan.md",
+        "source-owner-reviews/request-packet.md",
         "mvp-issue-packets",
         "final-redaction-review.md",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
