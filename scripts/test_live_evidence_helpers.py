@@ -306,11 +306,31 @@ def test_model_usage_log_requires_expected_tasks() -> None:
         usage["tasks"][0]["output_fixture"] = "outputs/unexpected.json"
         usage["tasks"][1]["task_type"] = "unexpected_task"
         write_json(usage_path, usage)
+        try:
+            model_spike.validate_usage_log(usage_path)
+        except model_spike.SpikeError as error:
+            assert "usage tasks must match expected output fixtures and input fixture ids" in str(error)
+        else:
+            raise AssertionError("expected mismatched usage log tasks to fail spike validation")
         _, missing, failures = readiness.check_model_live_evidence(evidence_root)
 
     assert not missing
     assert "Model usage log tasks must match expected output fixtures and input fixture ids" in failures
     assert "Model usage log every task task_type must be briefing_item_generation" in failures
+
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        usage_path = evidence_root / "model-provider/usage-log.json"
+        usage = json.loads(usage_path.read_text(encoding="utf-8"))
+        usage["tasks"][0]["task_type"] = "unexpected_task"
+        write_json(usage_path, usage)
+        try:
+            model_spike.validate_usage_log(usage_path)
+        except model_spike.SpikeError as error:
+            assert "every task task_type must be briefing_item_generation" in str(error)
+        else:
+            raise AssertionError("expected wrong usage log task_type to fail spike validation")
 
 
 def test_archive_failure_reason_redacts_private_paths() -> None:

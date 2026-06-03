@@ -1070,6 +1070,10 @@ def check_spike_runners() -> list[str]:
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
     require("DISALLOWED_RAW_METADATA_KEYS" in model_provider_text, "model provider runner must guard against full-body metadata")
+    require(
+        "usage tasks must match expected output fixtures and input fixture ids" in model_provider_text,
+        "model provider runner must validate usage-log task coverage",
+    )
     manifest_text = read("scripts/spikes/readiness_manifest.py")
     require("--write-final-review-packet" in manifest_text, "readiness manifest helper must write a final redaction review packet")
     require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")

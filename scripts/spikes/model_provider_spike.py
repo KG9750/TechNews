@@ -272,7 +272,17 @@ def validate_usage_log(path: Path) -> None:
     tasks = payload.get("tasks", [])
     if len(tasks) != 3:
         raise SpikeError(f"{path}: expected three usage tasks")
+    expected_tasks = {f"outputs/{profile_name}.json": fixture_id for profile_name, fixture_id in PROFILES}
+    actual_tasks = {
+        task.get("output_fixture"): task.get("input_fixture_id")
+        for task in tasks
+        if task.get("output_fixture")
+    }
+    if actual_tasks != expected_tasks:
+        raise SpikeError(f"{path}: usage tasks must match expected output fixtures and input fixture ids")
     for task in tasks:
+        if task.get("task_type") != "briefing_item_generation":
+            raise SpikeError(f"{path}: every task task_type must be briefing_item_generation")
         if int(task.get("request_count") or 0) <= 0:
             raise SpikeError(f"{path}: every task request_count must be > 0")
         if "latency_ms" not in task:
