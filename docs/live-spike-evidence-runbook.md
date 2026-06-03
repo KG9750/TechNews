@@ -5,6 +5,30 @@ Last updated: 2026-06-03
 
 This runbook explains how to turn the remaining external spikes into evidence that can pass the readiness gate. Generated evidence belongs under `evidence/`, which is ignored by git. Do not commit real credentials, recipient ids, provider responses, or storage paths.
 
+## Live Evidence Preflight
+
+Before running live external spikes, generate a local preflight summary:
+
+```bash
+python3 scripts/spikes/live_readiness_preflight.py --dry-run
+```
+
+This writes:
+
+```text
+evidence/live-readiness-preflight.json
+```
+
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. It does not print or store environment values. The generated summary is ignored by git.
+
+After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
+
+```bash
+python3 scripts/spikes/live_readiness_preflight.py --strict
+```
+
+Strict mode fails until all required environment variable names and live evidence files are present. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
+
 ## Final Gate Command
 
 After credentials and live evidence are available, run:

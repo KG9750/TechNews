@@ -66,6 +66,8 @@ Verification:
 
 Purpose: prove external dependencies before product code is built around them.
 
+Before live execution, run `scripts/spikes/live_readiness_preflight.py --dry-run` to aggregate helper dry-runs, missing environment variable names, and missing evidence files without printing secret values.
+
 Final live evidence for these spikes must include `evidence/readiness-manifest.json`, declaring the Feishu, model-provider, and archive-storage evidence files and matching live model/archive run metadata.
 
 ### Feishu Delivery Spike
