@@ -316,6 +316,8 @@ def mvp_issue_statuses(live_summary: dict, source_summary: dict) -> list[dict[st
                 "url": f"https://github.com/KG9750/TechNews/issues/{issue.lstrip('#')}",
                 "issue_specific_status": "blocked" if blocker_details else "ready for final triage",
                 "blocker_details": blocker_details,
+                "global_readiness_gate": states["final_readiness_gate"]["status"],
+                "global_readiness_detail": states["final_readiness_gate"]["detail"],
                 "label_action": (
                     "Keep `needs-triage` until final readiness and GitHub tracker gates pass."
                     if final_gate_blocked or blocker_details
@@ -393,6 +395,7 @@ def build_mvp_issue_packet(status: dict[str, object]) -> str:
             f"- GitHub issue: {status['url']}",
             f"- Issue body draft: `{status['draft_path']}`",
             f"- Issue-specific status: {status['issue_specific_status']}",
+            f"- Global readiness gate: {status['global_readiness_gate']} ({status['global_readiness_detail']})",
             f"- Label action: {status['label_action']}",
             "",
             "## Remaining Issue-Specific Inputs",

@@ -157,6 +157,7 @@ def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
 
         assert "MVP Issue Triage Packet: #18 Operations Console" in console_text
         assert "Issue-specific status: ready for final triage" in console_text
+        assert "Global readiness gate: blocked" in console_text
         assert "Label action: Keep `needs-triage` until final readiness and GitHub tracker gates pass." in console_text
         assert "Remaining Issue-Specific Inputs" in console_text
         assert "- None." in console_text
