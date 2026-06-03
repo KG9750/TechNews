@@ -124,6 +124,7 @@ Live command after credentials are configured:
 
 ```bash
 python3 scripts/spikes/feishu_delivery_spike.py
+python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence
 ```
 
 Required evidence:

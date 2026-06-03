@@ -110,6 +110,7 @@ SPIKE_PACKET_SPECS = [
         "commands": [
             "python3 scripts/spikes/feishu_delivery_spike.py --dry-run",
             "python3 scripts/spikes/feishu_delivery_spike.py",
+            "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
             "python3 scripts/spikes/feishu_delivery_spike.py --attempt-group-webhook-fallback",
             "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
         ],
@@ -565,6 +566,7 @@ def build_summary(evidence_root: Path, run_helpers: bool, require_clean_worktree
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
         "next_commands": [
             "python3 scripts/spikes/feishu_delivery_spike.py",
+            "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/archive_storage_spike.py",

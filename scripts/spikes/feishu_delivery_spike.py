@@ -41,11 +41,21 @@ SENSITIVE_KEY_EXACT = {
     "sign",
 }
 SENSITIVE_VALUE_PATTERNS = [
+    re.compile(r"Authorization\s*[:=]\s*Bearer\s+\S+", re.IGNORECASE),
     re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
     re.compile(r"\bou_[A-Za-z0-9]{8,}\b"),
     re.compile(r"\boc_[A-Za-z0-9]{8,}\b"),
     re.compile(r"\bcli_[A-Za-z0-9]{8,}\b"),
     re.compile(r"https://open\.(?:feishu|larksuite)\.cn/open-apis/bot/v2/hook/[A-Za-z0-9_-]+", re.IGNORECASE),
+]
+SENSITIVE_ENV_NAMES = [
+    "FEISHU_APP_ID",
+    "FEISHU_APP_SECRET",
+    "FEISHU_TENANT_KEY",
+    "FEISHU_DEFAULT_USER_OPEN_ID",
+    "FEISHU_DEFAULT_CHAT_ID",
+    "FEISHU_GROUP_WEBHOOK_URL",
+    "FEISHU_GROUP_WEBHOOK_SECRET",
 ]
 
 
@@ -189,6 +199,66 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def read_evidence_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def check_evidence_redaction(path: Path) -> None:
+    text = read_evidence_text(path)
+    if "TEMPLATE_" in text:
+        raise SpikeError(f"{path}: evidence still contains TEMPLATE_ placeholder")
+    for pattern in SENSITIVE_VALUE_PATTERNS:
+        if pattern.search(text):
+            raise SpikeError(f"{path}: evidence may leak Feishu token, id, or webhook value")
+    for label, pattern in [
+        ("local user path", r"/Users/[^/\s\"]+"),
+        ("private tmp path", r"(?<![A-Za-z0-9_./-])/private/"),
+        ("iCloud workspace path", r"Mobile Documents/com~apple~CloudDocs"),
+    ]:
+        if re.search(pattern, text):
+            raise SpikeError(f"{path}: evidence may leak {label}")
+    for env_name in SENSITIVE_ENV_NAMES:
+        value = os.environ.get(env_name, "")
+        if len(value) >= 8 and value in text:
+            raise SpikeError(f"{path}: evidence contains raw environment value {env_name}")
+
+
+def validate_delivery_response(path: Path, label: str) -> None:
+    if not path.exists():
+        raise SpikeError(f"missing Feishu {label} response evidence: {path}")
+    check_evidence_redaction(path)
+    payload = json.loads(read_evidence_text(path))
+    if payload.get("code") != 0:
+        raise SpikeError(f"{path}: Feishu {label} response code must be 0")
+    data = payload.get("data", {})
+    if not isinstance(data, dict) or not data:
+        raise SpikeError(f"{path}: Feishu {label} response must include data")
+    message_id = data.get("message_id")
+    if not isinstance(message_id, str) or not message_id.strip():
+        raise SpikeError(f"{path}: Feishu {label} response must include data.message_id")
+
+
+def validate_rendered_message(path: Path) -> None:
+    if not path.exists():
+        raise SpikeError(f"missing Feishu rendered message evidence: {path}")
+    check_evidence_redaction(path)
+    rendered = read_evidence_text(path)
+    for needle in ["Source", "置信提示"]:
+        if needle not in rendered:
+            raise SpikeError(f"{path}: Feishu rendered message missing {needle}")
+    if not any(needle in rendered for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
+        raise SpikeError(f"{path}: Feishu rendered message missing Archive or Deep-Dive link")
+
+
+def validate_evidence(evidence_dir: Path) -> int:
+    load_env_file(ROOT / ".env")
+    validate_delivery_response(evidence_dir / "user-response.redacted.json", "user")
+    validate_delivery_response(evidence_dir / "group-response.redacted.json", "group")
+    validate_rendered_message(evidence_dir / "rendered-message.md")
+    print(f"LIVE Feishu evidence validates: {evidence_dir}")
+    return 0
+
+
 def run(dry_run: bool, evidence_dir: Path, attempt_group_webhook_fallback: bool = False) -> int:
     load_env_file(ROOT / ".env")
     card = json.loads(CARD_PATH.read_text(encoding="utf-8"))
@@ -265,6 +335,7 @@ def run(dry_run: bool, evidence_dir: Path, attempt_group_webhook_fallback: bool 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Validate payload shape without credentials or network.")
+    parser.add_argument("--validate-evidence", action="store_true", help="Validate redacted live Feishu delivery evidence.")
     parser.add_argument(
         "--attempt-group-webhook-fallback",
         action="store_true",
@@ -273,12 +344,14 @@ def main() -> int:
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     args = parser.parse_args()
     try:
+        if args.validate_evidence:
+            return validate_evidence(Path(args.evidence_dir))
         return run(
             dry_run=args.dry_run,
             evidence_dir=Path(args.evidence_dir),
             attempt_group_webhook_fallback=args.attempt_group_webhook_fallback,
         )
-    except SpikeError as error:
+    except (FileNotFoundError, json.JSONDecodeError, SpikeError) as error:
         print(f"ERROR {error}")
         return 1
 

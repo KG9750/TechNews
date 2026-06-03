@@ -1071,6 +1071,11 @@ def check_spike_runners() -> list[str]:
     require("--attempt-group-webhook-fallback" in feishu_text, "Feishu runner must expose explicit group webhook fallback")
     require("build_group_webhook_payload" in feishu_text, "Feishu runner must build group webhook fallback payloads")
     require("does_not_replace_internal_app_group_evidence" in feishu_text, "Feishu fallback must not replace internal-app group evidence")
+    require("--validate-evidence" in feishu_text, "Feishu runner must validate redacted live evidence")
+    require(
+        "Feishu rendered message missing Archive or Deep-Dive link" in feishu_text,
+        "Feishu runner must validate rendered message archive/deep-dive link evidence",
+    )
     model_provider_text = read("scripts/spikes/model_provider_spike.py")
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
@@ -1143,6 +1148,7 @@ def check_spike_runners() -> list[str]:
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
+        "feishu_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",

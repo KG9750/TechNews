@@ -53,6 +53,7 @@ The test Push Briefing must include:
 - Draft delivery status examples: `fixtures/feishu-delivery/delivery-status-examples.json`.
 - Dry-run command: `python3 scripts/spikes/feishu_delivery_spike.py --dry-run`.
 - Live command: `python3 scripts/spikes/feishu_delivery_spike.py`.
+- Live evidence validation command: `python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence`.
 - Optional fallback command after internal app group delivery fails: `python3 scripts/spikes/feishu_delivery_spike.py --attempt-group-webhook-fallback`.
 - Pending: redacted success response for user delivery.
 - Pending: redacted success response for group delivery.

@@ -115,6 +115,7 @@ Live run:
 
 ```bash
 python3 scripts/spikes/feishu_delivery_spike.py
+python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence
 ```
 
 Optional group-chat fallback after internal app group delivery fails:

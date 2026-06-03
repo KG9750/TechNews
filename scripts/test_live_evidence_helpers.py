@@ -574,6 +574,7 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         write_synthetic_live_evidence(evidence_root)
+        assert feishu_spike.validate_evidence(evidence_root / "feishu-delivery") == 0
         assert archive_spike.validate_evidence(evidence_root / "archive-storage") == 0
         passed, missing, failures = readiness.check_live_evidence(evidence_root)
     assert not missing
@@ -629,6 +630,12 @@ def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
             "Source: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
             encoding="utf-8",
         )
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "Archive or Deep-Dive link" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject missing Archive or Deep-Dive link")
         _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
 
     assert not missing
@@ -650,7 +657,24 @@ def test_feishu_live_evidence_requires_message_ids() -> None:
             "Archive: https://archive.example.invalid/live\nSource: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
             encoding="utf-8",
         )
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "Feishu user response must include data" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject missing user response data")
         _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+        write_json(
+            evidence_root / "feishu-delivery/user-response.redacted.json",
+            {"code": 0, "msg": "success", "data": {"message_id": "REDACTED_MESSAGE_ID_USER"}},
+        )
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "Feishu group response must include data.message_id" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject missing group message_id")
 
     assert not missing
     assert "Feishu user response must include data" in failures
