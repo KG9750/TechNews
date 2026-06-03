@@ -153,6 +153,10 @@ def write_all_drafts(evidence_dir: Path) -> int:
     return 0
 
 
+def decision_path(evidence_dir: Path, source_id: str) -> Path:
+    return evidence_dir / f"{source_id}.decision.json"
+
+
 def contains_template_marker(payload: dict) -> bool:
     return "TEMPLATE_" in json.dumps(payload, ensure_ascii=False)
 
@@ -225,6 +229,30 @@ def validate_decision(path: Path) -> int:
     payload = validated_payload(path)
     print(f"VALID source owner decision: {payload['source_id']} -> {payload['decision']}")
     return 0
+
+
+def validate_all_decisions(evidence_dir: Path) -> int:
+    valid = 0
+    invalid = 0
+    missing = 0
+    for source_id in open_source_ids():
+        path = decision_path(evidence_dir, source_id)
+        if not path.exists():
+            missing += 1
+            print(f"MISSING source owner decision: {source_id} -> {path.relative_to(ROOT)}")
+            continue
+        try:
+            payload = validated_payload(path)
+        except (ReviewError, json.JSONDecodeError) as error:
+            invalid += 1
+            print(f"INVALID source owner decision: {source_id} -> {error}")
+            continue
+        valid += 1
+        print(f"VALID source owner decision: {payload['source_id']} -> {payload['decision']}")
+
+    total = valid + invalid + missing
+    print(f"Source owner decisions checked: {valid} valid, {invalid} invalid, {missing} missing, {total} open items")
+    return 0 if invalid == 0 and missing == 0 else 1
 
 
 def split_markdown_row(line: str) -> list[str]:
@@ -324,6 +352,7 @@ def main() -> int:
     group.add_argument("--draft", metavar="SOURCE_ID", help="Write a fillable decision draft under evidence/.")
     group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
+    group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
     group.add_argument("--apply", metavar="PATH", help="Validate and apply a completed source owner decision to tracked artifacts.")
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     parser.add_argument("--dry-run", action="store_true", help="With --apply, validate and print the planned action without writing.")
@@ -338,6 +367,8 @@ def main() -> int:
             return write_all_drafts(Path(args.evidence_dir))
         if args.validate:
             return validate_decision(Path(args.validate))
+        if args.validate_all:
+            return validate_all_decisions(Path(args.evidence_dir))
         return apply_decision(Path(args.apply), args.dry_run)
     except ReviewError as error:
         print(f"ERROR {error}")

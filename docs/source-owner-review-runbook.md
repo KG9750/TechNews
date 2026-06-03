@@ -66,19 +66,27 @@ evidence/source-owner-reviews/
 python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json
 ```
 
-10. Preview the tracked artifact update:
+10. Validate every open owner decision after batch completion:
+
+```bash
+python3 scripts/source_owner_review_decision.py --validate-all
+```
+
+This exits non-zero until every open source has a completed, template-free decision file.
+
+11. Preview the tracked artifact update:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run
 ```
 
-11. Apply the tracked artifact update:
+12. Apply the tracked artifact update:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json
 ```
 
-12. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
+13. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
 
 ## Artifact Update Rules
 
@@ -119,5 +127,5 @@ Required implementation guardrail: <policy row / connector mode / test expectati
 - Queue connector modes match `fixtures/source-ingestion/source-access-policy.json`.
 - Production auto-ingestion and source media reuse stay disabled while review is open.
 - Manual URL and pending-permission sources use the correct review decision type.
-- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, validating completed decisions, and applying validated decisions to tracked artifacts.
-- `scripts/test_source_owner_review_decision.py` verifies that batch draft generation covers every open item without overwriting existing drafts, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.
+- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, validating one or all completed decisions, and applying validated decisions to tracked artifacts.
+- `scripts/test_source_owner_review_decision.py` verifies that batch draft generation covers every open item without overwriting existing drafts, that batch validation fails template drafts and passes completed open-review decisions, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.

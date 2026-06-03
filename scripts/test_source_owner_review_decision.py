@@ -49,43 +49,32 @@ def isolated_artifacts():
                 setattr(review, name, value)
 
 
-def decision_payload(decision: str) -> dict:
+def decision_payload_for_source(source_id: str, decision: str) -> dict:
     production_enabled = decision == "eligible"
+    queue_item = review.load_queue_items()[source_id]
     return {
-        "source_id": "src-the-verge",
+        "source_id": source_id,
         "reviewed_at": "2026-06-03",
         "reviewed_by": "Briefing Administrator",
         "decision": decision,
         "evidence_checked": [
             {
-                "required_evidence": "Vox Media/The Verge terms or permission path",
-                "url_or_note": "Owner note: permission path reviewed.",
+                "required_evidence": evidence,
+                "url_or_note": f"Owner note: reviewed {evidence}.",
                 "checked_at": "2026-06-03",
-            },
-            {
-                "required_evidence": "generated-summary permission",
-                "url_or_note": "Owner note: generated-summary scope reviewed.",
-                "checked_at": "2026-06-03",
-            },
-            {
-                "required_evidence": "media reuse decision",
-                "url_or_note": "Owner note: media remains blocked.",
-                "checked_at": "2026-06-03",
-            },
+            }
+            for evidence in queue_item["evidence_required"]
         ],
         "owner_question_answers": [
             {
-                "question": "Can RSS metadata be used for internal generated summaries?",
+                "question": question,
                 "answer": "Owner answer recorded for test.",
-            },
-            {
-                "question": "Are source images allowed, or should this remain text-only?",
-                "answer": "Keep text-only for test.",
-            },
+            }
+            for question in queue_item["owner_questions"]
         ],
         "policy_after_decision": {
             "eligibility_state": decision,
-            "connector_mode": "rss_metadata_only" if production_enabled else "rss_metadata_probe",
+            "connector_mode": "rss_metadata_only" if production_enabled else queue_item["default_connector_mode"],
             "production_auto_ingestion": production_enabled,
             "full_text_storage": "not_stored",
             "summary_policy": "generated_summary_from_metadata_only" if production_enabled else "generated_summary_disallowed",
@@ -106,6 +95,10 @@ def decision_payload(decision: str) -> dict:
             },
         },
     }
+
+
+def decision_payload(decision: str) -> dict:
+    return decision_payload_for_source("src-the-verge", decision)
 
 
 def write_decision(tmp: Path, payload: dict) -> Path:
@@ -152,6 +145,28 @@ def test_draft_all_writes_every_open_review_without_overwriting_existing() -> No
         assert review.contains_template_marker(generated)
 
 
+def test_validate_all_fails_for_template_drafts() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+
+        assert review.validate_all_decisions(evidence_dir) == 1
+
+
+def test_validate_all_passes_completed_open_reviews() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        for source_id in review.open_source_ids():
+            output = review.decision_path(evidence_dir, source_id)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(
+                json.dumps(decision_payload_for_source(source_id, "needs_review"), ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
+        assert review.validate_all_decisions(evidence_dir) == 0
+
+
 def test_blocked_decision_updates_artifacts_and_closes_queue() -> None:
     with isolated_artifacts() as tmp:
         decision_path = write_decision(tmp, decision_payload("blocked"))
@@ -187,6 +202,8 @@ def test_needs_review_decision_keeps_queue_open() -> None:
 def main() -> int:
     test_draft_requires_owner_input()
     test_draft_all_writes_every_open_review_without_overwriting_existing()
+    test_validate_all_fails_for_template_drafts()
+    test_validate_all_passes_completed_open_reviews()
     test_blocked_decision_updates_artifacts_and_closes_queue()
     test_needs_review_decision_keeps_queue_open()
     print("source owner review decision tests passed")
