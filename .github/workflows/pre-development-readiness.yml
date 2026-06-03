@@ -35,11 +35,16 @@ jobs:
             scripts/spikes/readiness_manifest.py \
             scripts/spikes/live_readiness_preflight.py \
             scripts/test_live_evidence_helpers.py \
+            scripts/readiness_action_packet.py \
+            scripts/test_readiness_action_packet.py \
             scripts/source_owner_review_decision.py \
             scripts/test_source_owner_review_decision.py
 
       - name: Test live evidence helpers
         run: python scripts/test_live_evidence_helpers.py
+
+      - name: Test readiness action packet helper
+        run: python scripts/test_readiness_action_packet.py
 
       - name: Test source owner review decision helper
         run: python scripts/test_source_owner_review_decision.py

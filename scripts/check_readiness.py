@@ -362,6 +362,8 @@ def check_required_files() -> list[str]:
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
         "scripts/test_live_evidence_helpers.py",
+        "scripts/readiness_action_packet.py",
+        "scripts/test_readiness_action_packet.py",
         "scripts/source_owner_review_decision.py",
         "scripts/test_source_owner_review_decision.py",
     ]
@@ -1060,6 +1062,29 @@ def check_feishu_runner_redaction() -> list[str]:
     return ["Feishu runner redaction: ids and bearer tokens are scrubbed"]
 
 
+def check_readiness_action_packet_helper() -> list[str]:
+    text = read("scripts/readiness_action_packet.py")
+    test_text = read("scripts/test_readiness_action_packet.py")
+    for needle in [
+        "readiness-action-packet.md",
+        "live-readiness-packet.md",
+        "source-owner-reviews/index.md",
+        "build_packet",
+        "source_owner_summary",
+        "python3 scripts/check_readiness.py --require-live --require-evidence",
+        "python3 scripts/check_readiness.py --require-github",
+    ]:
+        require(needle in text, f"readiness action packet helper missing: {needle}")
+    for needle in [
+        "test_action_packet_summarizes_blockers_without_secret_values",
+        "test_action_packet_writes_markdown",
+    ]:
+        require(needle in test_text, f"readiness action packet tests missing: {needle}")
+    for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md"]:
+        require("scripts/readiness_action_packet.py" in read(path), f"{path} must document readiness action packet helper")
+    return ["readiness action packet helper: top-level blocked-workstream packet and regression tests present"]
+
+
 def check_readiness_ci_workflow() -> list[str]:
     text = read(".github/workflows/pre-development-readiness.yml")
     for needle in [
@@ -1070,6 +1095,8 @@ def check_readiness_ci_workflow() -> list[str]:
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
         "scripts/test_live_evidence_helpers.py",
+        "scripts/readiness_action_packet.py",
+        "scripts/test_readiness_action_packet.py",
         "scripts/source_owner_review_decision.py",
         "scripts/test_source_owner_review_decision.py",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
@@ -1684,6 +1711,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_feishu_fixture,
         check_spike_runners,
         check_feishu_runner_redaction,
+        check_readiness_action_packet_helper,
         check_live_evidence_redaction_negative_fixture,
         check_readiness_ci_workflow,
         check_adrs,

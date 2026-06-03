@@ -11,6 +11,7 @@ Before running live external spikes, generate a local preflight summary:
 
 ```bash
 python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet
+python3 scripts/readiness_action_packet.py
 ```
 
 This writes:
@@ -18,9 +19,10 @@ This writes:
 ```text
 evidence/live-readiness-preflight.json
 evidence/live-readiness-packet.md
+evidence/readiness-action-packet.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. It does not print or store environment values. The generated summary and packet are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. The top-level readiness action packet links the live packet and source-owner review index into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
