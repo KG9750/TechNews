@@ -43,3 +43,14 @@ jobs:
             echo "Expected template evidence validation to fail with exit code 1, got $status"
             exit 1
           fi
+
+      - name: Verify leaky evidence cannot pass as live evidence
+        run: |
+          set +e
+          python scripts/check_readiness.py --require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu
+          status=$?
+          set -e
+          if [ "$status" -ne 1 ]; then
+            echo "Expected leaky evidence validation to fail with exit code 1, got $status"
+            exit 1
+          fi

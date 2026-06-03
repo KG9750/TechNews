@@ -54,12 +54,21 @@ Validation rules:
 - Each response must include a non-empty `data` object.
 - Rendered message must include a source line and a Confidence Notice.
 - Evidence must not contain `TEMPLATE_` placeholders.
+- Evidence must not contain raw tokens, Feishu recipient ids, app ids, authorization headers, private local paths, or raw configured secret/env values.
 
 Template files:
 
 ```text
 fixtures/live-evidence-templates/feishu-delivery/
 ```
+
+Synthetic leak-test fixture:
+
+```text
+fixtures/live-evidence-negative/leaky-feishu/
+```
+
+This fixture intentionally contains fake Feishu ids, a fake bearer token, and a fake local path. It must fail validation and is used by CI to prove the redaction scanner is active.
 
 ## Model Provider
 
@@ -101,6 +110,7 @@ Validation rules:
 - Low-confidence output must remain `low` and include a Confidence Notice.
 - Usage log must include three tasks with `request_count > 0` and `latency_ms`.
 - Evidence must not contain `TEMPLATE_` placeholders.
+- Evidence must not contain raw API keys, authorization headers, private local paths, or raw configured secret/env values.
 
 Template files:
 
@@ -143,6 +153,7 @@ Validation rules:
 - Local and remote file counts must be greater than zero.
 - Local and remote tree files must exist.
 - Evidence must not contain `TEMPLATE_` placeholders.
+- Evidence must not contain private local paths, private sync target paths, tokens, or raw configured secret/env values.
 
 Template files:
 
@@ -156,3 +167,5 @@ fixtures/live-evidence-templates/archive-storage/
 - Keep enough non-sensitive response shape to prove success.
 - Do not redact `code`, status fields, request counts, latency fields, provider/model names, or source anchors needed by validation.
 - Do not replace required fields with `TEMPLATE_...`; the readiness checker rejects template markers in live evidence.
+- Prefer stable redaction labels such as `REDACTED`, `REDACTED_MESSAGE_ID`, `REDACTED_LOCAL_PATH`, and `REDACTED_SYNC_TARGET`.
+- The readiness checker rejects common leak patterns including `Bearer ...`, Feishu `ou_...`/`oc_...`/`cli_...` ids, `/Users/...`, `/private/...`, iCloud workspace paths, and raw values from configured sensitive environment variables.

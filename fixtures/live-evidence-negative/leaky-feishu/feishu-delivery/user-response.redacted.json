@@ -1,0 +1,8 @@
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "message_id": "om_synthetic_message",
+    "receive_id": "ou_syntheticuserid12345"
+  }
+}

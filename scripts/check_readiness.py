@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -24,6 +25,26 @@ SOURCE_REVIEW_PLACEHOLDERS = [
     "validate feed terms",
     "terms not yet recorded",
     "review terms, robots guidance, feed policy",
+]
+LIVE_EVIDENCE_SECRET_PATTERNS = [
+    ("authorization header", re.compile(r"Authorization\s*[:=]\s*Bearer\s+\S+", re.IGNORECASE)),
+    ("bearer token", re.compile(r"Bearer\s+(?!REDACTED\b)[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE)),
+    ("tenant access token", re.compile(r"tenant_access_token")),
+    ("Feishu user open_id", re.compile(r"\bou_[A-Za-z0-9]{8,}\b")),
+    ("Feishu chat_id", re.compile(r"\boc_[A-Za-z0-9]{8,}\b")),
+    ("Feishu app id", re.compile(r"\bcli_[A-Za-z0-9]{8,}\b")),
+    ("local user path", re.compile(r"/Users/[^/\s\"]+")),
+    ("private tmp path", re.compile(r"(?<![A-Za-z0-9_./-])/private/")),
+    ("iCloud workspace path", re.compile(r"Mobile Documents/com~apple~CloudDocs")),
+]
+SENSITIVE_ENV_NAMES = [
+    "FEISHU_APP_ID",
+    "FEISHU_APP_SECRET",
+    "FEISHU_DEFAULT_USER_OPEN_ID",
+    "FEISHU_DEFAULT_CHAT_ID",
+    "MODEL_API_KEY",
+    "ARCHIVE_LOCAL_ROOT",
+    "ARCHIVE_SYNC_TARGET",
 ]
 LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
@@ -413,10 +434,12 @@ def check_readiness_ci_workflow() -> list[str]:
         "python -m py_compile",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
         "Expected template evidence validation to fail",
+        "--require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu",
+        "Expected leaky evidence validation to fail",
     ]:
         require(needle in text, f"readiness CI workflow missing: {needle}")
     require("--require-live" not in text, "readiness CI must not require live external credentials")
-    return ["readiness CI workflow: local gate, script compile, and template-negative check present"]
+    return ["readiness CI workflow: local gate, script compile, template-negative, and redaction-negative checks present"]
 
 
 def check_adrs() -> list[str]:
@@ -495,6 +518,22 @@ def check_no_template_marker(path: Path, failures: list[str], label: str) -> Non
         failures.append(f"{label} still contains a TEMPLATE_ placeholder: {path}")
 
 
+def check_no_sensitive_live_evidence(path: Path, failures: list[str], label: str) -> None:
+    text = read_path(path)
+    for pattern_label, pattern in LIVE_EVIDENCE_SECRET_PATTERNS:
+        if pattern.search(text):
+            failures.append(f"{label} may leak {pattern_label}: {path}")
+    for env_name in SENSITIVE_ENV_NAMES:
+        value = os.environ.get(env_name, "")
+        if len(value) >= 8 and value in text:
+            failures.append(f"{label} contains raw environment value {env_name}: {path}")
+
+
+def check_live_evidence_file(path: Path, failures: list[str], label: str) -> None:
+    check_no_template_marker(path, failures, label)
+    check_no_sensitive_live_evidence(path, failures, label)
+
+
 def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
     evidence_dir = evidence_root / "feishu-delivery"
     missing: list[str] = []
@@ -511,7 +550,7 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
     if missing:
         return passed, missing, failures
     for label, path in required_files.items():
-        check_no_template_marker(path, failures, f"Feishu live evidence {label}")
+        check_live_evidence_file(path, failures, f"Feishu live evidence {label}")
     for label, path in [
         ("user", required_files["user response"]),
         ("group", required_files["group response"]),
@@ -531,6 +570,15 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
     return passed, missing, failures
 
 
+def check_live_evidence_redaction_negative_fixture() -> list[str]:
+    evidence_root = ROOT / "fixtures/live-evidence-negative/leaky-feishu"
+    _, missing, failures = check_feishu_live_evidence(evidence_root)
+    require(not missing, "live evidence redaction negative fixture must include all Feishu files")
+    leak_failures = [failure for failure in failures if "may leak" in failure]
+    require(leak_failures, "live evidence redaction negative fixture must fail on sensitive leak patterns")
+    return [f"live evidence redaction negative fixture: {len(leak_failures)} leak checks fire"]
+
+
 def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
     evidence_dir = evidence_root / "archive-storage"
     result_path = evidence_dir / "sync-result.json"
@@ -540,7 +588,7 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
     if not result_path.exists():
         missing.append(f"Archive live evidence missing sync result: {result_path}")
         return passed, missing, failures
-    check_no_template_marker(result_path, failures, "Archive live evidence sync result")
+    check_live_evidence_file(result_path, failures, "Archive live evidence sync result")
     payload = load_json_path(result_path)
     local_status = payload.get("local_archive", {}).get("status")
     remote_status = payload.get("remote_sync", {}).get("status")
@@ -559,7 +607,7 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
         if not path.exists():
             missing.append(f"Archive live evidence missing {label}: {path}")
         else:
-            check_no_template_marker(path, failures, f"Archive live evidence {label}")
+            check_live_evidence_file(path, failures, f"Archive live evidence {label}")
     if not failures and not missing:
         passed.append("Archive live evidence: local write and remote sync success present")
     return passed, missing, failures
@@ -580,7 +628,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
         if not path.exists():
             missing.append(f"Model live evidence missing output: {path}")
             continue
-        check_no_template_marker(path, failures, f"Model live evidence {profile} output")
+        check_live_evidence_file(path, failures, f"Model live evidence {profile} output")
         payload = load_json_path(path)
         fixture = samples[fixture_id]
         if payload.get("input_fixture_id") != fixture_id:
@@ -625,7 +673,7 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
     if not usage_path.exists():
         missing.append(f"Model live evidence missing usage log: {usage_path}")
     else:
-        check_no_template_marker(usage_path, failures, "Model live evidence usage log")
+        check_live_evidence_file(usage_path, failures, "Model live evidence usage log")
         usage_log = load_json_path(usage_path)
         if usage_log.get("provider") in {"fixture", None, ""}:
             failures.append("Model usage log provider must identify a live provider")
@@ -668,6 +716,7 @@ def run(require_live: bool, require_evidence: bool, evidence_root: Path) -> int:
         check_model_fixtures,
         check_feishu_fixture,
         check_spike_runners,
+        check_live_evidence_redaction_negative_fixture,
         check_readiness_ci_workflow,
         check_adrs,
         check_mvp_issue_drafts,
