@@ -134,16 +134,20 @@ When a source stays `needs_review`:
 
 - Keep it in `fixtures/source-ingestion/source-owner-review-queue.json` with `review_status: "open"`.
 - Keep `production_auto_ingestion: false` in `fixtures/source-ingestion/source-access-policy.json`.
+- Keep `policy_after_decision.connector_mode` at the queued `default_connector_mode`; do not switch unresolved sources to a production connector.
 - Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md`, `fixtures/source-ingestion/source-access-policy.json`, and `docs/source-registry.md` with the validated owner notes while keeping the queue item open.
 
 When a source becomes `eligible`:
 
 - Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md` to `eligible`, update `fixtures/source-ingestion/source-access-policy.json` to metadata-only production behavior, remove that source from `fixtures/source-ingestion/source-owner-review-queue.json`, and update `docs/source-registry.md` eligibility notes.
+- Use only the source-type production metadata connector: `rss_metadata_only` for public feeds or `arxiv_api_metadata_only` for academic sources.
+- Keep manual URL sources in per-item review; do not mark them `eligible` or set `production_auto_ingestion: true`.
 - Keep media blocked unless source-specific media reuse is approved and attribution behavior is implemented.
 
 When a source becomes `blocked` or `deferred`:
 
 - Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md`, keep production auto-ingestion disabled in `fixtures/source-ingestion/source-access-policy.json`, update `docs/source-registry.md` notes, and remove it from the open owner queue once the decision is recorded.
+- Keep `policy_after_decision.connector_mode` at the queued `default_connector_mode`; blocked and deferred outcomes must not introduce production connector modes.
 
 ## Evidence Note Template
 

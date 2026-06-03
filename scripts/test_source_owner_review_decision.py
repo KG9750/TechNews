@@ -474,6 +474,39 @@ def test_decision_rejects_mismatched_source_id_filename() -> None:
         assert_review_error(path, "decision source_id must match expected source: src-the-verge")
 
 
+def test_eligible_decision_accepts_metadata_only_connector_mode() -> None:
+    with isolated_artifacts() as tmp:
+        path = write_decision(tmp, decision_payload("eligible"))
+
+        assert review.validated_payload(path)["decision"] == "eligible"
+
+
+def test_eligible_decision_rejects_probe_connector_mode() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("eligible")
+        payload["policy_after_decision"]["connector_mode"] = "rss_metadata_probe"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "eligible decisions for public_feed must use connector_mode rss_metadata_only")
+
+
+def test_needs_review_decision_rejects_production_connector_mode() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["policy_after_decision"]["connector_mode"] = "rss_metadata_only"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "needs_review decisions must keep connector_mode at default rss_metadata_probe")
+
+
+def test_manual_url_decision_cannot_be_marked_eligible() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload_for_source("src-manual-url", "eligible")
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "eligible decisions require a known metadata-only connector mode for source_type: manual_url")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -571,6 +604,10 @@ def main() -> int:
     test_decision_rejects_placeholder_reviewer()
     test_decision_rejects_placeholder_policy_field()
     test_decision_rejects_mismatched_source_id_filename()
+    test_eligible_decision_accepts_metadata_only_connector_mode()
+    test_eligible_decision_rejects_probe_connector_mode()
+    test_needs_review_decision_rejects_production_connector_mode()
+    test_manual_url_decision_cannot_be_marked_eligible()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()

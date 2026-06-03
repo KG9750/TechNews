@@ -21,6 +21,10 @@ REVIEW_PATH = ROOT / "docs/source-eligibility-reviews.md"
 REGISTRY_PATH = ROOT / "docs/source-registry.md"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/source-owner-reviews"
 VALID_DECISIONS = {"eligible", "needs_review", "blocked", "deferred"}
+ELIGIBLE_CONNECTOR_MODE_BY_SOURCE_TYPE = {
+    "academic_source": "arxiv_api_metadata_only",
+    "public_feed": "rss_metadata_only",
+}
 INCOMPLETE_REVIEW_TEXT = {
     "n/a",
     "na",
@@ -798,6 +802,7 @@ def expected_source_id_from_path(path: Path) -> str | None:
 
 def validated_payload(path: Path, expected_source_id: str | None = None) -> dict:
     items = load_queue_items()
+    policies = load_policy_rows()
     payload = read_json(path)
     source_id = payload.get("source_id")
     if expected_source_id is None:
@@ -806,6 +811,7 @@ def validated_payload(path: Path, expected_source_id: str | None = None) -> dict
         require(source_id == expected_source_id, f"decision source_id must match expected source: {expected_source_id}")
     require(source_id in items, f"decision source is not in owner review queue: {source_id}")
     item = items[source_id]
+    current_policy = policies.get(source_id, {})
     require(item.get("review_status") == "open", f"source owner review is not open: {source_id}")
     require(not contains_template_marker(payload), "decision file still contains TEMPLATE_ placeholders")
 
@@ -846,16 +852,25 @@ def validated_payload(path: Path, expected_source_id: str | None = None) -> dict
     for field in ["connector_mode", "summary_policy", "media_policy", "rate_policy"]:
         require_completed_review_text(policy.get(field), f"policy_after_decision.{field}")
 
+    connector_mode = policy.get("connector_mode")
     production_auto_ingestion = policy.get("production_auto_ingestion")
     require(isinstance(production_auto_ingestion, bool), "production_auto_ingestion must be boolean")
     if decision == "eligible":
         require(production_auto_ingestion is True, "eligible decisions must explicitly enable production_auto_ingestion")
+        source_type = current_policy.get("source_type")
+        required_mode = ELIGIBLE_CONNECTOR_MODE_BY_SOURCE_TYPE.get(source_type)
+        require(required_mode is not None, f"eligible decisions require a known metadata-only connector mode for source_type: {source_type}")
+        require(connector_mode == required_mode, f"eligible decisions for {source_type} must use connector_mode {required_mode}")
         require(
             policy.get("summary_policy") == "generated_summary_from_metadata_only",
             "eligible decisions must keep summaries metadata-only",
         )
     else:
         require(production_auto_ingestion is False, f"{decision} decisions must keep production_auto_ingestion disabled")
+        require(
+            connector_mode == item["default_connector_mode"],
+            f"{decision} decisions must keep connector_mode at default {item['default_connector_mode']}",
+        )
 
     require_completed_review_text(payload.get("implementation_guardrail"), "implementation_guardrail is required")
     updates = payload.get("artifact_updates", {})

@@ -32,7 +32,10 @@ Required policy behavior:
 - `needs_review` sources must have `production_auto_ingestion: false`.
 - `needs_review` sources must have an open owner review queue item.
 - `eligible` sources may be enabled only for metadata-only ingestion.
+- `eligible` public feed sources must use `rss_metadata_only`; `eligible` academic sources must use `arxiv_api_metadata_only`.
+- Probe, pending-permission, and per-item-review connector modes must not be paired with `production_auto_ingestion: true`.
 - Manual URL sources must require per-item review.
+- Manual URL sources must not be production auto-ingested.
 - Full article text must remain `not_stored`.
 - Source media must not be blanket-allowed; media use stays text-only or attribution-gated until source-specific rights are approved.
 

@@ -642,6 +642,10 @@ def check_source_access_policy() -> list[str]:
         "manual_url_metadata_pending_permission",
         "public_metadata_probe",
     }
+    eligible_mode_by_source_type = {
+        "academic_source": "arxiv_api_metadata_only",
+        "public_feed": "rss_metadata_only",
+    }
     production_enabled = 0
     needs_review_locked = 0
     for source_id, source in policy_by_id.items():
@@ -659,6 +663,9 @@ def check_source_access_policy() -> list[str]:
         if source["eligibility_state"] == "eligible":
             require(source["production_auto_ingestion"] is True, f"{source_id}: eligible source should be enabled")
             require(source["requires_owner_review"] is False, f"{source_id}: eligible source should not require owner review")
+            expected_mode = eligible_mode_by_source_type.get(source["source_type"])
+            require(expected_mode is not None, f"{source_id}: eligible source type lacks a production metadata connector")
+            require(source["connector_mode"] == expected_mode, f"{source_id}: eligible source must use {expected_mode}")
             production_enabled += 1
         if source["eligibility_state"] == "needs_review":
             require(
@@ -668,6 +675,8 @@ def check_source_access_policy() -> list[str]:
             require(source["requires_owner_review"] is True, f"{source_id}: needs_review source must require owner review")
             needs_review_locked += 1
         if source_id == "src-manual-url":
+            require(source["eligibility_state"] != "eligible", "manual URL policy must stay per-item reviewed")
+            require(source["production_auto_ingestion"] is False, "manual URL policy must not be production auto-ingested")
             require(source["requires_per_item_review"] is True, "manual URL policy must require per-item review")
             require(
                 source["connector_mode"] == "manual_url_metadata_per_item_review",
@@ -763,6 +772,9 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "checked_at must be on or before reviewed_at",
         "expected_source_id_from_path",
         "decision source_id must match expected source",
+        "ELIGIBLE_CONNECTOR_MODE_BY_SOURCE_TYPE",
+        "eligible decisions for {source_type} must use connector_mode",
+        "decisions must keep connector_mode at default",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -791,6 +803,10 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_decision_rejects_placeholder_reviewer",
         "test_decision_rejects_placeholder_policy_field",
         "test_decision_rejects_mismatched_source_id_filename",
+        "test_eligible_decision_accepts_metadata_only_connector_mode",
+        "test_eligible_decision_rejects_probe_connector_mode",
+        "test_needs_review_decision_rejects_production_connector_mode",
+        "test_manual_url_decision_cannot_be_marked_eligible",
         "test_apply_all_rejects_template_drafts_without_writing",
         "test_apply_all_dry_run_validates_without_writing",
         "test_apply_all_applies_completed_open_reviews",
