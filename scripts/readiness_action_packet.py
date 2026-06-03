@@ -29,6 +29,32 @@ GITHUB_ISSUES = [
     ("Model provider spike", "https://github.com/KG9750/TechNews/issues/5"),
     ("Archive/storage spike", "https://github.com/KG9750/TechNews/issues/6"),
 ]
+EXTERNAL_INPUT_REQUESTS = [
+    {
+        "workstream": "Feishu delivery",
+        "env_group": "feishu",
+        "issue": "https://github.com/KG9750/TechNews/issues/3",
+        "configure_at": "Briefing Host secret store or local `.env`; never GitHub.",
+        "safe_request": "Request app id/secret, approved user open_id, and approved group chat_id through a secure channel.",
+        "after_configured": "Run Feishu delivery spike and keep only redacted user/group responses plus rendered message evidence.",
+    },
+    {
+        "workstream": "Model provider",
+        "env_group": "model_provider",
+        "issue": "https://github.com/KG9750/TechNews/issues/5",
+        "configure_at": "Briefing Host secret store or local `.env`; never GitHub.",
+        "safe_request": "Request provider name, default model name, and API key through a secure channel.",
+        "after_configured": "Run model provider spike and keep redacted outputs plus usage metadata.",
+    },
+    {
+        "workstream": "Archive sync",
+        "env_group": "archive_sync",
+        "issue": "https://github.com/KG9750/TechNews/issues/6",
+        "configure_at": "Briefing Host secret store or local `.env`; never GitHub.",
+        "safe_request": "Request local archive root and NAS/cloud sync target through a secure channel.",
+        "after_configured": "Run archive storage spike and keep redacted sync result plus local/remote tree evidence.",
+    },
+]
 LIVE_WORKSTREAMS = [
     {
         "key": "feishu_delivery",
@@ -308,6 +334,32 @@ def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]
     return rows
 
 
+def external_input_request_rows(live_summary: dict) -> list[str]:
+    rows = [
+        "| Workstream | Linked issue | Required variable names | Missing now | Configure at | Safe request wording | Evidence after configured |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for request in EXTERNAL_INPUT_REQUESTS:
+        env = live_summary["environment"][request["env_group"]]
+        required = live_preflight.ENV_GROUPS[request["env_group"]]
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(request["workstream"]),
+                    markdown_cell(request["issue"]),
+                    markdown_cell(", ".join(required)),
+                    markdown_cell(", ".join(env["missing"]) if env["missing"] else "None."),
+                    markdown_cell(request["configure_at"]),
+                    markdown_cell(request["safe_request"]),
+                    markdown_cell(request["after_configured"]),
+                ]
+            )
+            + " |"
+        )
+    return rows
+
+
 def mvp_issue_packet_filename(issue: str) -> str:
     return f"issue-{issue.lstrip('#')}.md"
 
@@ -372,6 +424,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_validation_failures = len(live_summary["evidence_validation"]["failures"])
     workstream_rows = live_workstream_rows(live_summary)
     issue_unlock_rows = mvp_issue_unlock_rows(live_summary, source_summary)
+    external_input_rows = external_input_request_rows(live_summary)
 
     source_decision_rows = [
         f"{decision_needed}: {count}"
@@ -494,6 +547,12 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "## Live Environment Names",
             "",
             *env_sections,
+            "## External Input Request Checklist",
+            "",
+            "Use this checklist to request missing live-spike inputs without collecting real values in GitHub, tracked files, or generated packets.",
+            "",
+            *external_input_rows,
+            "",
             "## Blocking Workstreams",
             "",
             *table_rows,

@@ -54,6 +54,13 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
     assert "Readiness manifest | blocked | 0 | 1" in text
     assert "Missing validation inputs | Validation failures" in text
+    assert "## External Input Request Checklist" in text
+    assert "Use this checklist to request missing live-spike inputs without collecting real values" in text
+    assert "| Feishu delivery | https://github.com/KG9750/TechNews/issues/3 |" in text
+    assert "FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_DEFAULT_USER_OPEN_ID, FEISHU_DEFAULT_CHAT_ID" in text
+    assert "MODEL_PROVIDER, MODEL_DEFAULT_MODEL, MODEL_API_KEY" in text
+    assert "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET" in text
+    assert "Briefing Host secret store or local `.env`; never GitHub." in text
     assert "## MVP Issue Unlock Matrix" in text
     assert "| #17 | Feishu delivery | blocked | Feishu delivery spike:" in text
     assert "| #18 | Operations Console | ready for final triage | None." in text
