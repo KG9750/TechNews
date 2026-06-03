@@ -735,12 +735,14 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "--list-open",
         "--draft",
         "--validate",
+        "--apply",
+        "artifact_updates",
         "TEMPLATE_",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, draft, and validation commands present"]
+    return ["source owner review decision helper: list, draft, validation, and apply commands present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:
