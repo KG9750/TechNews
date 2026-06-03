@@ -22,6 +22,17 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 TEMPLATE_MARKER = "TEMPLATE_"
+DISALLOWED_FULL_BODY_KEYS = {
+    "article_body",
+    "body",
+    "body_text",
+    "complete_article_text",
+    "content",
+    "full_text",
+    "html",
+    "text",
+    "transcript",
+}
 SOURCE_REVIEW_PLACEHOLDERS = [
     "terms/feed policy not yet recorded",
     "feed/api availability and terms not yet recorded",
@@ -278,6 +289,20 @@ def load_json(path: str):
 
 def load_json_path(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def nested_keys(value) -> set[str]:
+    if isinstance(value, dict):
+        keys = set(value)
+        for child in value.values():
+            keys.update(nested_keys(child))
+        return keys
+    if isinstance(value, list):
+        keys = set()
+        for child in value:
+            keys.update(nested_keys(child))
+        return keys
+    return set()
 
 
 def run_command(args: list[str], failure_message: str) -> subprocess.CompletedProcess[str]:
@@ -924,9 +949,8 @@ def check_golden_samples() -> list[str]:
     tags = {tag for item in items for tag in item.get("scenario_tags", [])}
     missing = sorted(required_tags - tags)
     require(not missing, f"golden samples missing scenario tags: {', '.join(missing)}")
-    forbidden_keys = {"article_body", "full_text", "body_text", "complete_article_text"}
     for item in items:
-        present = forbidden_keys & set(item.keys())
+        present = DISALLOWED_FULL_BODY_KEYS & set(item.keys())
         require(not present, f"{item['fixture_id']} contains forbidden full-text keys: {sorted(present)}")
     return [
         f"golden samples: {len(items)} total",
@@ -1080,6 +1104,7 @@ def check_spike_runners() -> list[str]:
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
     require("DISALLOWED_RAW_METADATA_KEYS" in model_provider_text, "model provider runner must guard against full-body metadata")
+    require("evidence includes disallowed full-body keys" in model_provider_text, "model provider runner must reject full-body keys in live evidence")
     require(
         "usage tasks must match expected output fixtures and input fixture ids" in model_provider_text,
         "model provider runner must validate usage-log task coverage",
@@ -1136,6 +1161,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
         "test_model_usage_log_requires_expected_tasks",
+        "test_model_live_evidence_rejects_full_body_keys",
         "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
         "test_archive_live_evidence_requires_matching_counts_and_trees",
@@ -1160,6 +1186,7 @@ def check_spike_runners() -> list[str]:
         "feishu_spike.validate_evidence",
         "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
+        "must not include full-body keys",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",
         "final-redaction-review.md",
@@ -1746,6 +1773,9 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
             continue
         check_live_evidence_file(path, failures, f"Model live evidence {profile} output")
         payload = load_json_path(path)
+        disallowed = sorted(nested_keys(payload) & DISALLOWED_FULL_BODY_KEYS)
+        if disallowed:
+            failures.append(f"{path}: model live evidence must not include full-body keys: {', '.join(disallowed)}")
         fixture = samples[fixture_id]
         if payload.get("input_fixture_id") != fixture_id:
             failures.append(f"{path}: input_fixture_id must be {fixture_id}")
@@ -1791,6 +1821,9 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
     else:
         check_live_evidence_file(usage_path, failures, "Model live evidence usage log")
         usage_log = load_json_path(usage_path)
+        disallowed = sorted(nested_keys(usage_log) & DISALLOWED_FULL_BODY_KEYS)
+        if disallowed:
+            failures.append(f"{usage_path}: model usage log must not include full-body keys: {', '.join(disallowed)}")
         if usage_log.get("provider") in {"fixture", None, ""}:
             failures.append("Model usage log provider must identify a live provider")
         if usage_log.get("model") in {"not_called", None, ""}:

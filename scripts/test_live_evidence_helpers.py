@@ -339,6 +339,29 @@ def test_model_usage_log_requires_expected_tasks() -> None:
             raise AssertionError("expected wrong usage log task_type to fail spike validation")
 
 
+def test_model_live_evidence_rejects_full_body_keys() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        output_path = evidence_root / "model-provider/outputs/high-confidence-news.json"
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+        payload["briefing_item"]["raw_metadata"] = {
+            "article_body": "Synthetic full article body should never be stored in model evidence."
+        }
+        write_json(output_path, payload)
+
+        try:
+            model_spike.validate_evidence(evidence_root / "model-provider")
+        except model_spike.SpikeError as error:
+            assert "evidence includes disallowed full-body keys" in str(error)
+        else:
+            raise AssertionError("expected model evidence validator to reject full-body keys")
+        _, missing, failures = readiness.check_model_live_evidence(evidence_root)
+
+    assert not missing
+    assert any("must not include full-body keys" in failure for failure in failures)
+
+
 def test_model_live_evidence_rejects_template_and_leaky_content() -> None:
     try:
         model_spike.validate_evidence(ROOT / "fixtures/live-evidence-templates/model-provider")
@@ -754,6 +777,7 @@ def main() -> int:
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()
     test_model_usage_log_requires_expected_tasks()
+    test_model_live_evidence_rejects_full_body_keys()
     test_model_live_evidence_rejects_template_and_leaky_content()
     test_archive_failure_reason_redacts_private_paths()
     test_archive_live_evidence_requires_matching_counts_and_trees()

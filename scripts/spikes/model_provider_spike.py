@@ -33,6 +33,8 @@ PROFILES = [
 DISALLOWED_RAW_METADATA_KEYS = {
     "article_body",
     "body",
+    "body_text",
+    "complete_article_text",
     "content",
     "full_text",
     "html",
@@ -186,6 +188,12 @@ def nested_keys(value) -> set[str]:
     return set()
 
 
+def check_no_full_body_keys(path: Path, payload: dict) -> None:
+    disallowed = sorted(nested_keys(payload) & DISALLOWED_RAW_METADATA_KEYS)
+    if disallowed:
+        raise SpikeError(f"{path}: evidence includes disallowed full-body keys: {', '.join(disallowed)}")
+
+
 def validate_request_envelope(envelope: dict, fixture: dict) -> None:
     if envelope.get("input_fixture_id") != fixture["fixture_id"]:
         raise SpikeError(f"{envelope.get('profile', 'request')}: input_fixture_id must be {fixture['fixture_id']}")
@@ -261,6 +269,7 @@ def validate_requests(evidence_dir: Path) -> int:
 def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> None:
     check_evidence_redaction(path)
     payload = json.loads(read_evidence_text(path))
+    check_no_full_body_keys(path, payload)
     if payload.get("input_fixture_id") != fixture["fixture_id"]:
         raise SpikeError(f"{path}: input_fixture_id must be {fixture['fixture_id']}")
     item = payload.get("briefing_item")
@@ -305,6 +314,7 @@ def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> No
 def validate_usage_log(path: Path) -> None:
     check_evidence_redaction(path)
     payload = json.loads(read_evidence_text(path))
+    check_no_full_body_keys(path, payload)
     if payload.get("provider") in {"fixture", None, ""}:
         raise SpikeError(f"{path}: provider must identify a live provider")
     if payload.get("model") in {"not_called", None, ""}:
