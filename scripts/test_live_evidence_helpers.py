@@ -339,6 +339,22 @@ def test_model_usage_log_requires_expected_tasks() -> None:
             raise AssertionError("expected wrong usage log task_type to fail spike validation")
 
 
+def test_model_live_evidence_rejects_template_and_leaky_content() -> None:
+    try:
+        model_spike.validate_evidence(ROOT / "fixtures/live-evidence-templates/model-provider")
+    except model_spike.SpikeError as error:
+        assert "evidence still contains TEMPLATE_ placeholder" in str(error)
+    else:
+        raise AssertionError("expected template model evidence to fail spike validation")
+
+    try:
+        model_spike.validate_evidence(ROOT / "fixtures/live-evidence-negative/leaky-model-provider/model-provider")
+    except model_spike.SpikeError as error:
+        assert "may leak model provider token" in str(error)
+    else:
+        raise AssertionError("expected leaky model evidence to fail spike validation")
+
+
 def test_archive_failure_reason_redacts_private_paths() -> None:
     values = {
         "ARCHIVE_LOCAL_ROOT": f"{Path.home()}/archive-secret-root",
@@ -581,6 +597,7 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
         evidence_root = Path(tmp_name)
         write_synthetic_live_evidence(evidence_root)
         assert feishu_spike.validate_evidence(evidence_root / "feishu-delivery") == 0
+        assert model_spike.validate_evidence(evidence_root / "model-provider") == 0
         assert archive_spike.validate_evidence(evidence_root / "archive-storage") == 0
         passed, missing, failures = readiness.check_live_evidence(evidence_root)
     assert not missing
@@ -737,6 +754,7 @@ def main() -> int:
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()
     test_model_usage_log_requires_expected_tasks()
+    test_model_live_evidence_rejects_template_and_leaky_content()
     test_archive_failure_reason_redacts_private_paths()
     test_archive_live_evidence_requires_matching_counts_and_trees()
     test_synthetic_live_evidence_package_passes_gate()

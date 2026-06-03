@@ -1084,6 +1084,8 @@ def check_spike_runners() -> list[str]:
         "usage tasks must match expected output fixtures and input fixture ids" in model_provider_text,
         "model provider runner must validate usage-log task coverage",
     )
+    require("evidence still contains TEMPLATE_ placeholder" in model_provider_text, "model provider runner must reject template evidence")
+    require("may leak model provider token" in model_provider_text, "model provider runner must reject leaky evidence")
     manifest_text = read("scripts/spikes/readiness_manifest.py")
     require("--write-final-review-packet" in manifest_text, "readiness manifest helper must write a final redaction review packet")
     require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")
@@ -1134,6 +1136,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
         "test_model_usage_log_requires_expected_tasks",
+        "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
         "test_archive_live_evidence_requires_matching_counts_and_trees",
         "test_readiness_manifest_dry_run_shape",
@@ -1155,6 +1158,7 @@ def check_spike_runners() -> list[str]:
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
         "feishu_spike.validate_evidence",
+        "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",

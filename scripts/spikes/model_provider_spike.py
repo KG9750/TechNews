@@ -39,10 +39,31 @@ DISALLOWED_RAW_METADATA_KEYS = {
     "text",
     "transcript",
 }
+SENSITIVE_VALUE_PATTERNS = [
+    re.compile(r"Authorization\s*[:=]\s*Bearer\s+\S+", re.IGNORECASE),
+    re.compile(r"Bearer\s+(?!REDACTED\b)[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
+    re.compile(r"/Users/[^/\s\"]+"),
+    re.compile(r"(?<![A-Za-z0-9_./-])/private/"),
+    re.compile(r"Mobile Documents/com~apple~CloudDocs"),
+]
+SENSITIVE_ENV_NAMES = [
+    "MODEL_API_KEY",
+]
 
 
 class SpikeError(Exception):
     pass
+
+
+def load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 def slug(value: str) -> str:
@@ -59,6 +80,23 @@ def load_golden_samples() -> dict[str, dict]:
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def read_evidence_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
+def check_evidence_redaction(path: Path) -> None:
+    text = read_evidence_text(path)
+    if "TEMPLATE_" in text:
+        raise SpikeError(f"{path}: evidence still contains TEMPLATE_ placeholder")
+    for pattern in SENSITIVE_VALUE_PATTERNS:
+        if pattern.search(text):
+            raise SpikeError(f"{path}: evidence may leak model provider token, authorization header, or private path")
+    for env_name in SENSITIVE_ENV_NAMES:
+        value = os.environ.get(env_name, "")
+        if len(value) >= 8 and value in text:
+            raise SpikeError(f"{path}: evidence contains raw environment value {env_name}")
 
 
 def build_candidate_item(fixture: dict) -> dict:
@@ -221,7 +259,8 @@ def validate_requests(evidence_dir: Path) -> int:
 
 
 def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> None:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    check_evidence_redaction(path)
+    payload = json.loads(read_evidence_text(path))
     if payload.get("input_fixture_id") != fixture["fixture_id"]:
         raise SpikeError(f"{path}: input_fixture_id must be {fixture['fixture_id']}")
     item = payload.get("briefing_item")
@@ -264,7 +303,8 @@ def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> No
 
 
 def validate_usage_log(path: Path) -> None:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    check_evidence_redaction(path)
+    payload = json.loads(read_evidence_text(path))
     if payload.get("provider") in {"fixture", None, ""}:
         raise SpikeError(f"{path}: provider must identify a live provider")
     if payload.get("model") in {"not_called", None, ""}:
@@ -290,6 +330,7 @@ def validate_usage_log(path: Path) -> None:
 
 
 def validate_evidence(evidence_dir: Path) -> int:
+    load_env_file(ROOT / ".env")
     samples = load_golden_samples()
     output_dir = evidence_dir / "outputs"
     if not output_dir.exists():
