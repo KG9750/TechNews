@@ -112,3 +112,4 @@ Required implementation guardrail: <policy row / connector mode / test expectati
 - Production auto-ingestion and source media reuse stay disabled while review is open.
 - Manual URL and pending-permission sources use the correct review decision type.
 - `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, validating completed decisions, and applying validated decisions to tracked artifacts.
+- `scripts/test_source_owner_review_decision.py` verifies that `blocked` decisions close queue items and that `needs_review` decisions keep queue items open while updating copied artifacts.

@@ -362,6 +362,7 @@ def check_required_files() -> list[str]:
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
         "scripts/source_owner_review_decision.py",
+        "scripts/test_source_owner_review_decision.py",
     ]
     require_files(files)
     return [f"required files present: {len(files)}"]
@@ -728,6 +729,7 @@ def check_source_owner_review_queue() -> list[str]:
 
 def check_source_owner_review_decision_helper() -> list[str]:
     text = read("scripts/source_owner_review_decision.py")
+    test_text = read("scripts/test_source_owner_review_decision.py")
     for needle in [
         "fixtures/source-ingestion/source-owner-review-queue.json",
         "fixtures/source-ingestion/source-access-policy.json",
@@ -740,9 +742,15 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "TEMPLATE_",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
+    for needle in [
+        "test_blocked_decision_updates_artifacts_and_closes_queue",
+        "test_needs_review_decision_keeps_queue_open",
+        "isolated_artifacts",
+    ]:
+        require(needle in test_text, f"source owner review decision tests missing: {needle}")
     for path in ["docs/source-owner-review-runbook.md", "docs/source-eligibility-checklist.md"]:
         require("scripts/source_owner_review_decision.py" in read(path), f"{path} must document source owner decision helper")
-    return ["source owner review decision helper: list, draft, validation, and apply commands present"]
+    return ["source owner review decision helper: list, draft, validation, apply, and regression tests present"]
 
 
 def _legacy_source_registry_review_notes() -> list[str]:
@@ -1023,6 +1031,7 @@ def check_readiness_ci_workflow() -> list[str]:
         "scripts/spikes/readiness_manifest.py",
         "scripts/spikes/live_readiness_preflight.py",
         "scripts/source_owner_review_decision.py",
+        "scripts/test_source_owner_review_decision.py",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
         "Expected template evidence validation to fail",
         "--require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu",
