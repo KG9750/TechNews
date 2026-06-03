@@ -55,6 +55,8 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "https://github.com/KG9750/TechNews/issues/3" in text
     assert "source-owner-reviews/index.md" in text
     assert "source-owner-reviews/worksheet.md" in text
+    assert "live-spike-packets" in text
+    assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/source_owner_review_decision.py --worksheet" in text
     assert "MODEL_API_KEY" in text
     assert secret not in text

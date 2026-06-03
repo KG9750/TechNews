@@ -42,6 +42,23 @@ def with_env(name: str, value: str):
     return EnvGuard()
 
 
+def with_env_values(values: dict[str, str]):
+    class EnvGuard:
+        def __enter__(self):
+            self.old = {name: os.environ.get(name) for name in values}
+            for name, value in values.items():
+                os.environ[name] = value
+
+        def __exit__(self, exc_type, exc, tb):
+            for name, value in self.old.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+    return EnvGuard()
+
+
 def test_preflight_redacts_workspace_and_env_values() -> None:
     secret = "test-secret-value-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -93,6 +110,27 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert str(preflight.ROOT) not in packet
     assert str(Path.home()) not in packet
     assert preflight.display_path(Path("evidence/packet.md")) == "evidence/packet.md"
+
+
+def test_preflight_writes_issue_facing_spike_packets() -> None:
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+        packet_dir = evidence_root / "live-spike-packets"
+        summary = preflight.build_summary(evidence_root, run_helpers=False)
+        written = preflight.write_spike_packets(packet_dir, summary, evidence_root)
+
+        assert len(written) == 3
+        feishu_packet = (packet_dir / "feishu-delivery.md").read_text(encoding="utf-8")
+        model_packet = (packet_dir / "model-provider.md").read_text(encoding="utf-8")
+        archive_packet = (packet_dir / "archive-storage.md").read_text(encoding="utf-8")
+
+    assert "https://github.com/KG9750/TechNews/issues/3" in feishu_packet
+    assert "FEISHU_APP_ID" in feishu_packet
+    assert "feishu-delivery/user-response.redacted.json" in feishu_packet
+    assert "MODEL_API_KEY" not in feishu_packet
+    assert "https://github.com/KG9750/TechNews/issues/5" in model_packet
+    assert "https://github.com/KG9750/TechNews/issues/6" in archive_packet
+    assert "Do not paste raw secrets" in archive_packet
 
 
 def test_readiness_manifest_dry_run_shape() -> None:
@@ -305,15 +343,24 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
 
 
 def test_preflight_accepts_synthetic_valid_evidence() -> None:
-    with tempfile.TemporaryDirectory() as tmp_name:
-        evidence_root = Path(tmp_name)
-        write_synthetic_live_evidence(evidence_root)
-        summary = preflight.build_summary(evidence_root, run_helpers=False)
+    feishu_env = {
+        "FEISHU_APP_ID": "redacted-test-app",
+        "FEISHU_APP_SECRET": "redacted-test-secret",
+        "FEISHU_DEFAULT_USER_OPEN_ID": "redacted-test-user",
+        "FEISHU_DEFAULT_CHAT_ID": "redacted-test-chat",
+    }
+    with with_env_values(feishu_env):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            evidence_root = Path(tmp_name)
+            write_synthetic_live_evidence(evidence_root)
+            summary = preflight.build_summary(evidence_root, run_helpers=False)
+            packet = preflight.build_spike_packet(summary, evidence_root, preflight.SPIKE_PACKET_SPECS[0])
 
     assert summary["evidence"]["missing"] == []
     assert summary["evidence_validation"]["missing"] == []
     assert summary["evidence_validation"]["failures"] == []
     assert len(summary["evidence_validation"]["passed"]) == 4
+    assert "- Status: ready for final gate" in packet
 
 
 def test_live_evidence_rejects_raw_environment_values() -> None:
@@ -331,6 +378,7 @@ def main() -> int:
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_packet_lists_status_without_secret_values()
+    test_preflight_writes_issue_facing_spike_packets()
     test_readiness_manifest_dry_run_shape()
     test_preflight_reports_template_evidence_validation_failures()
     test_synthetic_live_evidence_package_passes_gate()

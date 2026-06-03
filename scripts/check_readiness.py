@@ -1024,6 +1024,8 @@ def check_spike_runners() -> list[str]:
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
+    require("--write-spike-packets" in preflight_text, "live readiness preflight must support per-spike packet output")
+    require("build_spike_packet" in preflight_text, "live readiness preflight must build per-spike packets")
     require("check_live_evidence" in preflight_text, "live readiness preflight must validate live evidence content")
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     test_text = read("scripts/test_live_evidence_helpers.py")
@@ -1031,6 +1033,7 @@ def check_spike_runners() -> list[str]:
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_packet_lists_status_without_secret_values",
+        "test_preflight_writes_issue_facing_spike_packets",
         "test_preflight_reports_template_evidence_validation_failures",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
@@ -1038,7 +1041,7 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight packet helper with live evidence validation, and live evidence tests present"]
+    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:
@@ -1075,6 +1078,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     for needle in [
         "readiness-action-packet.md",
         "live-readiness-packet.md",
+        "live-spike-packets",
         "source-owner-reviews/index.md",
         "source-owner-reviews/worksheet.md",
         "readiness-manifest.json",
@@ -1083,6 +1087,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "build_packet",
         "source_owner_summary",
         "python3 scripts/check_readiness.py --require-live --require-evidence",
+        "--write-spike-packets",
         "python3 scripts/check_readiness.py --require-github",
     ]:
         require(needle in text, f"readiness action packet helper missing: {needle}")

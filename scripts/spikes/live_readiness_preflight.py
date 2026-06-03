@@ -66,6 +66,47 @@ EVIDENCE_FILES = [
 ]
 
 SENSITIVE_ENV_NAMES = sorted({name for names in ENV_GROUPS.values() for name in names})
+SPIKE_PACKET_SPECS = [
+    {
+        "key": "feishu-delivery",
+        "title": "Feishu Delivery",
+        "issue_url": "https://github.com/KG9750/TechNews/issues/3",
+        "env_group": "feishu",
+        "evidence_prefixes": ["feishu-delivery/"],
+        "validation_needles": ["feishu", "feishu-delivery"],
+        "commands": [
+            "python3 scripts/spikes/feishu_delivery_spike.py --dry-run",
+            "python3 scripts/spikes/feishu_delivery_spike.py",
+            "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+        ],
+    },
+    {
+        "key": "model-provider",
+        "title": "Model Provider",
+        "issue_url": "https://github.com/KG9750/TechNews/issues/5",
+        "env_group": "model_provider",
+        "evidence_prefixes": ["model-provider/"],
+        "validation_needles": ["model", "model-provider"],
+        "commands": [
+            "python3 scripts/spikes/model_provider_spike.py --dry-run",
+            "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+            "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+        ],
+    },
+    {
+        "key": "archive-storage",
+        "title": "Archive Storage",
+        "issue_url": "https://github.com/KG9750/TechNews/issues/6",
+        "env_group": "archive_sync",
+        "evidence_prefixes": ["archive-storage/"],
+        "validation_needles": ["archive", "archive-storage"],
+        "commands": [
+            "python3 scripts/spikes/archive_storage_spike.py --dry-run",
+            "python3 scripts/spikes/archive_storage_spike.py",
+            "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+        ],
+    },
+]
 
 
 def env_summary() -> dict[str, dict[str, list[str]]]:
@@ -167,6 +208,15 @@ def markdown_command_block(commands: list[str]) -> str:
     return "```bash\n" + "\n".join(commands) + "\n```"
 
 
+def matches_any_prefix(value: str, prefixes: list[str]) -> bool:
+    return any(value.startswith(prefix) for prefix in prefixes)
+
+
+def matches_any_needle(value: str, needles: list[str]) -> bool:
+    lowered = value.lower()
+    return any(needle in lowered for needle in needles)
+
+
 def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path, packet_path: Path) -> str:
     env_sections = []
     for group, env in summary["environment"].items():
@@ -253,6 +303,107 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
     )
 
 
+def spike_packet_status(summary: dict, spec: dict) -> str:
+    env_missing = summary["environment"][spec["env_group"]]["missing"]
+    evidence_missing = [
+        path
+        for path in summary["evidence"]["missing"]
+        if matches_any_prefix(path, spec["evidence_prefixes"])
+    ]
+    validation_missing = [
+        item
+        for item in summary["evidence_validation"]["missing"]
+        if matches_any_needle(item, spec["validation_needles"])
+    ]
+    validation_failures = [
+        item
+        for item in summary["evidence_validation"]["failures"]
+        if matches_any_needle(item, spec["validation_needles"])
+    ]
+    if env_missing or evidence_missing or validation_missing or validation_failures:
+        return "blocked"
+    return "ready for final gate"
+
+
+def build_spike_packet(summary: dict, evidence_root: Path, spec: dict) -> str:
+    env = summary["environment"][spec["env_group"]]
+    evidence_present = [
+        path
+        for path in summary["evidence"]["present"]
+        if matches_any_prefix(path, spec["evidence_prefixes"])
+    ]
+    evidence_missing = [
+        path
+        for path in summary["evidence"]["missing"]
+        if matches_any_prefix(path, spec["evidence_prefixes"])
+    ]
+    validation_passed = [
+        item
+        for item in summary["evidence_validation"]["passed"]
+        if matches_any_needle(item, spec["validation_needles"])
+    ]
+    validation_missing = [
+        item
+        for item in summary["evidence_validation"]["missing"]
+        if matches_any_needle(item, spec["validation_needles"])
+    ]
+    validation_failures = [
+        item
+        for item in summary["evidence_validation"]["failures"]
+        if matches_any_needle(item, spec["validation_needles"])
+    ]
+
+    return "\n".join(
+        [
+            f"# Live Spike Packet: {spec['title']}",
+            "",
+            "This packet is context only. Complete redacted live evidence under ignored `evidence/`; do not commit this packet or live evidence.",
+            "",
+            f"- Status: {spike_packet_status(summary, spec)}",
+            f"- GitHub issue: {spec['issue_url']}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            f"- Final gate: `{summary['final_gate_command']}`",
+            "",
+            "## Environment Names",
+            "",
+            "Present variable names:",
+            markdown_bullets(env["present"], empty_label="None present."),
+            "",
+            "Missing variable names:",
+            markdown_bullets(env["missing"], empty_label="None missing."),
+            "",
+            "## Evidence Files",
+            "",
+            "Present files:",
+            markdown_bullets(evidence_present, empty_label="None present."),
+            "",
+            "Missing files:",
+            markdown_bullets(evidence_missing, empty_label="None missing."),
+            "",
+            "## Validation Status",
+            "",
+            "Passed checks:",
+            markdown_bullets(validation_passed, empty_label="None passed yet."),
+            "",
+            "Missing validation inputs:",
+            markdown_bullets(validation_missing, empty_label="None missing."),
+            "",
+            "Validation failures:",
+            markdown_bullets(validation_failures, empty_label="None."),
+            "",
+            "## Commands",
+            "",
+            markdown_command_block(spec["commands"]),
+            "",
+            "## Guardrails",
+            "",
+            "- Do not paste raw secrets, recipient ids, API keys, local paths, or sync targets into GitHub comments.",
+            "- Keep validation fields such as status, run id, provider/model, latency, and source anchors visible.",
+            "- Attach only redacted summaries or paths to ignored local evidence when updating the linked issue.",
+        ]
+    )
+
+
 def run_dry_runs(evidence_root: Path, run_helpers: bool) -> list[dict]:
     results = []
     if not run_helpers:
@@ -312,6 +463,15 @@ def write_markdown(path: Path, text: str) -> None:
     path.write_text(text + "\n", encoding="utf-8")
 
 
+def write_spike_packets(packet_dir: Path, summary: dict, evidence_root: Path) -> list[Path]:
+    written = []
+    for spec in SPIKE_PACKET_SPECS:
+        path = packet_dir / f"{spec['key']}.md"
+        write_markdown(path, build_spike_packet(summary, evidence_root, spec))
+        written.append(path)
+    return written
+
+
 def has_missing_required(summary: dict) -> bool:
     env_missing = any(group["missing"] for group in summary["environment"].values())
     evidence_missing = bool(summary["evidence"]["missing"])
@@ -345,17 +505,23 @@ def main() -> int:
     parser.add_argument("--summary-path", "--output", dest="summary_path", help="Override summary output path.")
     parser.add_argument("--write-packet", action="store_true", help="Also write a Markdown execution packet under evidence/.")
     parser.add_argument("--packet-path", help="Override Markdown packet output path.")
+    parser.add_argument("--write-spike-packets", action="store_true", help="Also write one Markdown packet per live spike under evidence/.")
+    parser.add_argument("--spike-packet-dir", help="Override per-spike Markdown packet directory.")
     args = parser.parse_args()
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.summary_path) if args.summary_path else evidence_root / "live-readiness-preflight.json"
     packet_path = Path(args.packet_path) if args.packet_path else evidence_root / "live-readiness-packet.md"
+    spike_packet_dir = Path(args.spike_packet_dir) if args.spike_packet_dir else evidence_root / "live-spike-packets"
     run_helpers = args.dry_run and not args.skip_helper_dry_runs
     summary = build_summary(evidence_root, run_helpers=run_helpers)
     write_json(output_path, summary)
     if args.write_packet:
         write_markdown(packet_path, build_markdown_packet(summary, evidence_root, output_path, packet_path))
         print(f"Preflight packet written to {display_path(packet_path)}")
+    if args.write_spike_packets:
+        for path in write_spike_packets(spike_packet_dir, summary, evidence_root):
+            print(f"Live spike packet written to {display_path(path)}")
     print_summary(output_path, summary)
     if args.strict and has_missing_required(summary):
         print("STRICT preflight failed: environment variables, failed helper dry-runs, or live evidence validation are incomplete")

@@ -10,7 +10,7 @@ This runbook explains how to turn the remaining external spikes into evidence th
 Before running live external spikes, generate a local preflight summary:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet
+python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets
 python3 scripts/readiness_action_packet.py
 ```
 
@@ -19,15 +19,18 @@ This writes:
 ```text
 evidence/live-readiness-preflight.json
 evidence/live-readiness-packet.md
+evidence/live-spike-packets/feishu-delivery.md
+evidence/live-spike-packets/model-provider.md
+evidence/live-spike-packets/archive-storage.md
 evidence/readiness-action-packet.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The top-level readiness action packet links the live packet, source-owner review index and worksheet, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index and worksheet, readiness-manifest blocker, and relevant GitHub issues into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet
+python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets
 ```
 
 Strict mode fails until all required environment variable names are present and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
