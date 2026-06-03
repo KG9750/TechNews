@@ -91,9 +91,11 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
         assert any("--validate-requests" in result["command"] for result in results)
         assert (evidence_root / "archive-storage/dry-run-sync-result.json").exists()
         assert (evidence_root / "readiness-manifest.dry-run.json").exists()
+        assert (evidence_root / "final-redaction-review.md").exists()
         assert "feishu-delivery/dry-run-request-shape.redacted.json" in summary["dry_run_artifacts"]["present"]
         assert "model-provider/requests/high-confidence-news.request.json" in summary["dry_run_artifacts"]["present"]
         assert "archive-storage/dry-run-sync-result.json" in summary["dry_run_artifacts"]["present"]
+        assert "final-redaction-review.md" in summary["dry_run_artifacts"]["present"]
         assert "feishu-delivery/user-response.redacted.json" in summary["evidence"]["missing"]
 
 
@@ -142,6 +144,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "MODEL_API_KEY" in packet
     assert "readiness-manifest.json" in packet
     assert "Final Evidence Group Status" in packet
+    assert "final-redaction-review.md" in packet
     assert "Dry-Run Artifact Inventory" in packet
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
@@ -218,6 +221,28 @@ def test_readiness_manifest_dry_run_shape() -> None:
     assert payload["spikes"]["feishu_delivery"]["status"] == "missing"
     assert payload["spikes"]["model_provider"]["provider"] == "not_available_dry_run"
     assert payload["spikes"]["archive_storage"]["run_id"] == "not_available_dry_run"
+
+
+def test_readiness_manifest_final_review_packet_shape() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        packet_path = evidence_root / "final-redaction-review.md"
+        payload = manifest.build_manifest(
+            evidence_root,
+            reviewed_by="Briefing Administrator",
+            redaction_notes="Dry-run regression test.",
+            dry_run=True,
+        )
+        packet = manifest.build_final_review_packet(evidence_root, payload, packet_path)
+
+    assert "# Final Redaction Review Packet" in packet
+    assert "readiness-manifest.json" in packet
+    assert "feishu-delivery/user-response.redacted.json" in packet
+    assert "Redaction Checklist" in packet
+    assert "Share Guardrails" in packet
+    assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
+    assert str(manifest.ROOT) not in packet
+    assert str(Path.home()) not in packet
 
 
 def test_preflight_reports_template_evidence_validation_failures() -> None:
@@ -525,6 +550,7 @@ def main() -> int:
     test_feishu_dry_run_documents_group_webhook_fallback()
     test_feishu_group_webhook_payload_redacts_signature()
     test_readiness_manifest_dry_run_shape()
+    test_readiness_manifest_final_review_packet_shape()
     test_preflight_reports_template_evidence_validation_failures()
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()

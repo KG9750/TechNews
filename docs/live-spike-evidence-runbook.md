@@ -22,11 +22,12 @@ evidence/live-readiness-packet.md
 evidence/live-spike-packets/feishu-delivery.md
 evidence/live-spike-packets/model-provider.md
 evidence/live-spike-packets/archive-storage.md
+evidence/final-redaction-review.md
 evidence/readiness-action-packet.md
 evidence/mvp-issue-packets/issue-10.md through issue-20.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index, worksheet, batch plan, readiness-manifest blocker, relevant GitHub issues, an MVP issue unlock matrix, and per-MVP-issue triage packets into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, generates a final redaction review packet, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The final redaction review packet lists every final evidence file, preserves validation fields that should remain visible, and reminds the operator what must not be pasted into GitHub. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index, worksheet, batch plan, readiness-manifest blocker, final redaction review packet, relevant GitHub issues, an MVP issue unlock matrix, and per-MVP-issue triage packets into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
 
@@ -44,7 +45,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, partial final evidence group reporting, Markdown packet output without secret values, readiness manifest dry-run shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, partial final evidence group reporting, Markdown packet output without secret values, readiness manifest dry-run shape, final redaction review packet shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 
@@ -74,10 +75,10 @@ Dry-run the manifest shape before live evidence is complete:
 python3 scripts/spikes/readiness_manifest.py --dry-run
 ```
 
-Generate the final manifest after live evidence is complete and redacted:
+Generate the final manifest and final redaction review packet after live evidence is complete and redacted:
 
 ```bash
-python3 scripts/spikes/readiness_manifest.py --reviewed-by "Briefing Administrator" --redaction-notes "Reviewed redacted evidence for template markers, sensitive ids, tokens, and private paths."
+python3 scripts/spikes/readiness_manifest.py --write-final-review-packet --reviewed-by "Briefing Administrator" --redaction-notes "Reviewed redacted evidence for template markers, sensitive ids, tokens, and private paths."
 ```
 
 Template:
@@ -95,7 +96,8 @@ Validation rules:
 - Model Provider `run_id`, `provider`, and `model` must match `evidence/model-provider/usage-log.json`, and every model output must use that same `run_id`.
 - Archive/storage `run_id` must match `evidence/archive-storage/sync-result.json`.
 - Manifest content must pass the same template-marker and sensitive-value redaction checks as other live evidence files.
-- The manifest helper writes generated files under ignored `evidence/`; do not commit live manifests.
+- The manifest helper writes generated files under ignored `evidence/`; do not commit live manifests or final redaction review packets.
+- `evidence/final-redaction-review.md` is an operator checklist only. It does not replace strict preflight or the final readiness gate.
 
 ## Feishu Delivery
 

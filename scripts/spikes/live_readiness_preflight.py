@@ -94,6 +94,7 @@ DRY_RUN_ARTIFACT_FILES = [
     "model-provider/requests/low-confidence-news.request.json",
     "model-provider/requests/academic-paper.request.json",
     "archive-storage/dry-run-sync-result.json",
+    "final-redaction-review.md",
 ]
 
 SENSITIVE_ENV_NAMES = sorted({name for names in ENV_GROUPS.values() for name in names})
@@ -240,6 +241,7 @@ def dry_run_commands(evidence_root: Path) -> list[list[str]]:
             str(evidence_root),
             "--output",
             str(evidence_root / "readiness-manifest.dry-run.json"),
+            "--write-final-review-packet",
         ],
     ]
 
@@ -390,7 +392,7 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
                     "python3 scripts/spikes/model_provider_spike.py --validate-requests",
                     "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
                     "python3 scripts/spikes/archive_storage_spike.py",
-                    "python3 scripts/spikes/readiness_manifest.py",
+                    "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet",
                     "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
                     "python3 scripts/check_readiness.py --require-live --require-evidence",
                 ]
@@ -559,7 +561,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/archive_storage_spike.py",
-            "python3 scripts/spikes/readiness_manifest.py",
+            "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet",
             "python3 scripts/check_readiness.py --require-live --require-evidence",
         ],
         "notes": [

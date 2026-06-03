@@ -1034,6 +1034,10 @@ def check_spike_runners() -> list[str]:
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
     require("DISALLOWED_RAW_METADATA_KEYS" in model_provider_text, "model provider runner must guard against full-body metadata")
+    manifest_text = read("scripts/spikes/readiness_manifest.py")
+    require("--write-final-review-packet" in manifest_text, "readiness manifest helper must write a final redaction review packet")
+    require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")
+    require("Final Redaction Review Packet" in manifest_text, "readiness manifest helper must label final redaction review packets")
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
@@ -1043,6 +1047,7 @@ def check_spike_runners() -> list[str]:
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     require("DRY_RUN_ARTIFACT_FILES" in preflight_text, "live readiness preflight must define dry-run artifact inventory")
     require("dry_run_artifacts" in preflight_text, "live readiness preflight must summarize dry-run artifacts separately")
+    require("final-redaction-review.md" in preflight_text, "live readiness preflight must inventory the final redaction review packet")
     require("FINAL_EVIDENCE_GROUPS" in preflight_text, "live readiness preflight must define final evidence groups")
     require("final_evidence_groups" in preflight_text, "live readiness preflight must summarize final evidence groups")
     require("Final Evidence Group Status" in preflight_text, "live readiness preflight packet must report final evidence group status")
@@ -1069,6 +1074,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_validation_rejects_full_body_metadata",
         "test_archive_failure_reason_redacts_private_paths",
         "test_readiness_manifest_dry_run_shape",
+        "test_readiness_manifest_final_review_packet_shape",
         "test_synthetic_live_evidence_package_passes_gate",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
         "test_preflight_accepts_synthetic_valid_evidence",
@@ -1078,13 +1084,14 @@ def check_spike_runners() -> list[str]:
     for needle in [
         "summary[\"dry_run_artifacts\"][\"present\"]",
         "summary[\"final_evidence_groups\"][\"feishu_delivery\"]",
+        "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
     ]:
         require(needle in test_text, f"live evidence helper tests missing dry-run inventory assertion: {needle}")
-    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation, dry-run artifact inventory, final evidence group status, per-spike packets, and live evidence tests present"]
+    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, final redaction review packet, preflight packet helper with live evidence validation, dry-run artifact inventory, final evidence group status, per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:
@@ -1127,6 +1134,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source-owner-reviews/batch-plan.md",
         "mvp-issue-packets",
         "readiness-manifest.json",
+        "final-redaction-review.md",
         "GitHub Issue Links",
         "MVP Issue Unlock Matrix",
         "MVP_ISSUE_UNLOCKS",
@@ -1140,6 +1148,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source_owner_summary",
         "python3 scripts/check_readiness.py --require-live --require-evidence",
         "--write-spike-packets",
+        "--write-final-review-packet",
         "python3 scripts/check_readiness.py --require-github",
     ]:
         require(needle in text, f"readiness action packet helper missing: {needle}")
@@ -1150,6 +1159,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "MVP Issue Unlock Matrix",
         "source-owner-reviews/batch-plan.md",
         "mvp-issue-packets",
+        "final-redaction-review.md",
     ]:
         require(needle in test_text, f"readiness action packet tests missing: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md", "docs/live-spike-evidence-runbook.md"]:

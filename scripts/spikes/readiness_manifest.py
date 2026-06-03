@@ -34,6 +34,13 @@ ARCHIVE_FILES = [
     "archive-storage/local-tree.txt",
     "archive-storage/remote-tree.txt",
 ]
+FINAL_REVIEW_PACKET = "final-redaction-review.md"
+FINAL_EVIDENCE_FILES = [
+    "readiness-manifest.json",
+    *FEISHU_FILES,
+    *MODEL_FILES,
+    *ARCHIVE_FILES,
+]
 
 
 class ManifestError(Exception):
@@ -65,6 +72,28 @@ def read_json_if_present(path: Path) -> dict:
 
 def missing_files(evidence_root: Path, files: list[str]) -> list[str]:
     return [path for path in files if not (evidence_root / path).exists()]
+
+
+def display_path(path: Path) -> str:
+    comparable_path = path if path.is_absolute() else ROOT / path
+    try:
+        return str(comparable_path.resolve().relative_to(ROOT))
+    except ValueError:
+        return "REDACTED_EXTERNAL_PATH"
+
+
+def markdown_bullets(items: list[str], empty_label: str = "None.") -> str:
+    if not items:
+        return f"- {empty_label}"
+    return "\n".join(f"- {item}" for item in items)
+
+
+def evidence_file_rows(evidence_root: Path) -> list[str]:
+    rows = []
+    for path in FINAL_EVIDENCE_FILES:
+        status = "present" if (evidence_root / path).exists() else "missing"
+        rows.append(f"- `{path}`: {status}")
+    return rows
 
 
 def spike_status(evidence_root: Path, files: list[str]) -> str:
@@ -134,6 +163,65 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def build_final_review_packet(evidence_root: Path, manifest: dict, packet_path: Path) -> str:
+    spikes = manifest.get("spikes", {})
+    spike_rows = [
+        f"`{name}`: {spike.get('status', 'missing')}"
+        for name, spike in spikes.items()
+    ]
+    return "\n".join(
+        [
+            "# Final Redaction Review Packet",
+            "",
+            "This packet is context only. It is not readiness evidence and must stay under ignored `evidence/`.",
+            "",
+            f"- Generated at: {utc_now()}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            f"- Packet path: `{display_path(packet_path)}`",
+            f"- Manifest id: `{manifest.get('readiness_evidence_id', 'not_available')}`",
+            f"- Manifest commit: `{manifest.get('commit', 'not_available')}`",
+            f"- Reviewed by: {manifest.get('reviewed_by', 'not_available')}",
+            "- Final gate: `python3 scripts/check_readiness.py --require-live --require-evidence`",
+            "",
+            "## Evidence Files",
+            "",
+            *evidence_file_rows(evidence_root),
+            "",
+            "## Manifest Spike Status",
+            "",
+            markdown_bullets(spike_rows, empty_label="No spike status available."),
+            "",
+            "## Redaction Checklist",
+            "",
+            "- Confirm no `TEMPLATE_` markers remain.",
+            "- Confirm no raw Feishu recipient ids, app ids, authorization headers, API keys, local paths, or NAS/cloud targets remain.",
+            "- Confirm source names, original titles, source URLs, run ids, provider/model names, request counts, latency, status codes, and failure reasons remain visible where required for validation.",
+            "- Confirm rendered Feishu evidence includes Source, Confidence Notice, and Archive or Deep-Dive link text.",
+            "- Confirm model evidence is metadata-only and does not include full article bodies, PDFs, transcripts, or unapproved media.",
+            "- Confirm archive evidence redacts local and remote roots while preserving file counts, sync status, and retryability.",
+            "",
+            "## Share Guardrails",
+            "",
+            "- Do not paste raw evidence files into GitHub comments.",
+            "- Share only validation summaries, commit ids, CI links, and redacted paths when updating issues.",
+            "- Re-run strict preflight after any evidence file changes.",
+            "",
+            "## Required Commands",
+            "",
+            "```bash",
+            "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+            "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+            "python3 scripts/check_readiness.py --require-live --require-evidence",
+            "```",
+        ]
+    )
+
+
+def write_markdown(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n", encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
@@ -144,18 +232,25 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true", help="Write a dry-run manifest even if live evidence is incomplete.")
     parser.add_argument("--output", help="Override manifest output path.")
+    parser.add_argument("--write-final-review-packet", action="store_true", help="Also write an ignored final redaction review packet.")
+    parser.add_argument("--review-packet-output", help="Override final redaction review packet output path.")
     args = parser.parse_args()
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.output) if args.output else evidence_root / ("readiness-manifest.dry-run.json" if args.dry_run else "readiness-manifest.json")
+    review_packet_path = Path(args.review_packet_output) if args.review_packet_output else evidence_root / FINAL_REVIEW_PACKET
     try:
         manifest = build_manifest(evidence_root, args.reviewed_by, args.redaction_notes, args.dry_run)
         write_json(output_path, manifest)
+        if args.write_final_review_packet:
+            write_markdown(review_packet_path, build_final_review_packet(evidence_root, manifest, review_packet_path))
     except ManifestError as error:
         print(f"ERROR {error}")
         return 1
 
     print(f"{'DRY-RUN' if args.dry_run else 'LIVE'} readiness manifest written to {output_path}")
+    if args.write_final_review_packet:
+        print(f"Final redaction review packet written to {review_packet_path}")
     return 0
 
 
