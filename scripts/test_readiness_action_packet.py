@@ -51,6 +51,8 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "Open source owner decisions: 25" in text
     assert "Missing source owner decisions: 25" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
+    assert "Readiness manifest | blocked | 0 | 1" in text
+    assert "https://github.com/KG9750/TechNews/issues/3" in text
     assert "source-owner-reviews/index.md" in text
     assert "MODEL_API_KEY" in text
     assert secret not in text

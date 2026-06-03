@@ -20,6 +20,12 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
+GITHUB_ISSUES = [
+    ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
+    ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
+    ("Model provider spike", "https://github.com/KG9750/TechNews/issues/5"),
+    ("Archive/storage spike", "https://github.com/KG9750/TechNews/issues/6"),
+]
 
 
 def load_module(name: str, path: Path):
@@ -162,6 +168,18 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         "| "
         + " | ".join(
             [
+                "Readiness manifest",
+                "blocked" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "ready for final gate",
+                "0",
+                "1" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "0",
+            ]
+        )
+        + " |"
+    )
+    table_rows.append(
+        "| "
+        + " | ".join(
+            [
                 "Source owner decisions",
                 "blocked" if source_summary["counts"]["invalid"] or source_summary["counts"]["missing"] else "ready to apply",
                 "0",
@@ -170,6 +188,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         )
         + " |"
     )
+    issue_rows = [
+        f"{label}: {url}"
+        for label, url in GITHUB_ISSUES
+    ]
 
     return "\n".join(
         [
@@ -196,6 +218,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Live execution packet: `{display_path(evidence_root / 'live-readiness-packet.md')}`",
             f"- Live preflight summary: `{display_path(evidence_root / 'live-readiness-preflight.json')}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
+            "",
+            "## GitHub Issue Links",
+            "",
+            markdown_bullets(issue_rows, empty_label="No GitHub issues linked."),
             "",
             "## Live Environment Names",
             "",
