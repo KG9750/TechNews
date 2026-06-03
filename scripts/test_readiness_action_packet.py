@@ -107,7 +107,10 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "### #1 Pre-development Tracking" in text
     assert "### #10-#20 MVP Issue Triage" in text
     assert "Final readiness gate: blocked" in text
-    assert "Source owner decisions: blocked" in text
+    assert "Source owner decisions: blocked (25 decision drafts not generated yet)" in text
+    assert "Decision drafts not generated yet: 25" in text
+    assert "Invalid decisions:" not in text
+    assert "25 invalid decisions" not in text
     assert "FEISHU_APP_ID" in text
     assert "MODEL_PROVIDER" in text
     assert "ARCHIVE_LOCAL_ROOT" in text
@@ -121,6 +124,16 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text
+
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+        packet.write_source_owner_packets(evidence_root)
+        draft_text = packet.build_github_update_packet(evidence_root)
+
+    assert "Source owner decisions: blocked (25 decision drafts need owner input or validation fixes)" in draft_text
+    assert "Decision drafts needing owner input or validation fixes: 25" in draft_text
+    assert "Invalid decisions:" not in draft_text
+    assert "25 invalid decisions" not in draft_text
 
 
 def test_external_input_request_packet_names_inputs_without_secret_values() -> None:

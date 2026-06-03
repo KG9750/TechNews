@@ -494,12 +494,24 @@ def github_workstream_sections(live_summary: dict) -> list[str]:
     return sections
 
 
+def github_source_owner_status(source_summary: dict) -> str:
+    counts = source_summary["counts"]
+    blockers = []
+    if counts["invalid"]:
+        blockers.append(f"{count_phrase(counts['invalid'], 'decision draft', 'decision drafts')} need owner input or validation fixes")
+    if counts["missing"]:
+        blockers.append(f"{count_phrase(counts['missing'], 'decision draft', 'decision drafts')} not generated yet")
+    if blockers:
+        return "blocked (" + ", ".join(blockers) + ")"
+    return "ready (all open source owner decisions validate)"
+
+
 def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
     states = prerequisite_states(live_summary, source_summary)
     final_state = states["final_readiness_gate"]
-    source_state = states["source_owner_decisions"]
+    source_owner_status = github_source_owner_status(source_summary)
     mvp_statuses = mvp_issue_statuses(live_summary, source_summary)
     ready_mvp_count = sum(1 for status in mvp_statuses if status["issue_specific_status"] == "ready for final triage")
     blocked_mvp_count = len(mvp_statuses) - ready_mvp_count
@@ -507,7 +519,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
     issue_one_comment = [
         "Readiness update:",
         f"- Final readiness gate: {final_state['status']} ({final_state['detail']})",
-        f"- Source owner decisions: {source_state['status']} ({source_state['detail']})",
+        f"- Source owner decisions: {source_owner_status}",
         f"- MVP issue unlock status: {blocked_mvp_count} blocked, {ready_mvp_count} ready for final triage",
         f"- Action packet: evidence/readiness-action-packet.md",
         f"- External input request packet: evidence/{EXTERNAL_INPUT_REQUEST_RELATIVE}",
@@ -518,9 +530,9 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
     source_owner_comment = [
         "Source owner review update:",
         f"- Open decisions: {source_summary['open']}",
-        f"- Valid decisions: {source_summary['counts']['valid']}",
-        f"- Invalid decisions: {source_summary['counts']['invalid']}",
-        f"- Missing decisions: {source_summary['counts']['missing']}",
+        f"- Completed valid decisions: {source_summary['counts']['valid']}",
+        f"- Decision drafts needing owner input or validation fixes: {source_summary['counts']['invalid']}",
+        f"- Decision drafts not generated yet: {source_summary['counts']['missing']}",
         f"- Worksheet: {source_summary['worksheet_path']}",
         f"- Request packet: {source_summary['request_packet_path']}",
         "",
@@ -550,7 +562,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             "## Status Snapshot",
             "",
             f"- Final readiness gate: {final_state['status']} ({final_state['detail']})",
-            f"- Source owner decisions: {source_state['status']} ({source_state['detail']})",
+            f"- Source owner decisions: {source_owner_status}",
             f"- MVP issue packet status: {blocked_mvp_count} blocked, {ready_mvp_count} ready for final triage",
             "",
             "## Label Guardrails",
