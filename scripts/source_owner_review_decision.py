@@ -758,6 +758,16 @@ def is_incomplete_review_text(value: str) -> bool:
     return normalized.startswith(("placeholder:", "tbd:", "todo:"))
 
 
+def duplicate_values(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for value in values:
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates)
+
+
 def require_completed_review_text(value: object, label: str) -> None:
     require(isinstance(value, str), f"{label} must be text")
     require(bool(value.strip()), f"{label} is required")
@@ -790,9 +800,14 @@ def validated_payload(path: Path) -> dict:
     require(isinstance(evidence, list), "evidence_checked must be a list")
     require(len(evidence) >= len(item.get("evidence_required", [])), "all required evidence items must be addressed")
     required_evidence = set(item.get("evidence_required", []))
-    covered_evidence = {entry.get("required_evidence") for entry in evidence}
+    required_values = [entry.get("required_evidence") for entry in evidence if entry.get("required_evidence")]
+    duplicate_evidence = duplicate_values(required_values)
+    require(not duplicate_evidence, "evidence_checked duplicates required evidence: " + ", ".join(duplicate_evidence))
+    covered_evidence = set(required_values)
     missing_evidence = sorted(required_evidence - covered_evidence)
     require(not missing_evidence, "evidence_checked missing required evidence: " + ", ".join(missing_evidence))
+    unexpected_evidence = sorted(covered_evidence - required_evidence)
+    require(not unexpected_evidence, "evidence_checked has unexpected required_evidence values: " + ", ".join(unexpected_evidence))
     for entry in evidence:
         require(entry.get("required_evidence"), "each evidence item needs required_evidence")
         require_completed_review_text(entry.get("url_or_note"), "each evidence item needs url_or_note")

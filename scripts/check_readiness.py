@@ -757,6 +757,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "INCOMPLETE_REVIEW_TEXT",
         "require_completed_review_text",
         "evidence_checked missing required evidence",
+        "evidence_checked duplicates required evidence",
+        "evidence_checked has unexpected required_evidence values",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -778,6 +780,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_decision_rejects_placeholder_evidence_note",
         "test_decision_rejects_placeholder_owner_answer",
         "test_decision_rejects_missing_required_evidence_item",
+        "test_decision_rejects_duplicate_required_evidence_item",
+        "test_decision_rejects_unexpected_required_evidence_item",
         "test_apply_all_rejects_template_drafts_without_writing",
         "test_apply_all_dry_run_validates_without_writing",
         "test_apply_all_applies_completed_open_reviews",

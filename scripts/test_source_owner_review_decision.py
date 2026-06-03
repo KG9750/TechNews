@@ -397,10 +397,34 @@ def test_decision_rejects_missing_required_evidence_item() -> None:
     with isolated_artifacts() as tmp:
         payload = decision_payload("needs_review")
         required = payload["evidence_checked"]
-        required[1]["required_evidence"] = required[0]["required_evidence"]
+        required[1]["required_evidence"] = "Unrequested evidence item"
         path = write_decision(tmp, payload)
 
         assert_review_error(path, "evidence_checked missing required evidence")
+
+
+def test_decision_rejects_duplicate_required_evidence_item() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["evidence_checked"].append(dict(payload["evidence_checked"][0]))
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "evidence_checked duplicates required evidence")
+
+
+def test_decision_rejects_unexpected_required_evidence_item() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["evidence_checked"].append(
+            {
+                "required_evidence": "Unrequested evidence item",
+                "url_or_note": "Owner note: reviewed additional context.",
+                "checked_at": "2026-06-03",
+            }
+        )
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "evidence_checked has unexpected required_evidence values")
 
 
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
@@ -493,6 +517,8 @@ def main() -> int:
     test_decision_rejects_placeholder_evidence_note()
     test_decision_rejects_placeholder_owner_answer()
     test_decision_rejects_missing_required_evidence_item()
+    test_decision_rejects_duplicate_required_evidence_item()
+    test_decision_rejects_unexpected_required_evidence_item()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()
