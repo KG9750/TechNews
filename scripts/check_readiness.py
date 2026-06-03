@@ -1289,6 +1289,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     test_text = read("scripts/test_readiness_action_packet.py")
     for needle in [
         "readiness-action-packet.md",
+        "external-input-request.md",
         "live-readiness-packet.md",
         "live-spike-packets",
         "source-owner-reviews/index.md",
@@ -1299,7 +1300,11 @@ def check_readiness_action_packet_helper() -> list[str]:
         "final-redaction-review.md",
         "EXTERNAL_INPUT_REQUESTS",
         "External Input Request Checklist",
+        "External Input Request Packet",
         "external_input_request_rows",
+        "build_external_input_request_packet",
+        "write_external_input_request_packet",
+        "Required evidence files",
         "Briefing Host secret store or local `.env`; never GitHub.",
         "GitHub Issue Links",
         "MVP Issue Unlock Matrix",
@@ -1335,6 +1340,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Final evidence group",
         "Feishu delivery spike: final evidence group partial",
         "Global readiness gate: blocked",
+        "External Input Request Packet",
+        "Required evidence files",
         "External Input Request Checklist",
         "FEISHU_APP_ID, FEISHU_APP_SECRET",
         "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET",

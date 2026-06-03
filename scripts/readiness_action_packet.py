@@ -19,6 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
+EXTERNAL_INPUT_REQUEST_RELATIVE = "external-input-request.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
@@ -376,6 +377,80 @@ def external_input_request_rows(live_summary: dict) -> list[str]:
     return rows
 
 
+def spike_commands_by_env_group() -> dict[str, list[str]]:
+    return {
+        spec["env_group"]: spec["commands"]
+        for spec in live_preflight.SPIKE_PACKET_SPECS
+    }
+
+
+def evidence_files_for_env_group(env_group: str) -> list[str]:
+    evidence_group = next(
+        spec["evidence_group"]
+        for spec in LIVE_WORKSTREAMS
+        if spec["env_group"] == env_group
+    )
+    return live_preflight.FINAL_EVIDENCE_GROUPS[evidence_group]
+
+
+def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
+    live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
+    commands_by_env_group = spike_commands_by_env_group()
+    sections = []
+    for request in EXTERNAL_INPUT_REQUESTS:
+        env = live_summary["environment"][request["env_group"]]
+        required = live_preflight.ENV_GROUPS[request["env_group"]]
+        sections.extend(
+            [
+                f"## {request['workstream']}",
+                "",
+                f"- Linked issue: {request['issue']}",
+                f"- Configure at: {request['configure_at']}",
+                f"- Safe request wording: {request['safe_request']}",
+                f"- After configured: {request['after_configured']}",
+                "",
+                "Required variable names:",
+                markdown_bullets(required),
+                "",
+                "Missing variable names now:",
+                markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Required evidence files:",
+                markdown_bullets(evidence_files_for_env_group(request["env_group"])),
+                "",
+                "Commands after values are configured:",
+                "```bash",
+                *commands_by_env_group[request["env_group"]],
+                "```",
+                "",
+            ]
+        )
+
+    return "\n".join(
+        [
+            "# External Input Request Packet",
+            "",
+            "This ignored packet is for requesting live spike inputs through a secure channel. It names variables, evidence paths, and commands only; do not paste real values here, in GitHub, or in tracked files.",
+            "",
+            f"- Generated at: {utc_now()}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            "- Final gate after evidence is complete: `python3 scripts/check_readiness.py --require-live --require-evidence`",
+            "",
+            *sections,
+            "## Share Guardrails",
+            "",
+            "- Share variable names and setup instructions only.",
+            "- Keep real credentials, Feishu recipient ids, provider responses, local paths, and NAS/cloud targets in the secure environment.",
+            "- Commit tracked docs/scripts before generating the final readiness manifest.",
+        ]
+    )
+
+
+def write_external_input_request_packet(output_path: Path, evidence_root: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(build_external_input_request_packet(evidence_root) + "\n", encoding="utf-8")
+
+
 def mvp_issue_packet_filename(issue: str) -> str:
     return f"issue-{issue.lstrip('#')}.md"
 
@@ -561,6 +636,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Live spike packets: `{display_path(evidence_root / 'live-spike-packets')}`",
             f"- Live preflight summary: `{display_path(evidence_root / 'live-readiness-preflight.json')}`",
             f"- Final redaction review packet: `{display_path(evidence_root / 'final-redaction-review.md')}`",
+            f"- External input request packet: `{display_path(evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE)}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
@@ -640,6 +716,9 @@ def main() -> int:
     output_path = Path(args.output)
     write_packet(output_path, evidence_root)
     print(f"Readiness action packet written to {display_path(output_path)}")
+    external_input_path = evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE
+    write_external_input_request_packet(external_input_path, evidence_root)
+    print(f"External input request packet written to {display_path(external_input_path)}")
     if args.write_mvp_issue_packets:
         packet_dir = Path(args.mvp_issue_packet_dir) if args.mvp_issue_packet_dir else evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE
         write_mvp_issue_packets(packet_dir, evidence_root)

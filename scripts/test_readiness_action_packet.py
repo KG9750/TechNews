@@ -74,6 +74,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "source-owner-reviews/batch-plan.md" in text
     assert "mvp-issue-packets" in text
     assert "live-spike-packets" in text
+    assert "external-input-request.md" in text
     assert "final-redaction-review.md" in text
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet" in text
@@ -85,6 +86,32 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "python3 scripts/source_owner_review_decision.py --batch-plan" in text
     assert "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets" in text
     assert "MODEL_API_KEY" in text
+    assert secret not in text
+    assert str(packet.ROOT) not in text
+    assert str(Path.home()) not in text
+
+
+def test_external_input_request_packet_names_inputs_without_secret_values() -> None:
+    secret = "external-input-secret-123456789"
+    with with_env("FEISHU_APP_SECRET", secret):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+            evidence_root = Path(tmp_name) / "evidence"
+            text = packet.build_external_input_request_packet(evidence_root)
+
+    assert "# External Input Request Packet" in text
+    assert "Required variable names:" in text
+    assert "Missing variable names now:" in text
+    assert "Required evidence files:" in text
+    assert "Commands after values are configured:" in text
+    assert "FEISHU_APP_ID" in text
+    assert "FEISHU_APP_SECRET" in text
+    assert "feishu-delivery/user-request.redacted.json" in text
+    assert "model-provider/usage-log.json" in text
+    assert "archive-storage/sync-result.json" in text
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in text
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in text
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
+    assert "Share variable names and setup instructions only." in text
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text
@@ -126,13 +153,18 @@ def test_action_packet_writes_markdown() -> None:
     with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
         output = Path(tmp_name) / "evidence/readiness-action-packet.md"
         evidence_root = Path(tmp_name) / "evidence"
+        external_input_output = evidence_root / packet.EXTERNAL_INPUT_REQUEST_RELATIVE
 
         packet.write_packet(output, evidence_root)
+        packet.write_external_input_request_packet(external_input_output, evidence_root)
 
         assert output.exists()
+        assert external_input_output.exists()
         text = output.read_text(encoding="utf-8")
+        external_input_text = external_input_output.read_text(encoding="utf-8")
         assert "Blocking Workstreams" in text
         assert "Source owner decisions" in text
+        assert "External Input Request Packet" in external_input_text
 
 
 def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
@@ -165,6 +197,7 @@ def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
 
 def main() -> int:
     test_action_packet_summarizes_blockers_without_secret_values()
+    test_external_input_request_packet_names_inputs_without_secret_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
     test_mvp_issue_packets_are_written_with_label_guardrails()
