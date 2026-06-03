@@ -553,6 +553,28 @@ def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
     assert "Feishu rendered message missing Archive or Deep-Dive link" in failures
 
 
+def test_feishu_live_evidence_requires_message_ids() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "feishu-delivery/user-response.redacted.json",
+            {"code": 0, "msg": "success", "data": {}},
+        )
+        write_json(
+            evidence_root / "feishu-delivery/group-response.redacted.json",
+            {"code": 0, "msg": "success", "data": {"message_id": ""}},
+        )
+        (evidence_root / "feishu-delivery/rendered-message.md").write_text(
+            "Archive: https://archive.example.invalid/live\nSource: Synthetic Source\n置信提示: Synthetic confidence notice.\n",
+            encoding="utf-8",
+        )
+        _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Feishu user response must include data" in failures
+    assert "Feishu group response must include data.message_id" in failures
+
+
 def test_preflight_accepts_synthetic_valid_evidence() -> None:
     feishu_env = {
         "FEISHU_APP_ID": "redacted-test-app",
@@ -607,6 +629,7 @@ def main() -> int:
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()
     test_feishu_live_evidence_requires_archive_or_deep_dive_link()
+    test_feishu_live_evidence_requires_message_ids()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()
     print("live evidence helper tests passed")

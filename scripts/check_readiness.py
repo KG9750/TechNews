@@ -1121,6 +1121,7 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_manifest_rejects_stale_commit",
         "test_live_evidence_manifest_rejects_invalid_timestamps",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
+        "test_feishu_live_evidence_requires_message_ids",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
@@ -1130,6 +1131,7 @@ def check_spike_runners() -> list[str]:
         "summary[\"final_evidence_groups\"][\"feishu_delivery\"]",
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
+        "data.message_id",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
@@ -1610,6 +1612,10 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
         data = payload.get("data", {})
         if not isinstance(data, dict) or not data:
             failures.append(f"Feishu {label} response must include data")
+            continue
+        message_id = data.get("message_id")
+        if not isinstance(message_id, str) or not message_id.strip():
+            failures.append(f"Feishu {label} response must include data.message_id")
     rendered = required_files["rendered message"].read_text(encoding="utf-8")
     for needle in ["Source", "置信提示"]:
         if needle not in rendered:
