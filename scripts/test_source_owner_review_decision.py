@@ -70,7 +70,7 @@ def decision_payload_for_source(source_id: str, decision: str) -> dict:
         "owner_question_answers": [
             {
                 "question": question,
-                "answer": "Owner answer recorded for test.",
+                "answer": "Metadata-only use remains needs_review until explicit permission and text-only media handling are approved.",
             }
             for question in queue_item["owner_questions"]
         ],
@@ -414,6 +414,24 @@ def test_decision_rejects_placeholder_owner_answer() -> None:
         assert_review_error(path, "each owner question needs an answer must be a concrete review note")
 
 
+def test_decision_rejects_short_owner_answer() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["owner_question_answers"][0]["answer"] = "Approved."
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each owner question needs an answer must include concrete decision detail")
+
+
+def test_decision_rejects_generic_owner_answer() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["owner_question_answers"][0]["answer"] = "Owner answer recorded for review."
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each owner question needs an answer must include a concrete decision term")
+
+
 def test_decision_rejects_missing_required_evidence_item() -> None:
     with isolated_artifacts() as tmp:
         payload = decision_payload("needs_review")
@@ -619,6 +637,8 @@ def main() -> int:
     test_decision_rejects_evidence_note_without_reference_type()
     test_decision_rejects_short_internal_evidence_note()
     test_decision_rejects_placeholder_owner_answer()
+    test_decision_rejects_short_owner_answer()
+    test_decision_rejects_generic_owner_answer()
     test_decision_rejects_missing_required_evidence_item()
     test_decision_rejects_duplicate_required_evidence_item()
     test_decision_rejects_unexpected_required_evidence_item()

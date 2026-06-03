@@ -40,6 +40,41 @@ INCOMPLETE_REVIEW_TEXT = {
     "unsure",
 }
 EVIDENCE_NOTE_PREFIXES = ("internal note:", "owner note:", "legal note:")
+OWNER_ANSWER_DECISION_TERMS = (
+    "allowed",
+    "approved",
+    "attribution",
+    "blocked",
+    "commercial",
+    "deferred",
+    "disallowed",
+    "excluded",
+    "filter",
+    "frequency",
+    "included",
+    "license",
+    "limit",
+    "manual only",
+    "manual-only",
+    "metadata only",
+    "metadata-only",
+    "non-commercial",
+    "not allowed",
+    "not approved",
+    "not permitted",
+    "not required",
+    "per item",
+    "per-item",
+    "permission",
+    "permitted",
+    "probe only",
+    "probe-only",
+    "required",
+    "requires",
+    "share-alike",
+    "text only",
+    "text-only",
+)
 SOURCE_REVIEW_BATCHES = [
     {
         "title": "Batch 1 - Access Path Blockers",
@@ -808,6 +843,17 @@ def require_evidence_reference(value: object, label: str) -> None:
     )
 
 
+def require_owner_answer(value: object, label: str) -> None:
+    require_completed_review_text(value, label)
+    normalized = normalized_review_text(value)
+    require(len(normalized) >= 30, f"{label} must include concrete decision detail")
+    has_decision_term = any(term in normalized for term in OWNER_ANSWER_DECISION_TERMS)
+    require(
+        has_decision_term,
+        f"{label} must include a concrete decision term such as approved, blocked, metadata-only, text-only, permission, or limit",
+    )
+
+
 def expected_source_id_from_path(path: Path) -> str | None:
     suffix = ".decision.json"
     if path.name.endswith(suffix):
@@ -859,7 +905,7 @@ def validated_payload(path: Path, expected_source_id: str | None = None) -> dict
     require(isinstance(answers, list), "owner_question_answers must be a list")
     require([entry.get("question") for entry in answers] == questions, "owner questions must match queue order")
     for entry in answers:
-        require_completed_review_text(entry.get("answer"), "each owner question needs an answer")
+        require_owner_answer(entry.get("answer"), "each owner question needs an answer")
 
     policy = payload.get("policy_after_decision", {})
     require(policy.get("eligibility_state") == decision, "policy_after_decision.eligibility_state must match decision")
