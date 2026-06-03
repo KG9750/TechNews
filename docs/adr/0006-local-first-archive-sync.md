@@ -1,6 +1,6 @@
 # Write archives locally before syncing to NAS or cloud storage
 
-Status: proposed
+Status: accepted
 
 Archive creation is local-first: every Automatic Briefing Run writes a complete Archive Package under `ARCHIVE_LOCAL_ROOT` before any remote sync is attempted. Sync to NAS or cloud storage happens after the local package is complete, and sync failure is recorded in Archive Metadata and operational run state without deleting or rewriting the local archive.
 

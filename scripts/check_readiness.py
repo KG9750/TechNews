@@ -1441,15 +1441,15 @@ def check_adrs() -> list[str]:
     required = list(REQUIRED_ADRS)
     require_files(required)
     architecture_notes = read("docs/ARCHITECTURE-NOTES.md")
-    statuses: dict[str, int] = {"accepted": 0, "proposed": 0}
+    accepted_count = 0
     for path, expectations in REQUIRED_ADRS.items():
         text = read(path)
         require(text.startswith("# "), f"{path} missing title")
         status_match = re.search(r"^Status:\s+([a-z-]+)\s*$", text, re.MULTILINE)
         require(status_match is not None, f"{path} missing Status")
         status = status_match.group(1)
-        require(status in statuses, f"{path} status must be accepted or proposed")
-        statuses[status] += 1
+        require(status == "accepted", f"{path} status must be accepted")
+        accepted_count += 1
         require(adr_section_bullet_count(text, "**Tradeoffs**") >= 2, f"{path} must record real tradeoffs")
         require(adr_section_bullet_count(text, "**Consequences**") >= 2, f"{path} must record consequences")
         for keyword in expectations["keywords"]:
@@ -1462,8 +1462,7 @@ def check_adrs() -> list[str]:
     require("AI chat can later be added" in architecture_notes, "ARCHITECTURE-NOTES.md must keep post-MVP AI chat extension")
     return [
         f"required ADRs present: {len(required)}",
-        "required ADRs: "
-        + ", ".join(f"{status}={count}" for status, count in sorted(statuses.items()) if count),
+        f"required ADRs: accepted={accepted_count}",
         "required ADRs: tradeoffs, consequences, decision keywords, and architecture defaults verified",
     ]
 
