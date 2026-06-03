@@ -786,6 +786,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_decision_rejects_unexpected_required_evidence_item",
         "test_decision_rejects_invalid_reviewed_at_date",
         "test_decision_rejects_evidence_checked_after_review_date",
+        "test_decision_rejects_placeholder_reviewer",
+        "test_decision_rejects_placeholder_policy_field",
         "test_apply_all_rejects_template_drafts_without_writing",
         "test_apply_all_dry_run_validates_without_writing",
         "test_apply_all_applies_completed_open_reviews",

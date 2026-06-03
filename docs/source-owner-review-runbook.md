@@ -87,7 +87,7 @@ evidence/source-owner-reviews/
 9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include exactly one `evidence_checked` entry for each required item, with no duplicates or unlisted evidence labels.
 10. Answer every `owner_questions` item in the generated decision file.
 11. Use real ISO dates: `reviewed_at` and every evidence `checked_at` must be valid `YYYY-MM-DD` dates, and evidence `checked_at` must be on or before `reviewed_at`.
-12. Replace every placeholder with concrete review text. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.
+12. Replace every placeholder with concrete review text, including `reviewed_by`, owner answers, implementation guardrails, and `policy_after_decision` fields. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.
 13. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.
 14. Decide one outcome:
    - Keep `needs_review` if permission, license obligations, media rules, or rate limits remain unclear.

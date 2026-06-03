@@ -446,6 +446,24 @@ def test_decision_rejects_evidence_checked_after_review_date() -> None:
         assert_review_error(path, "each evidence item checked_at must be on or before reviewed_at")
 
 
+def test_decision_rejects_placeholder_reviewer() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["reviewed_by"] = "TBD"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "reviewed_by must be a concrete review note")
+
+
+def test_decision_rejects_placeholder_policy_field() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["policy_after_decision"]["summary_policy"] = "pending"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "policy_after_decision.summary_policy must be a concrete review note")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -540,6 +558,8 @@ def main() -> int:
     test_decision_rejects_unexpected_required_evidence_item()
     test_decision_rejects_invalid_reviewed_at_date()
     test_decision_rejects_evidence_checked_after_review_date()
+    test_decision_rejects_placeholder_reviewer()
+    test_decision_rejects_placeholder_policy_field()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()

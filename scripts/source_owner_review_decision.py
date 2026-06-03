@@ -799,7 +799,7 @@ def validated_payload(path: Path) -> dict:
     require(not contains_template_marker(payload), "decision file still contains TEMPLATE_ placeholders")
 
     reviewed_at = parse_review_date(payload.get("reviewed_at", ""), "reviewed_at")
-    require(payload.get("reviewed_by"), "reviewed_by is required")
+    require_completed_review_text(payload.get("reviewed_by"), "reviewed_by")
 
     decision = payload.get("decision")
     require(decision in VALID_DECISIONS, "decision must be one of: " + ", ".join(sorted(VALID_DECISIONS)))
@@ -833,7 +833,7 @@ def validated_payload(path: Path) -> dict:
     require(policy.get("eligibility_state") == decision, "policy_after_decision.eligibility_state must match decision")
     require(policy.get("full_text_storage") == "not_stored", "full_text_storage must remain not_stored")
     for field in ["connector_mode", "summary_policy", "media_policy", "rate_policy"]:
-        require(policy.get(field), f"policy_after_decision.{field} is required")
+        require_completed_review_text(policy.get(field), f"policy_after_decision.{field}")
 
     production_auto_ingestion = policy.get("production_auto_ingestion")
     require(isinstance(production_auto_ingestion, bool), "production_auto_ingestion must be boolean")
