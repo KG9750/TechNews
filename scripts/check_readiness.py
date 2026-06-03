@@ -1324,6 +1324,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "incomplete final evidence group",
         "global_readiness_gate",
         "Global readiness gate",
+        "write_source_owner_packets",
+        "--write-source-owner-packets",
         "write_mvp_issue_packets",
         "--write-mvp-issue-packets",
         "batch_plan_path",
@@ -1343,6 +1345,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "test_action_packet_summarizes_blockers_without_secret_values",
         "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
+        "test_source_owner_packets_can_be_written_from_action_packet",
         "test_mvp_issue_packets_are_written_with_label_guardrails",
         "MVP Issue Unlock Matrix",
         "Final evidence group",
@@ -1355,6 +1358,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET",
         "source-owner-reviews/batch-plan.md",
         "source-owner-reviews/request-packet.md",
+        "--write-source-owner-packets",
         "mvp-issue-packets",
         "final-redaction-review.md",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
@@ -1365,6 +1369,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md", "docs/live-spike-evidence-runbook.md"]:
         require("scripts/readiness_action_packet.py" in read(path), f"{path} must document readiness action packet helper")
         require("--write-mvp-issue-packets" in read(path), f"{path} must document MVP issue packet generation")
+        require("--write-source-owner-packets" in read(path), f"{path} must document source-owner packet generation")
     for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
         require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
     return ["readiness action packet helper: blocked-workstream, MVP issue unlock, and per-issue triage packets with regression tests present"]

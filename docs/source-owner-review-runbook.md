@@ -66,6 +66,12 @@ python3 scripts/source_owner_review_decision.py --request-packet
 
 Each packet is ignored context only. Single-source packets collect the current review matrix row, source registry row, source access policy row, owner queue questions, evidence requirements, and suggested commands. The index packet groups all open items by `decision_needed` and links the generated draft/packet filenames. The worksheet gives a consolidated checklist of decision files, draft status, required evidence, owner questions, and fields to complete. The batch plan groups open decisions into access-path blockers, RSS/feed reuse, summary/media permission, and license-obligation batches so owner review can proceed in smaller passes. The request packet is the shareable owner handoff: it lists each batch's goal, default unresolved policy, source list, evidence required, owner questions, and validation commands. Complete the JSON decision files; do not edit packets, the worksheet, the batch plan, or the request packet as the source of truth.
 
+The top-level readiness action packet can generate the same owner packet set and MVP issue packets in one pass:
+
+```bash
+python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets
+```
+
 6. To refresh one packet explicitly:
 
 ```bash

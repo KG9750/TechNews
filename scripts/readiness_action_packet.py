@@ -509,6 +509,19 @@ def write_mvp_issue_packets(output_dir: Path, evidence_root: Path) -> int:
     return len(statuses)
 
 
+def write_source_owner_packets(evidence_root: Path) -> int:
+    evidence_dir = evidence_root / "source-owner-reviews"
+    source_owner.write_all_drafts(evidence_dir)
+    source_owner.write_all_packets(evidence_dir)
+    source_owner.write_packet_index(evidence_dir)
+    source_owner.write_worksheet(evidence_dir)
+    source_owner.write_batch_plan(evidence_dir)
+    source_owner.write_request_packet(evidence_dir)
+    open_count = len(source_owner.open_source_ids())
+    print(f"Source owner packet set written: {open_count} open items -> {display_path(evidence_dir)}")
+    return open_count
+
+
 def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
@@ -674,12 +687,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "",
             "```bash",
             "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
-            "python3 scripts/source_owner_review_decision.py --draft-all",
-            "python3 scripts/source_owner_review_decision.py --packet-all",
-            "python3 scripts/source_owner_review_decision.py --packet-index",
-            "python3 scripts/source_owner_review_decision.py --worksheet",
-            "python3 scripts/source_owner_review_decision.py --batch-plan",
-            "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets",
+            "python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets",
             "python3 scripts/spikes/feishu_delivery_spike.py",
             "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",
@@ -711,12 +719,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--write-source-owner-packets", action="store_true")
     parser.add_argument("--write-mvp-issue-packets", action="store_true")
     parser.add_argument("--mvp-issue-packet-dir", default="")
     args = parser.parse_args()
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.output)
+    if args.write_source_owner_packets:
+        write_source_owner_packets(evidence_root)
     write_packet(output_path, evidence_root)
     print(f"Readiness action packet written to {display_path(output_path)}")
     external_input_path = evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE

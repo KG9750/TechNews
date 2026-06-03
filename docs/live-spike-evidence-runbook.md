@@ -11,7 +11,7 @@ Before running live external spikes, generate a local preflight summary:
 
 ```bash
 python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets
-python3 scripts/readiness_action_packet.py --write-mvp-issue-packets
+python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets
 ```
 
 This writes:
@@ -25,10 +25,14 @@ evidence/live-spike-packets/archive-storage.md
 evidence/final-redaction-review.md
 evidence/external-input-request.md
 evidence/readiness-action-packet.md
+evidence/source-owner-reviews/index.md
+evidence/source-owner-reviews/worksheet.md
+evidence/source-owner-reviews/batch-plan.md
+evidence/source-owner-reviews/request-packet.md
 evidence/mvp-issue-packets/issue-10.md through issue-20.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, generates a final redaction review packet, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6, including a closure gate that stays blocked until that spike's final evidence group is `complete`. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The final redaction review packet lists every final evidence file, explains that manifest spike status is only a file-presence declaration until validators and the final gate pass, preserves validation fields that should remain visible, and reminds the operator what must not be pasted into GitHub. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index, worksheet, batch plan, request packet, readiness-manifest blocker, final redaction review packet, an external input request checklist and `evidence/external-input-request.md`, relevant GitHub issues, an MVP issue unlock matrix, and per-MVP-issue triage packets into one execution view. The external input checklist and request packet name required variables, required evidence files, safe request wording, and commands only; they do not collect real secret values. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, generates a final redaction review packet, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6, including a closure gate that stays blocked until that spike's final evidence group is `complete`. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The final redaction review packet lists every final evidence file, explains that manifest spike status is only a file-presence declaration until validators and the final gate pass, preserves validation fields that should remain visible, and reminds the operator what must not be pasted into GitHub. The top-level readiness action packet can now generate and link the source-owner review index, worksheet, batch plan, request packet, MVP issue packets, live packet, per-spike packets, readiness-manifest blocker, final redaction review packet, an external input request checklist and `evidence/external-input-request.md`, relevant GitHub issues, and an MVP issue unlock matrix into one execution view. The external input checklist and request packet name required variables, required evidence files, safe request wording, and commands only; they do not collect real secret values. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
 

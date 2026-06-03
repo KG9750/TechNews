@@ -83,9 +83,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "python3 scripts/spikes/model_provider_spike.py --validate-requests" in text
     assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in text
     assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
-    assert "python3 scripts/source_owner_review_decision.py --worksheet" in text
-    assert "python3 scripts/source_owner_review_decision.py --batch-plan" in text
-    assert "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets" in text
+    assert "python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets" in text
     assert "MODEL_API_KEY" in text
     assert secret not in text
     assert str(packet.ROOT) not in text
@@ -168,6 +166,23 @@ def test_action_packet_writes_markdown() -> None:
         assert "External Input Request Packet" in external_input_text
 
 
+def test_source_owner_packets_can_be_written_from_action_packet() -> None:
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+
+        written = packet.write_source_owner_packets(evidence_root)
+
+        source_owner_dir = evidence_root / "source-owner-reviews"
+        assert written == 25
+        assert (source_owner_dir / "index.md").exists()
+        assert (source_owner_dir / "worksheet.md").exists()
+        assert (source_owner_dir / "batch-plan.md").exists()
+        assert (source_owner_dir / "request-packet.md").exists()
+        assert (source_owner_dir / "src-the-verge.decision.json").exists()
+        assert (source_owner_dir / "src-the-verge.packet.md").exists()
+        assert "Source Owner Decision Request Packet" in (source_owner_dir / "request-packet.md").read_text(encoding="utf-8")
+
+
 def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
     with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
         evidence_root = Path(tmp_name) / "evidence"
@@ -201,6 +216,7 @@ def main() -> int:
     test_external_input_request_packet_names_inputs_without_secret_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
+    test_source_owner_packets_can_be_written_from_action_packet()
     test_mvp_issue_packets_are_written_with_label_guardrails()
     print("readiness action packet tests passed")
     return 0
