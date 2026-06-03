@@ -590,7 +590,7 @@ def build_summary(evidence_root: Path, run_helpers: bool, require_clean_worktree
         "notes": [
             "Environment values are not written, only variable names.",
             "Dry-run outputs are generated under ignored evidence/.",
-            "Strict mode fails until all required environment variables and valid live evidence files are present.",
+            "Strict mode fails until all required environment variables, complete final evidence groups, and valid live evidence files are present.",
             "Strict mode requires a clean tracked worktree; ignored evidence files do not need to be committed.",
         ],
     }
@@ -618,10 +618,14 @@ def write_spike_packets(packet_dir: Path, summary: dict, evidence_root: Path) ->
 def has_missing_required(summary: dict) -> bool:
     env_missing = any(group["missing"] for group in summary["environment"].values())
     evidence_missing = bool(summary["evidence"]["missing"])
+    incomplete_final_groups = any(
+        group["status"] != "complete"
+        for group in summary["final_evidence_groups"].values()
+    )
     validation_missing = bool(summary["evidence_validation"]["missing"])
     validation_failed = bool(summary["evidence_validation"]["failures"])
     command_failed = any(result["returncode"] != 0 for result in summary["dry_run_commands"])
-    return env_missing or evidence_missing or validation_missing or validation_failed or command_failed
+    return env_missing or evidence_missing or incomplete_final_groups or validation_missing or validation_failed or command_failed
 
 
 def print_summary(path: Path, summary: dict) -> None:
@@ -649,7 +653,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Run local dry-run helpers and write a preflight summary.")
     parser.add_argument("--skip-helper-dry-runs", action="store_true", help="Only inspect environment and evidence files.")
-    parser.add_argument("--strict", action="store_true", help="Fail if env vars, dry-runs, or live evidence files are missing.")
+    parser.add_argument("--strict", action="store_true", help="Fail if env vars, dry-runs, final evidence groups, or live evidence validation are incomplete.")
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--summary-path", "--output", dest="summary_path", help="Override summary output path.")
     parser.add_argument("--write-packet", action="store_true", help="Also write a Markdown execution packet under evidence/.")
@@ -673,7 +677,7 @@ def main() -> int:
             print(f"Live spike packet written to {display_path(path)}")
     print_summary(output_path, summary)
     if args.strict and has_missing_required(summary):
-        print("STRICT preflight failed: environment variables, failed helper dry-runs, or live evidence validation are incomplete")
+        print("STRICT preflight failed: environment variables, final evidence groups, failed helper dry-runs, or live evidence validation are incomplete")
         return 2
     return 0
 

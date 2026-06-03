@@ -37,7 +37,7 @@ After credentials and redacted evidence are configured, use strict mode as a qui
 python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets
 ```
 
-Strict mode fails until all required environment variable names are present, the tracked git worktree is clean, and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. Ignored files under `evidence/` do not need to be committed. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
+Strict mode fails until all required environment variable names are present, every final evidence group is `complete`, the tracked git worktree is clean, and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. Ignored files under `evidence/` do not need to be committed. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
 
 CI regression coverage:
 
@@ -45,7 +45,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, partial final evidence group reporting, Markdown packet output without secret values, readiness manifest dry-run shape, final redaction review packet shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, partial final evidence group reporting, strict preflight blocking for incomplete final evidence groups, Markdown packet output without secret values, readiness manifest dry-run shape, final redaction review packet shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 

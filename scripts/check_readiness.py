@@ -1161,6 +1161,11 @@ def check_spike_runners() -> list[str]:
         "finish this group before closing the issue" in preflight_text,
         "live readiness spike packets must block issue closure for partial final evidence groups",
     )
+    require("incomplete_final_groups" in preflight_text, "strict live readiness preflight must block incomplete final evidence groups")
+    require(
+        "complete final evidence groups" in preflight_text,
+        "strict live readiness preflight must describe final evidence group completion",
+    )
     require(
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in preflight_text,
         "live readiness preflight packet must document per-spike dry-run packet generation",
@@ -1231,7 +1236,9 @@ def check_spike_runners() -> list[str]:
         "some final evidence files exist",
         "Closure gate: blocked",
         "finish this group before closing the issue",
+        "preflight.has_missing_required(summary) is True",
         "Strict mode requires a clean tracked worktree",
+        "complete final evidence groups",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",

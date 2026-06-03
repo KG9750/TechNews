@@ -146,6 +146,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "Final Evidence Group Status" in packet
     assert "final-redaction-review.md" in packet
     assert "Strict mode requires a clean tracked worktree" in packet
+    assert "complete final evidence groups" in packet
     assert "Dry-Run Artifact Inventory" in packet
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
@@ -217,12 +218,14 @@ def test_spike_packet_status_blocks_partial_final_evidence_group() -> None:
             "missing": [],
             "failures": [],
         },
+        "dry_run_commands": [],
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
     }
     spec = preflight.SPIKE_PACKET_SPECS[0]
     packet = preflight.build_spike_packet(summary, Path("evidence"), spec)
 
     assert preflight.spike_packet_status(summary, spec) == "blocked"
+    assert preflight.has_missing_required(summary) is True
     assert "- Closure gate: blocked" in packet
     assert "final evidence group is `partial`; finish this group before closing the issue" in packet
 
