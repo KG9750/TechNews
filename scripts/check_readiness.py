@@ -103,6 +103,71 @@ REQUIRED_GITHUB_MILESTONES = {
 }
 PREDEVELOPMENT_ISSUES = set(range(1, 10))
 MVP_ISSUES = set(range(10, 21))
+CONTRACT_REQUIRED_FIELDS = {
+    "CandidateItem": {
+        "id",
+        "run_id",
+        "source_id",
+        "source_type",
+        "source_name",
+        "original_title",
+        "source_url",
+        "original_source_anchor",
+        "dedupe_key",
+        "discovered_at",
+        "section_hints",
+        "source_media",
+        "eligibility_state",
+        "raw_metadata",
+    },
+    "BriefingItem": {
+        "id",
+        "run_id",
+        "candidate_id",
+        "section",
+        "subcategory",
+        "title_zh",
+        "bullets_zh",
+        "original_source_anchor",
+        "selection_rationale",
+        "confidence_level",
+        "confidence_notice",
+        "media_attribution",
+        "related_history",
+    },
+    "ArchiveMetadata": {
+        "run_id",
+        "domain_template",
+        "generated_at",
+        "files",
+        "selected_items",
+        "excluded_candidates",
+        "connector_status",
+        "delivery_status",
+        "media_inventory",
+        "sync_status",
+        "model_usage_summary",
+    },
+    "BriefingRun": {
+        "run_id",
+        "domain_template",
+        "scheduled_for",
+        "delivery_deadline",
+        "started_at",
+        "connector_status",
+        "model_task_status",
+        "archive_status",
+        "feishu_delivery_status",
+        "run_warnings",
+    },
+}
+CONTRACT_NESTED_SHAPES = {
+    "OriginalSourceAnchor",
+    "SourceMedia",
+    "SelectionRationale",
+    "ConfidenceNotice",
+    "ModelUsage",
+}
 
 
 class CheckFailure(Exception):
@@ -274,6 +339,59 @@ def check_secrets_inventory() -> list[str]:
         require(needle in handling, f"docs/secrets.md missing handling rule: {needle}")
 
     return [f"secrets inventory: {len(expected)} variables documented with empty .env.example values"]
+
+
+def markdown_section(text: str, heading: str) -> str:
+    match = re.search(rf"^## {re.escape(heading)}\s*$", text, re.MULTILINE)
+    require(match is not None, f"minimal contracts missing section: {heading}")
+    next_match = re.search(r"^##\s+", text[match.end() :], re.MULTILINE)
+    end = match.end() + next_match.start() if next_match else len(text)
+    return text[match.end() : end]
+
+
+def check_minimal_contracts() -> list[str]:
+    text = read("docs/schemas/minimal-contracts.md")
+    for heading in ["Shared Conventions", "Canonical Values", "Shared Nested Shapes", "Spike Acceptance Checklist"]:
+        require(f"## {heading}" in text, f"minimal contracts missing {heading}")
+    for shape in CONTRACT_NESTED_SHAPES:
+        require(f"### {shape}" in text, f"minimal contracts missing nested shape {shape}")
+
+    for concept in [
+        "source_type",
+        "eligibility_state",
+        "confidence_level",
+        "delivery_status.status",
+        "sync_status.status",
+        "model_task_status.status",
+    ]:
+        require(f"`{concept}`" in text, f"minimal contracts missing canonical value {concept}")
+
+    for section, fields in CONTRACT_REQUIRED_FIELDS.items():
+        section_text = markdown_section(text, section)
+        for field in fields:
+            require(f"`{field}`" in section_text, f"{section} missing field {field}")
+
+    for needle in [
+        "`run_id` is required",
+        "`confidence_notice` is required when `confidence_level` is `medium` or `low`",
+        "`media_attribution` is required whenever SourceMedia is displayed",
+        "`delivery_status` must be keyed by Briefing Recipient id",
+        "`raw_metadata` must not include full article body text",
+    ]:
+        require(needle in text, f"minimal contracts missing rule: {needle}")
+
+    for path in [
+        "docs/spikes/feishu-delivery.md",
+        "docs/spikes/model-provider.md",
+        "docs/spikes/archive-storage.md",
+        "docs/spikes/source-ingestion.md",
+    ]:
+        require("docs/schemas/minimal-contracts.md" in read(path), f"{path} must reference minimal contracts")
+
+    return [
+        f"minimal contracts: {len(CONTRACT_REQUIRED_FIELDS)} top-level contracts and {len(CONTRACT_NESTED_SHAPES)} nested shapes verified",
+        "minimal contracts: Feishu, model, archive, and source spikes reference shared contracts",
+    ]
 
 
 def check_source_registry() -> list[str]:
@@ -1036,6 +1154,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_json_fixtures,
         check_live_evidence_templates,
         check_secrets_inventory,
+        check_minimal_contracts,
         check_source_registry,
         check_source_eligibility_reviews,
         check_source_access_policy,

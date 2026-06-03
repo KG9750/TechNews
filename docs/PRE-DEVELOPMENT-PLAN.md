@@ -60,6 +60,7 @@ Verification:
 
 - Feishu, model, and archive spike templates all reference the same contract file.
 - The contracts include run id, delivery status, confidence notice, selection rationale, source anchor, media attribution, and usage metadata.
+- `python3 scripts/check_readiness.py` verifies the required contract sections, core fields, and spike references.
 
 ## Phase 2: Risk Spikes
 

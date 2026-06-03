@@ -1,7 +1,7 @@
 # Minimal Contracts
 
 Status: Reviewed for pre-development spikes
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 These contracts are the shared input for Feishu, model, archive, and source spikes. They are intentionally minimal and will later be converted into JSON schemas.
 
@@ -244,3 +244,5 @@ This example is intentionally abbreviated, but it shows the required relationshi
 ## Spike Requirement
 
 Every spike must use these field names unless it documents a required change. If a spike needs a new required field, update this document before implementation issues are created.
+
+`python3 scripts/check_readiness.py` verifies the required contract sections, core fields, cross-spike references, and guardrail rules before MVP implementation issues are moved out of `needs-triage`.
