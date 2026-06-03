@@ -1,0 +1,9 @@
+{
+  "path": "internal_app_bot",
+  "receive_id_type": "open_id",
+  "body": {
+    "receive_id": "TEMPLATE_REPLACE_WITH_REDACTED_USER_OPEN_ID",
+    "msg_type": "interactive",
+    "content": "{\"config\":{\"wide_screen_mode\":true},\"elements\":[]}"
+  }
+}

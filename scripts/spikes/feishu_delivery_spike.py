@@ -120,6 +120,14 @@ def build_message_request(receive_id: str, card: dict) -> dict:
     }
 
 
+def build_internal_app_request_evidence(receive_id_type: str, payload: dict) -> dict:
+    return {
+        "path": "internal_app_bot",
+        "receive_id_type": receive_id_type,
+        "body": payload,
+    }
+
+
 def send_message(token: str, receive_id_type: str, receive_id: str, card: dict) -> tuple[dict, dict]:
     payload = build_message_request(receive_id, card)
     response = request_json(
@@ -238,6 +246,31 @@ def validate_delivery_response(path: Path, label: str) -> None:
         raise SpikeError(f"{path}: Feishu {label} response must include data.message_id")
 
 
+def validate_delivery_request(path: Path, label: str, expected_receive_id_type: str) -> None:
+    if not path.exists():
+        raise SpikeError(f"missing Feishu {label} request evidence: {path}")
+    check_evidence_redaction(path)
+    payload = json.loads(read_evidence_text(path))
+    if payload.get("path") != "internal_app_bot":
+        raise SpikeError(f"{path}: Feishu {label} request path must be internal_app_bot")
+    if payload.get("receive_id_type") != expected_receive_id_type:
+        raise SpikeError(f"{path}: Feishu {label} request receive_id_type must be {expected_receive_id_type}")
+    body = payload.get("body", {})
+    if not isinstance(body, dict):
+        raise SpikeError(f"{path}: Feishu {label} request body must be an object")
+    if body.get("msg_type") != "interactive":
+        raise SpikeError(f"{path}: Feishu {label} request msg_type must be interactive")
+    if not body.get("receive_id"):
+        raise SpikeError(f"{path}: Feishu {label} request must include redacted receive_id")
+    content = body.get("content")
+    if not isinstance(content, str) or not content.strip():
+        raise SpikeError(f"{path}: Feishu {label} request must include card content")
+    try:
+        json.loads(content)
+    except json.JSONDecodeError as error:
+        raise SpikeError(f"{path}: Feishu {label} request content must be JSON") from error
+
+
 def validate_rendered_message(path: Path) -> None:
     if not path.exists():
         raise SpikeError(f"missing Feishu rendered message evidence: {path}")
@@ -252,6 +285,8 @@ def validate_rendered_message(path: Path) -> None:
 
 def validate_evidence(evidence_dir: Path) -> int:
     load_env_file(ROOT / ".env")
+    validate_delivery_request(evidence_dir / "user-request.redacted.json", "user", "open_id")
+    validate_delivery_request(evidence_dir / "group-request.redacted.json", "group", "chat_id")
     validate_delivery_response(evidence_dir / "user-response.redacted.json", "user")
     validate_delivery_response(evidence_dir / "group-response.redacted.json", "group")
     validate_rendered_message(evidence_dir / "rendered-message.md")
@@ -305,7 +340,10 @@ def run(dry_run: bool, evidence_dir: Path, attempt_group_webhook_fallback: bool 
     ]:
         request_payload, response = send_message(token, receive_id_type, env[env_name], card)
         results[name] = response
-        write_json(evidence_dir / f"{name}-request.redacted.json", redact(request_payload))
+        write_json(
+            evidence_dir / f"{name}-request.redacted.json",
+            redact(build_internal_app_request_evidence(receive_id_type, request_payload)),
+        )
         write_json(evidence_dir / f"{name}-response.redacted.json", redact(response))
 
     failed = {name: response for name, response in results.items() if response.get("code") != 0}

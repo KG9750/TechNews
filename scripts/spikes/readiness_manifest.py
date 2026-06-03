@@ -19,7 +19,9 @@ DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 EXPECTED_REPOSITORY = "KG9750/TechNews"
 
 FEISHU_FILES = [
+    "feishu-delivery/user-request.redacted.json",
     "feishu-delivery/user-response.redacted.json",
+    "feishu-delivery/group-request.redacted.json",
     "feishu-delivery/group-response.redacted.json",
     "feishu-delivery/rendered-message.md",
 ]
@@ -166,6 +168,8 @@ def build_manifest(evidence_root: Path, reviewed_by: str, redaction_notes: str, 
                 "requirements": [
                     "one_user_delivery",
                     "one_group_delivery",
+                    "internal_app_user_open_id_request",
+                    "internal_app_group_chat_id_request",
                     "source_line_present",
                     "confidence_notice_present",
                 ],
@@ -223,7 +227,7 @@ def build_final_review_packet(evidence_root: Path, manifest: dict, packet_path: 
             "",
             "- Confirm no `TEMPLATE_` markers remain.",
             "- Confirm no raw Feishu recipient ids, app ids, authorization headers, API keys, local paths, or NAS/cloud targets remain.",
-            "- Confirm source names, original titles, source URLs, run ids, provider/model names, request counts, latency, status codes, and failure reasons remain visible where required for validation.",
+            "- Confirm source names, original titles, source URLs, run ids, provider/model names, request counts, latency, status codes, Feishu receive_id_type values, and failure reasons remain visible where required for validation.",
             "- Confirm rendered Feishu evidence includes Source, Confidence Notice, and Archive or Deep-Dive link text.",
             "- Confirm model evidence is metadata-only and does not include full article bodies, PDFs, transcripts, or unapproved media.",
             "- Confirm archive evidence redacts local and remote roots while preserving file counts, sync status, and retryability.",

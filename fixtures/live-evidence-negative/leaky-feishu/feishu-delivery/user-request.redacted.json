@@ -1,0 +1,9 @@
+{
+  "path": "internal_app_bot",
+  "receive_id_type": "open_id",
+  "body": {
+    "receive_id": "ou_syntheticuserid12345",
+    "msg_type": "interactive",
+    "content": "{\"config\":{\"wide_screen_mode\":true},\"elements\":[]}"
+  }
+}

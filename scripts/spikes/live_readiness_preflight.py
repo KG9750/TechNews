@@ -53,7 +53,9 @@ ENV_GROUPS = {
 
 EVIDENCE_FILES = [
     "readiness-manifest.json",
+    "feishu-delivery/user-request.redacted.json",
     "feishu-delivery/user-response.redacted.json",
+    "feishu-delivery/group-request.redacted.json",
     "feishu-delivery/group-response.redacted.json",
     "feishu-delivery/rendered-message.md",
     "model-provider/outputs/high-confidence-news.json",
@@ -69,7 +71,9 @@ FINAL_EVIDENCE_GROUPS = {
         "readiness-manifest.json",
     ],
     "feishu_delivery": [
+        "feishu-delivery/user-request.redacted.json",
         "feishu-delivery/user-response.redacted.json",
+        "feishu-delivery/group-request.redacted.json",
         "feishu-delivery/group-response.redacted.json",
         "feishu-delivery/rendered-message.md",
     ],

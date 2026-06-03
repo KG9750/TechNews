@@ -84,7 +84,9 @@ SENSITIVE_ENV_NAMES = [
 ]
 LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/readiness-manifest.json",
+    "fixtures/live-evidence-templates/feishu-delivery/user-request.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
+    "fixtures/live-evidence-templates/feishu-delivery/group-request.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/group-response.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/rendered-message.md",
     "fixtures/live-evidence-templates/model-provider/outputs/high-confidence-news.json",
@@ -1096,6 +1098,8 @@ def check_spike_runners() -> list[str]:
     require("build_group_webhook_payload" in feishu_text, "Feishu runner must build group webhook fallback payloads")
     require("does_not_replace_internal_app_group_evidence" in feishu_text, "Feishu fallback must not replace internal-app group evidence")
     require("--validate-evidence" in feishu_text, "Feishu runner must validate redacted live evidence")
+    require("validate_delivery_request" in feishu_text, "Feishu runner must validate internal-app request evidence")
+    require("receive_id_type must be" in feishu_text, "Feishu runner must validate user/group receive_id_type evidence")
     require(
         "Feishu rendered message missing Archive or Deep-Dive link" in feishu_text,
         "Feishu runner must validate rendered message archive/deep-dive link evidence",
@@ -1172,6 +1176,7 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_manifest_rejects_stale_commit",
         "test_live_evidence_manifest_rejects_invalid_timestamps",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
+        "test_feishu_live_evidence_requires_internal_app_request_types",
         "test_feishu_live_evidence_requires_message_ids",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
@@ -1183,6 +1188,7 @@ def check_spike_runners() -> list[str]:
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
+        "receive_id_type must be chat_id",
         "feishu_spike.validate_evidence",
         "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
@@ -1657,7 +1663,9 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
     failures: list[str] = []
     passed: list[str] = []
     required_files = {
+        "user request": evidence_dir / "user-request.redacted.json",
         "user response": evidence_dir / "user-response.redacted.json",
+        "group request": evidence_dir / "group-request.redacted.json",
         "group response": evidence_dir / "group-response.redacted.json",
         "rendered message": evidence_dir / "rendered-message.md",
     }
@@ -1668,6 +1676,31 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
         return passed, missing, failures
     for label, path in required_files.items():
         check_live_evidence_file(path, failures, f"Feishu live evidence {label}")
+    for label, path, expected_receive_id_type in [
+        ("user", required_files["user request"], "open_id"),
+        ("group", required_files["group request"], "chat_id"),
+    ]:
+        payload = load_json_path(path)
+        if payload.get("path") != "internal_app_bot":
+            failures.append(f"Feishu {label} request path must be internal_app_bot")
+        if payload.get("receive_id_type") != expected_receive_id_type:
+            failures.append(f"Feishu {label} request receive_id_type must be {expected_receive_id_type}")
+        body = payload.get("body", {})
+        if not isinstance(body, dict):
+            failures.append(f"Feishu {label} request body must be an object")
+            continue
+        if body.get("msg_type") != "interactive":
+            failures.append(f"Feishu {label} request msg_type must be interactive")
+        if not body.get("receive_id"):
+            failures.append(f"Feishu {label} request must include redacted receive_id")
+        content = body.get("content")
+        if not isinstance(content, str) or not content.strip():
+            failures.append(f"Feishu {label} request must include card content")
+        else:
+            try:
+                json.loads(content)
+            except json.JSONDecodeError:
+                failures.append(f"Feishu {label} request content must be JSON")
     for label, path in [
         ("user", required_files["user response"]),
         ("group", required_files["group response"]),
@@ -1689,7 +1722,7 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
     if not any(needle in rendered for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
         failures.append("Feishu rendered message missing Archive or Deep-Dive link")
     if not failures:
-        passed.append("Feishu live evidence: user and group delivery responses with archive/deep-dive link present")
+        passed.append("Feishu live evidence: internal-app user/group requests and delivery responses with archive/deep-dive link present")
     return passed, missing, failures
 
 
@@ -1928,7 +1961,9 @@ def check_live_evidence_manifest(
         evidence_root,
         "feishu_delivery",
         {
+            "feishu-delivery/user-request.redacted.json",
             "feishu-delivery/user-response.redacted.json",
+            "feishu-delivery/group-request.redacted.json",
             "feishu-delivery/group-response.redacted.json",
             "feishu-delivery/rendered-message.md",
         },
@@ -1936,7 +1971,14 @@ def check_live_evidence_manifest(
         failures,
     )
     requirements = set(feishu.get("requirements", []))
-    for requirement in ["one_user_delivery", "one_group_delivery", "source_line_present", "confidence_notice_present"]:
+    for requirement in [
+        "one_user_delivery",
+        "one_group_delivery",
+        "internal_app_user_open_id_request",
+        "internal_app_group_chat_id_request",
+        "source_line_present",
+        "confidence_notice_present",
+    ]:
         if requirement not in requirements:
             failures.append(f"Live evidence manifest Feishu requirements missing {requirement}")
 

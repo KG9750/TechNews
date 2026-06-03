@@ -449,6 +449,18 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def feishu_request_evidence(receive_id_type: str) -> dict:
+    return {
+        "path": "internal_app_bot",
+        "receive_id_type": receive_id_type,
+        "body": {
+            "receive_id": "REDACTED",
+            "msg_type": "interactive",
+            "content": json.dumps({"config": {"wide_screen_mode": True}, "elements": []}),
+        },
+    }
+
+
 def model_output(profile: str, fixture_id: str, run_id: str, confidence_level: str) -> dict:
     fixture = readiness.golden_sample_by_id()[fixture_id]
     anchor = fixture["raw_source_metadata"]
@@ -499,8 +511,16 @@ def write_synthetic_live_evidence(evidence_root: Path) -> None:
     model = "synthetic-live-model"
 
     write_json(
+        evidence_root / "feishu-delivery/user-request.redacted.json",
+        feishu_request_evidence("open_id"),
+    )
+    write_json(
         evidence_root / "feishu-delivery/user-response.redacted.json",
         {"code": 0, "msg": "success", "data": {"message_id": "REDACTED_MESSAGE_ID_USER"}},
+    )
+    write_json(
+        evidence_root / "feishu-delivery/group-request.redacted.json",
+        feishu_request_evidence("chat_id"),
     )
     write_json(
         evidence_root / "feishu-delivery/group-response.redacted.json",
@@ -578,13 +598,17 @@ def write_synthetic_live_evidence(evidence_root: Path) -> None:
                 "feishu_delivery": {
                     "status": "passed",
                     "evidence_files": [
+                        "feishu-delivery/user-request.redacted.json",
                         "feishu-delivery/user-response.redacted.json",
+                        "feishu-delivery/group-request.redacted.json",
                         "feishu-delivery/group-response.redacted.json",
                         "feishu-delivery/rendered-message.md",
                     ],
                     "requirements": [
                         "one_user_delivery",
                         "one_group_delivery",
+                        "internal_app_user_open_id_request",
+                        "internal_app_group_chat_id_request",
                         "source_line_present",
                         "confidence_notice_present",
                     ],
@@ -626,7 +650,7 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     assert not missing
     assert not failures
     assert "Live evidence manifest: declared files and spike run metadata are consistent" in passed
-    assert "Feishu live evidence: user and group delivery responses with archive/deep-dive link present" in passed
+    assert "Feishu live evidence: internal-app user/group requests and delivery responses with archive/deep-dive link present" in passed
     assert "Archive live evidence: local write and remote sync success present" in passed
     assert "Model live evidence: three live outputs and usage log valid" in passed
 
@@ -665,8 +689,16 @@ def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         write_json(
+            evidence_root / "feishu-delivery/user-request.redacted.json",
+            feishu_request_evidence("open_id"),
+        )
+        write_json(
             evidence_root / "feishu-delivery/user-response.redacted.json",
             {"code": 0, "msg": "success", "data": {"message_id": "REDACTED_MESSAGE_ID_USER"}},
+        )
+        write_json(
+            evidence_root / "feishu-delivery/group-request.redacted.json",
+            feishu_request_evidence("chat_id"),
         )
         write_json(
             evidence_root / "feishu-delivery/group-response.redacted.json",
@@ -688,12 +720,40 @@ def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
     assert "Feishu rendered message missing Archive or Deep-Dive link" in failures
 
 
+def test_feishu_live_evidence_requires_internal_app_request_types() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        group_request_path = evidence_root / "feishu-delivery/group-request.redacted.json"
+        group_request = json.loads(group_request_path.read_text(encoding="utf-8"))
+        group_request["receive_id_type"] = "open_id"
+        write_json(group_request_path, group_request)
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "receive_id_type must be chat_id" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject wrong group receive_id_type")
+        _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Feishu group request receive_id_type must be chat_id" in failures
+
+
 def test_feishu_live_evidence_requires_message_ids() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         write_json(
+            evidence_root / "feishu-delivery/user-request.redacted.json",
+            feishu_request_evidence("open_id"),
+        )
+        write_json(
             evidence_root / "feishu-delivery/user-response.redacted.json",
             {"code": 0, "msg": "success", "data": {}},
+        )
+        write_json(
+            evidence_root / "feishu-delivery/group-request.redacted.json",
+            feishu_request_evidence("chat_id"),
         )
         write_json(
             evidence_root / "feishu-delivery/group-response.redacted.json",
@@ -785,6 +845,7 @@ def main() -> int:
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()
     test_feishu_live_evidence_requires_archive_or_deep_dive_link()
+    test_feishu_live_evidence_requires_internal_app_request_types()
     test_feishu_live_evidence_requires_message_ids()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

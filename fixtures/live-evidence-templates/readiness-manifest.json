@@ -12,13 +12,17 @@
     "feishu_delivery": {
       "status": "passed",
       "evidence_files": [
+        "feishu-delivery/user-request.redacted.json",
         "feishu-delivery/user-response.redacted.json",
+        "feishu-delivery/group-request.redacted.json",
         "feishu-delivery/group-response.redacted.json",
         "feishu-delivery/rendered-message.md"
       ],
       "requirements": [
         "one_user_delivery",
         "one_group_delivery",
+        "internal_app_user_open_id_request",
+        "internal_app_group_chat_id_request",
         "source_line_present",
         "confidence_notice_present"
       ]

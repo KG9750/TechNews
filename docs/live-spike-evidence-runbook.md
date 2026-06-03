@@ -139,13 +139,18 @@ Required evidence:
 
 ```text
 evidence/feishu-delivery/
+  user-request.redacted.json
   user-response.redacted.json
+  group-request.redacted.json
   group-response.redacted.json
   rendered-message.md
 ```
 
 Validation rules:
 
+- User request JSON must use `path = internal_app_bot` and `receive_id_type = open_id`.
+- Group request JSON must use `path = internal_app_bot` and `receive_id_type = chat_id`.
+- Request bodies must use `msg_type = interactive`, include a redacted `receive_id`, and preserve parseable card content.
 - User and group response JSON must have `code = 0`.
 - Each response must include a non-empty `data` object.
 - Each response must include a non-empty `data.message_id` so the send-message result remains verifiable after redaction.

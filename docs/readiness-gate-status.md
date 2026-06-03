@@ -129,14 +129,18 @@ python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence
 
 Required evidence:
 
+- Redacted internal-app request envelope for one user with `receive_id_type = open_id`.
 - Redacted successful send response for one user.
+- Redacted internal-app request envelope for one group with `receive_id_type = chat_id`.
 - Redacted successful send response for one group.
 - Rendered Feishu message text or screenshot.
 - Scopes, permissions, recipient id type, rate/message-size notes, and any failure response shape.
 
 Expected evidence files:
 
+- `evidence/feishu-delivery/user-request.redacted.json`
 - `evidence/feishu-delivery/user-response.redacted.json`
+- `evidence/feishu-delivery/group-request.redacted.json`
 - `evidence/feishu-delivery/group-response.redacted.json`
 - `evidence/feishu-delivery/rendered-message.md`
 
