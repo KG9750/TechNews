@@ -92,6 +92,7 @@ Validation rules:
 
 - `repository` must be `KG9750/TechNews`.
 - `commit`, `generated_at`, `reviewed_by`, and `redaction_review` must be filled in.
+- `generated_at` and `redaction_review.reviewed_at` must be valid UTC ISO timestamps ending in `Z`.
 - `commit` must match the current git `HEAD` when the final readiness gate runs; regenerate the manifest after any tracked file changes.
 - Final manifest generation and the final readiness gate require a clean tracked worktree. Commit or revert tracked changes before writing `evidence/readiness-manifest.json`; ignored evidence files may remain untracked.
 - Feishu, model-provider, and archive-storage spike statuses must be `passed`.

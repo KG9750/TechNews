@@ -516,6 +516,22 @@ def test_live_evidence_manifest_rejects_stale_commit() -> None:
     assert "Live evidence manifest commit must match current git HEAD" in failures
 
 
+def test_live_evidence_manifest_rejects_invalid_timestamps() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        manifest_path = evidence_root / "readiness-manifest.json"
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload["generated_at"] = "2026-99-99T00:00:00Z"
+        payload["redaction_review"]["reviewed_at"] = "2026-06-03T00:00:00"
+        write_json(manifest_path, payload)
+        _, missing, failures = readiness.check_live_evidence_manifest(evidence_root)
+
+    assert not missing
+    assert "Live evidence manifest generated_at must be a valid UTC ISO timestamp ending in Z" in failures
+    assert "Live evidence manifest redaction_review.reviewed_at must be a valid UTC ISO timestamp ending in Z" in failures
+
+
 def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
@@ -589,6 +605,7 @@ def main() -> int:
     test_archive_failure_reason_redacts_private_paths()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_manifest_rejects_stale_commit()
+    test_live_evidence_manifest_rejects_invalid_timestamps()
     test_feishu_live_evidence_requires_archive_or_deep_dive_link()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

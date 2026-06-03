@@ -14,6 +14,7 @@ import json
 import os
 import re
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 
@@ -1075,6 +1076,8 @@ def check_spike_runners() -> list[str]:
     require("Final Redaction Review Packet" in manifest_text, "readiness manifest helper must label final redaction review packets")
     require("require_clean_tracked_worktree" in manifest_text, "readiness manifest helper must require a clean tracked worktree for final manifests")
     require("tracked_worktree_changes_from_status" in manifest_text, "readiness manifest helper must expose tracked worktree status parsing")
+    readiness_text = read("scripts/check_readiness.py")
+    require("check_utc_iso_timestamp" in readiness_text, "live evidence manifest gate must validate UTC ISO timestamps")
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
@@ -1116,6 +1119,7 @@ def check_spike_runners() -> list[str]:
         "test_readiness_manifest_tracks_dirty_worktree_guard",
         "test_synthetic_live_evidence_package_passes_gate",
         "test_live_evidence_manifest_rejects_stale_commit",
+        "test_live_evidence_manifest_rejects_invalid_timestamps",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
@@ -1125,6 +1129,7 @@ def check_spike_runners() -> list[str]:
         "summary[\"dry_run_artifacts\"][\"present\"]",
         "summary[\"final_evidence_groups\"][\"feishu_delivery\"]",
         "current_git_commit()",
+        "must be a valid UTC ISO timestamp ending in Z",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
@@ -1517,6 +1522,19 @@ def current_git_commit() -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def check_utc_iso_timestamp(value: object, label: str, failures: list[str]) -> None:
+    if not isinstance(value, str) or not value.strip():
+        failures.append(f"{label} must be a non-empty UTC ISO timestamp")
+        return
+    if not value.endswith("Z"):
+        failures.append(f"{label} must be a valid UTC ISO timestamp ending in Z")
+        return
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        failures.append(f"{label} must be a valid UTC ISO timestamp ending in Z")
+
+
 def tracked_worktree_changes_from_status(status_output: str) -> list[str]:
     return [line for line in status_output.splitlines() if line.strip()]
 
@@ -1791,6 +1809,8 @@ def check_live_evidence_manifest(
     for field in ["readiness_evidence_id", "generated_at", "commit", "reviewed_by"]:
         if not manifest.get(field):
             failures.append(f"Live evidence manifest missing {field}")
+    if manifest.get("generated_at"):
+        check_utc_iso_timestamp(manifest.get("generated_at"), "Live evidence manifest generated_at", failures)
     manifest_commit = manifest.get("commit")
     head_commit = current_git_commit()
     if manifest_commit and head_commit and manifest_commit != head_commit:
@@ -1798,6 +1818,8 @@ def check_live_evidence_manifest(
     redaction_review = manifest.get("redaction_review", {})
     if not isinstance(redaction_review, dict) or not redaction_review.get("reviewed_at") or not redaction_review.get("notes"):
         failures.append("Live evidence manifest redaction_review must include reviewed_at and notes")
+    elif redaction_review.get("reviewed_at"):
+        check_utc_iso_timestamp(redaction_review.get("reviewed_at"), "Live evidence manifest redaction_review.reviewed_at", failures)
 
     feishu = require_manifest_files(
         manifest,
