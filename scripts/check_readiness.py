@@ -1041,6 +1041,7 @@ def check_feishu_runner_redaction() -> list[str]:
 def check_readiness_ci_workflow() -> list[str]:
     text = read(".github/workflows/pre-development-readiness.yml")
     for needle in [
+        'FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"',
         "python scripts/check_readiness.py",
         "python -m py_compile",
         "scripts/spikes/readiness_manifest.py",
@@ -1056,7 +1057,7 @@ def check_readiness_ci_workflow() -> list[str]:
         require(needle in text, f"readiness CI workflow missing: {needle}")
     require("--require-live" not in text, "readiness CI must not require live external credentials")
     require("--require-github" not in text, "readiness CI must not require GitHub tracker access")
-    return ["readiness CI workflow: local gate, script compile, template-negative, and redaction-negative checks present"]
+    return ["readiness CI workflow: Node 24 action runtime opt-in, local gate, script compile, template-negative, and redaction-negative checks present"]
 
 
 def adr_section_bullet_count(text: str, marker: str) -> int:
