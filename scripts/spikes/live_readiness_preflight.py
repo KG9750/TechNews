@@ -130,7 +130,92 @@ def display_path(path: Path) -> str:
     try:
         return str(path.relative_to(ROOT))
     except ValueError:
-        return redact_text(str(path))
+        return "REDACTED_EXTERNAL_PATH"
+
+
+def markdown_bullets(items: list[str], empty_label: str = "None.") -> str:
+    if not items:
+        return f"- {empty_label}"
+    return "\n".join(f"- {item}" for item in items)
+
+
+def markdown_command_block(commands: list[str]) -> str:
+    return "```bash\n" + "\n".join(commands) + "\n```"
+
+
+def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path, packet_path: Path) -> str:
+    env_sections = []
+    for group, env in summary["environment"].items():
+        env_sections.extend(
+            [
+                f"### {group}",
+                "",
+                "Present variable names:",
+                markdown_bullets(env["present"], empty_label="None present."),
+                "",
+                "Missing variable names:",
+                markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+            ]
+        )
+
+    dry_run_sections = []
+    if summary["dry_run_commands"]:
+        for result in summary["dry_run_commands"]:
+            status = "passed" if result["returncode"] == 0 else "failed"
+            dry_run_sections.append(f"- `{result['command']}` -> {status} ({result['returncode']})")
+    else:
+        dry_run_sections.append("- Helper dry-runs were skipped.")
+
+    return "\n".join(
+        [
+            "# Live Readiness Execution Packet",
+            "",
+            "This packet is context only. Complete live evidence files under ignored `evidence/`; do not treat this packet as readiness evidence.",
+            "",
+            f"- Generated at: {summary['generated_at']}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            f"- JSON summary: `{display_path(summary_path)}`",
+            f"- Packet path: `{display_path(packet_path)}`",
+            f"- Final gate: `{summary['final_gate_command']}`",
+            "",
+            "## Current Environment Status",
+            "",
+            *env_sections,
+            "## Evidence File Checklist",
+            "",
+            "Present evidence files:",
+            markdown_bullets(summary["evidence"]["present"], empty_label="None present."),
+            "",
+            "Missing evidence files:",
+            markdown_bullets(summary["evidence"]["missing"], empty_label="None missing."),
+            "",
+            "## Helper Dry-Run Results",
+            "",
+            "\n".join(dry_run_sections),
+            "",
+            "## Execution Order",
+            "",
+            markdown_command_block(
+                [
+                    "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet",
+                    "python3 scripts/spikes/feishu_delivery_spike.py",
+                    "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+                    "python3 scripts/spikes/archive_storage_spike.py",
+                    "python3 scripts/spikes/readiness_manifest.py",
+                    "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet",
+                    "python3 scripts/check_readiness.py --require-live --require-evidence",
+                ]
+            ),
+            "",
+            "## Redaction Guardrails",
+            "",
+            markdown_bullets(summary["notes"]),
+            "- Review every generated evidence file before sharing.",
+            "- Keep recipient ids, tokens, API keys, local paths, and NAS/cloud targets redacted.",
+            "- Preserve validation fields such as status codes, run ids, provider/model names, request counts, latency, and source anchors.",
+        ]
+    )
 
 
 def run_dry_runs(evidence_root: Path, run_helpers: bool) -> list[dict]:
@@ -186,6 +271,11 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_markdown(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text + "\n", encoding="utf-8")
+
+
 def has_missing_required(summary: dict) -> bool:
     env_missing = any(group["missing"] for group in summary["environment"].values())
     evidence_missing = bool(summary["evidence"]["missing"])
@@ -213,13 +303,19 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true", help="Fail if env vars, dry-runs, or live evidence files are missing.")
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--summary-path", "--output", dest="summary_path", help="Override summary output path.")
+    parser.add_argument("--write-packet", action="store_true", help="Also write a Markdown execution packet under evidence/.")
+    parser.add_argument("--packet-path", help="Override Markdown packet output path.")
     args = parser.parse_args()
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.summary_path) if args.summary_path else evidence_root / "live-readiness-preflight.json"
+    packet_path = Path(args.packet_path) if args.packet_path else evidence_root / "live-readiness-packet.md"
     run_helpers = args.dry_run and not args.skip_helper_dry_runs
     summary = build_summary(evidence_root, run_helpers=run_helpers)
     write_json(output_path, summary)
+    if args.write_packet:
+        write_markdown(packet_path, build_markdown_packet(summary, evidence_root, output_path, packet_path))
+        print(f"Preflight packet written to {display_path(packet_path)}")
     print_summary(output_path, summary)
     if args.strict and has_missing_required(summary):
         print("STRICT preflight failed: environment variables, failed helper dry-runs, or live evidence files are incomplete")

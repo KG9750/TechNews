@@ -10,21 +10,22 @@ This runbook explains how to turn the remaining external spikes into evidence th
 Before running live external spikes, generate a local preflight summary:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --dry-run
+python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet
 ```
 
 This writes:
 
 ```text
 evidence/live-readiness-preflight.json
+evidence/live-readiness-packet.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. It does not print or store environment values. The generated summary is ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, and lists missing live evidence files. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, and redaction guardrails. It does not print or store environment values. The generated summary and packet are ignored by git.
 
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --strict
+python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet
 ```
 
 Strict mode fails until all required environment variable names and live evidence files are present. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
@@ -35,7 +36,7 @@ CI regression coverage:
 python3 scripts/test_live_evidence_helpers.py
 ```
 
-This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, readiness manifest dry-run shape, a synthetic redacted evidence package that exercises the positive live-evidence validator path, and rejection of raw sensitive environment values in evidence files.
+This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, Markdown packet output without secret values, readiness manifest dry-run shape, a synthetic redacted evidence package that exercises the positive live-evidence validator path, and rejection of raw sensitive environment values in evidence files.
 
 ## Final Gate Command
 

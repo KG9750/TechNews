@@ -71,6 +71,28 @@ def test_preflight_dry_runs_write_to_temp_evidence() -> None:
         assert (evidence_root / "readiness-manifest.dry-run.json").exists()
 
 
+def test_preflight_packet_lists_status_without_secret_values() -> None:
+    secret = "packet-secret-value-123456789"
+    with with_env("MODEL_API_KEY", secret):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            evidence_root = Path(tmp_name)
+            summary_path = evidence_root / "summary.json"
+            packet_path = evidence_root / "packet.md"
+            summary = preflight.build_summary(evidence_root, run_helpers=False)
+            packet = preflight.build_markdown_packet(summary, evidence_root, summary_path, packet_path)
+            preflight.write_markdown(packet_path, packet)
+
+            assert packet_path.exists()
+
+    assert "# Live Readiness Execution Packet" in packet
+    assert "MODEL_API_KEY" in packet
+    assert "readiness-manifest.json" in packet
+    assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
+    assert secret not in packet
+    assert str(preflight.ROOT) not in packet
+    assert str(Path.home()) not in packet
+
+
 def test_readiness_manifest_dry_run_shape() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
@@ -284,6 +306,7 @@ def test_live_evidence_rejects_raw_environment_values() -> None:
 def main() -> int:
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
+    test_preflight_packet_lists_status_without_secret_values()
     test_readiness_manifest_dry_run_shape()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_rejects_raw_environment_values()

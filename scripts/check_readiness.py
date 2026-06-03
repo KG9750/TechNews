@@ -1013,16 +1013,20 @@ def check_spike_runners() -> list[str]:
         require("evidence/" in text, f"{path} must write generated evidence outside tracked docs")
         require("--dry-run" in text, f"{path} must support --dry-run")
     require("--validate-evidence" in read("scripts/spikes/model_provider_spike.py"), "model provider runner must validate evidence")
+    preflight_text = read("scripts/spikes/live_readiness_preflight.py")
+    require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
+    require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
+        "test_preflight_packet_lists_status_without_secret_values",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight helpers, and live evidence tests present"]
+    return ["spike runners: Feishu, archive, model-provider, readiness-manifest, preflight packet helper, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:
