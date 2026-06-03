@@ -359,6 +359,7 @@ def check_required_files() -> list[str]:
         "scripts/spikes/feishu_delivery_spike.py",
         "scripts/spikes/archive_storage_spike.py",
         "scripts/spikes/model_provider_spike.py",
+        "scripts/spikes/readiness_manifest.py",
     ]
     require_files(files)
     return [f"required files present: {len(files)}"]
@@ -955,12 +956,13 @@ def check_spike_runners() -> list[str]:
         "scripts/spikes/feishu_delivery_spike.py",
         "scripts/spikes/archive_storage_spike.py",
         "scripts/spikes/model_provider_spike.py",
+        "scripts/spikes/readiness_manifest.py",
     ]:
         text = read(path)
         require("evidence/" in text, f"{path} must write generated evidence outside tracked docs")
         require("--dry-run" in text, f"{path} must support --dry-run")
     require("--validate-evidence" in read("scripts/spikes/model_provider_spike.py"), "model provider runner must validate evidence")
-    return ["spike runners: Feishu, archive, and model-provider helpers present"]
+    return ["spike runners: Feishu, archive, model-provider, and readiness-manifest helpers present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:
@@ -996,6 +998,7 @@ def check_readiness_ci_workflow() -> list[str]:
     for needle in [
         "python scripts/check_readiness.py",
         "python -m py_compile",
+        "scripts/spikes/readiness_manifest.py",
         "--require-evidence --evidence-root fixtures/live-evidence-templates",
         "Expected template evidence validation to fail",
         "--require-evidence --evidence-root fixtures/live-evidence-negative/leaky-feishu",

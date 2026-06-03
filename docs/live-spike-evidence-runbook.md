@@ -1,7 +1,7 @@
 # Live Spike Evidence Runbook
 
 Status: Ready for external validation
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 This runbook explains how to turn the remaining external spikes into evidence that can pass the readiness gate. Generated evidence belongs under `evidence/`, which is ignored by git. Do not commit real credentials, recipient ids, provider responses, or storage paths.
 
@@ -27,6 +27,18 @@ Create this file after all three live spikes have generated redacted evidence:
 evidence/readiness-manifest.json
 ```
 
+Dry-run the manifest shape before live evidence is complete:
+
+```bash
+python3 scripts/spikes/readiness_manifest.py --dry-run
+```
+
+Generate the final manifest after live evidence is complete and redacted:
+
+```bash
+python3 scripts/spikes/readiness_manifest.py --reviewed-by "Briefing Administrator" --redaction-notes "Reviewed redacted evidence for template markers, sensitive ids, tokens, and private paths."
+```
+
 Template:
 
 ```text
@@ -42,6 +54,7 @@ Validation rules:
 - Model Provider `run_id`, `provider`, and `model` must match `evidence/model-provider/usage-log.json`, and every model output must use that same `run_id`.
 - Archive/storage `run_id` must match `evidence/archive-storage/sync-result.json`.
 - Manifest content must pass the same template-marker and sensitive-value redaction checks as other live evidence files.
+- The manifest helper writes generated files under ignored `evidence/`; do not commit live manifests.
 
 ## Feishu Delivery
 

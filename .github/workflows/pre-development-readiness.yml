@@ -31,7 +31,8 @@ jobs:
             scripts/check_readiness.py \
             scripts/spikes/archive_storage_spike.py \
             scripts/spikes/feishu_delivery_spike.py \
-            scripts/spikes/model_provider_spike.py
+            scripts/spikes/model_provider_spike.py \
+            scripts/spikes/readiness_manifest.py
 
       - name: Verify evidence templates cannot pass as live evidence
         run: |
