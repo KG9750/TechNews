@@ -55,9 +55,9 @@
       "requires_owner_review": true,
       "requires_per_item_review": false,
       "full_text_storage": "not_stored",
-      "summary_policy": "owner_review_required_before_generated_summary",
+      "summary_policy": "permission_required_before_generated_summary",
       "media_policy": "none_until_approved",
-      "rate_policy": "conservative_default"
+      "rate_policy": "no_automated_crawl_until_permission"
     },
     {
       "source_id": "src-ieee-spectrum",
