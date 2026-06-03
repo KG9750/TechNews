@@ -376,7 +376,23 @@ def test_archive_live_evidence_requires_matching_counts_and_trees() -> None:
         )
         (evidence_root / "archive-storage/local-tree.txt").write_text("briefing.md\nmetadata.json\n", encoding="utf-8")
         (evidence_root / "archive-storage/remote-tree.txt").write_text("briefing.md\nsummary.json\n", encoding="utf-8")
+        try:
+            archive_spike.validate_evidence(evidence_root / "archive-storage")
+        except archive_spike.SpikeError as error:
+            assert "local and remote file_count values must match" in str(error)
+        else:
+            raise AssertionError("expected archive validator to reject mismatched file counts")
         _, missing, failures = readiness.check_archive_live_evidence(evidence_root)
+
+        sync_result = json.loads((evidence_root / "archive-storage/sync-result.json").read_text(encoding="utf-8"))
+        sync_result["remote_sync"]["file_count"] = 2
+        write_json(evidence_root / "archive-storage/sync-result.json", sync_result)
+        try:
+            archive_spike.validate_evidence(evidence_root / "archive-storage")
+        except archive_spike.SpikeError as error:
+            assert "tree listings must match" in str(error)
+        else:
+            raise AssertionError("expected archive validator to reject mismatched trees")
 
     assert not missing
     assert "Archive live evidence local and remote file_count values must match" in failures
@@ -558,6 +574,7 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
         write_synthetic_live_evidence(evidence_root)
+        assert archive_spike.validate_evidence(evidence_root / "archive-storage") == 0
         passed, missing, failures = readiness.check_live_evidence(evidence_root)
     assert not missing
     assert not failures

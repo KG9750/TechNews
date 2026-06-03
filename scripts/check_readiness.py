@@ -1062,6 +1062,11 @@ def check_spike_runners() -> list[str]:
     archive_text = read("scripts/spikes/archive_storage_spike.py")
     require("redact_archive_text" in archive_text, "archive runner must redact sync failure paths")
     require("failure_reason" in archive_text and "redact_archive_text(str(error))" in archive_text, "archive runner must redact OSError failure reasons")
+    require("--validate-evidence" in archive_text, "archive runner must validate redacted live evidence")
+    require(
+        "archive evidence local and remote tree listings must match" in archive_text,
+        "archive runner must validate matching local and remote tree evidence",
+    )
     feishu_text = read("scripts/spikes/feishu_delivery_spike.py")
     require("--attempt-group-webhook-fallback" in feishu_text, "Feishu runner must expose explicit group webhook fallback")
     require("build_group_webhook_payload" in feishu_text, "Feishu runner must build group webhook fallback payloads")
@@ -1139,6 +1144,7 @@ def check_spike_runners() -> list[str]:
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
+        "archive_spike.validate_evidence",
         "local and remote tree listings must match",
         "final-redaction-review.md",
         "They do not count as final live evidence.",

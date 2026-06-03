@@ -234,6 +234,7 @@ Live run:
 
 ```bash
 python3 scripts/spikes/archive_storage_spike.py
+python3 scripts/spikes/archive_storage_spike.py --validate-evidence
 ```
 
 Required environment:

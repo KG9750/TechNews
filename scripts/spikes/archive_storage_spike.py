@@ -58,6 +58,10 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def read_evidence_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
 def redacted_archive_path(root_label: str) -> str:
     return f"{root_label}/2026-06-01/technology"
 
@@ -172,14 +176,79 @@ def require_fixture() -> None:
             raise SpikeError(f"missing archive fixture file: {path}")
 
 
+def check_evidence_redaction(path: Path) -> None:
+    text = read_evidence_text(path)
+    if "TEMPLATE_" in text:
+        raise SpikeError(f"{path}: evidence still contains TEMPLATE_ placeholder")
+    for label, pattern in [
+        ("local user path", r"/Users/[^/\s\"]+"),
+        ("private tmp path", r"(?<![A-Za-z0-9_./-])/private/"),
+        ("iCloud workspace path", r"Mobile Documents/com~apple~CloudDocs"),
+    ]:
+        if re.search(pattern, text):
+            raise SpikeError(f"{path}: evidence may leak {label}")
+    for env_name in ["ARCHIVE_LOCAL_ROOT", "ARCHIVE_SYNC_TARGET"]:
+        value = os.environ.get(env_name, "")
+        if len(value) >= 8 and value in text:
+            raise SpikeError(f"{path}: evidence contains raw environment value {env_name}")
+
+
+def read_tree(path: Path) -> list[str]:
+    if not path.exists():
+        raise SpikeError(f"missing archive evidence tree file: {path}")
+    check_evidence_redaction(path)
+    lines = [line.strip() for line in read_evidence_text(path).splitlines() if line.strip()]
+    if not lines:
+        raise SpikeError(f"{path}: archive evidence tree must list at least one file")
+    return lines
+
+
+def positive_int(value: object, label: str) -> int:
+    try:
+        number = int(value or 0)
+    except (TypeError, ValueError) as error:
+        raise SpikeError(f"{label} must be an integer") from error
+    if number <= 0:
+        raise SpikeError(f"{label} must be > 0")
+    return number
+
+
+def validate_evidence(evidence_dir: Path) -> int:
+    load_env_file(ROOT / ".env")
+    result_path = evidence_dir / "sync-result.json"
+    if not result_path.exists():
+        raise SpikeError(f"missing archive evidence sync result: {result_path}")
+    check_evidence_redaction(result_path)
+    payload = json.loads(read_evidence_text(result_path))
+    if payload.get("local_archive", {}).get("status") != "written":
+        raise SpikeError(f"{result_path}: local_archive.status must be written")
+    if payload.get("remote_sync", {}).get("status") != "synced":
+        raise SpikeError(f"{result_path}: remote_sync.status must be synced")
+
+    local_count = positive_int(payload.get("local_archive", {}).get("file_count"), "local_archive.file_count")
+    remote_count = positive_int(payload.get("remote_sync", {}).get("file_count"), "remote_sync.file_count")
+    if local_count != remote_count:
+        raise SpikeError(f"{result_path}: local and remote file_count values must match")
+
+    local_tree = read_tree(evidence_dir / "local-tree.txt")
+    remote_tree = read_tree(evidence_dir / "remote-tree.txt")
+    if local_tree != remote_tree:
+        raise SpikeError("archive evidence local and remote tree listings must match")
+    print(f"LIVE archive evidence validates: {evidence_dir}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Validate copy plan without writing archive roots.")
+    parser.add_argument("--validate-evidence", action="store_true", help="Validate redacted live archive sync evidence.")
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     args = parser.parse_args()
     try:
+        if args.validate_evidence:
+            return validate_evidence(Path(args.evidence_dir))
         return run(dry_run=args.dry_run, evidence_dir=Path(args.evidence_dir))
-    except SpikeError as error:
+    except (FileNotFoundError, json.JSONDecodeError, SpikeError) as error:
         print(f"ERROR {error}")
         return 1
 

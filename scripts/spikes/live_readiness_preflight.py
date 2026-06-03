@@ -140,6 +140,7 @@ SPIKE_PACKET_SPECS = [
         "commands": [
             "python3 scripts/spikes/archive_storage_spike.py --dry-run",
             "python3 scripts/spikes/archive_storage_spike.py",
+            "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
             "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
         ],
     },
@@ -567,6 +568,7 @@ def build_summary(evidence_root: Path, run_helpers: bool, require_clean_worktree
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
             "python3 scripts/spikes/archive_storage_spike.py",
+            "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
             "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet",
             "python3 scripts/check_readiness.py --require-live --require-evidence",
         ],
