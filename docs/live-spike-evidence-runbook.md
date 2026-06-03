@@ -212,6 +212,7 @@ Validation rules:
 - Each output must contain three or four Chinese bullets.
 - Low-confidence output must remain `low` and include a Confidence Notice.
 - Usage log must include three tasks with `request_count > 0` and `latency_ms`.
+- Usage log tasks must use `briefing_item_generation` and exactly match the three expected output fixtures and input fixture ids.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw API keys, authorization headers, private local paths, or raw configured secret/env values.
 

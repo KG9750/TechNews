@@ -1113,6 +1113,7 @@ def check_spike_runners() -> list[str]:
         "test_preflight_reports_template_evidence_validation_failures",
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
+        "test_model_usage_log_requires_expected_tasks",
         "test_archive_failure_reason_redacts_private_paths",
         "test_archive_live_evidence_requires_matching_counts_and_trees",
         "test_readiness_manifest_dry_run_shape",
@@ -1133,6 +1134,7 @@ def check_spike_runners() -> list[str]:
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
+        "Model usage log tasks must match expected output fixtures and input fixture ids",
         "local and remote tree listings must match",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
@@ -1761,7 +1763,20 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
         tasks = usage_log.get("tasks", [])
         if len(tasks) != 3:
             failures.append("Model usage log must include three tasks")
+        expected_tasks = {
+            f"outputs/{profile}.json": fixture_id
+            for profile, fixture_id in MODEL_OUTPUT_PROFILES.items()
+        }
+        actual_tasks = {
+            task.get("output_fixture"): task.get("input_fixture_id")
+            for task in tasks
+            if task.get("output_fixture")
+        }
+        if actual_tasks != expected_tasks:
+            failures.append("Model usage log tasks must match expected output fixtures and input fixture ids")
         for task in tasks:
+            if task.get("task_type") != "briefing_item_generation":
+                failures.append("Model usage log every task task_type must be briefing_item_generation")
             if int(task.get("request_count") or 0) <= 0:
                 failures.append("Model usage log every task request_count must be > 0")
             if "latency_ms" not in task:

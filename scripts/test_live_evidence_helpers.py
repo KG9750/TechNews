@@ -297,6 +297,22 @@ def test_model_request_validation_rejects_full_body_metadata() -> None:
         raise AssertionError("expected full-body metadata to fail request validation")
 
 
+def test_model_usage_log_requires_expected_tasks() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        usage_path = evidence_root / "model-provider/usage-log.json"
+        usage = json.loads(usage_path.read_text(encoding="utf-8"))
+        usage["tasks"][0]["output_fixture"] = "outputs/unexpected.json"
+        usage["tasks"][1]["task_type"] = "unexpected_task"
+        write_json(usage_path, usage)
+        _, missing, failures = readiness.check_model_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Model usage log tasks must match expected output fixtures and input fixture ids" in failures
+    assert "Model usage log every task task_type must be briefing_item_generation" in failures
+
+
 def test_archive_failure_reason_redacts_private_paths() -> None:
     values = {
         "ARCHIVE_LOCAL_ROOT": f"{Path.home()}/archive-secret-root",
@@ -653,6 +669,7 @@ def main() -> int:
     test_preflight_reports_template_evidence_validation_failures()
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()
+    test_model_usage_log_requires_expected_tasks()
     test_archive_failure_reason_redacts_private_paths()
     test_archive_live_evidence_requires_matching_counts_and_trees()
     test_synthetic_live_evidence_package_passes_gate()
