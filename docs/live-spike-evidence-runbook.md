@@ -17,6 +17,31 @@ The gate only passes when both conditions are true:
 
 - Required environment variables are present.
 - Redacted evidence files pass validation.
+- `evidence/readiness-manifest.json` declares the final evidence set and matches the live model/archive run metadata.
+
+## Evidence Manifest
+
+Create this file after all three live spikes have generated redacted evidence:
+
+```text
+evidence/readiness-manifest.json
+```
+
+Template:
+
+```text
+fixtures/live-evidence-templates/readiness-manifest.json
+```
+
+Validation rules:
+
+- `repository` must be `KG9750/TechNews`.
+- `commit`, `generated_at`, `reviewed_by`, and `redaction_review` must be filled in.
+- Feishu, model-provider, and archive-storage spike statuses must be `passed`.
+- Manifest evidence file declarations must exactly match the required live evidence files below.
+- Model Provider `run_id`, `provider`, and `model` must match `evidence/model-provider/usage-log.json`, and every model output must use that same `run_id`.
+- Archive/storage `run_id` must match `evidence/archive-storage/sync-result.json`.
+- Manifest content must pass the same template-marker and sensitive-value redaction checks as other live evidence files.
 
 ## Feishu Delivery
 

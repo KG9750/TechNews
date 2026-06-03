@@ -71,6 +71,7 @@ SENSITIVE_ENV_NAMES = [
     "SESSION_SECRET",
 ]
 LIVE_EVIDENCE_TEMPLATE_FILES = [
+    "fixtures/live-evidence-templates/readiness-manifest.json",
     "fixtures/live-evidence-templates/feishu-delivery/user-response.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/group-response.redacted.json",
     "fixtures/live-evidence-templates/feishu-delivery/rendered-message.md",
@@ -1444,11 +1445,142 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
     return passed, missing, failures
 
 
+def require_manifest_files(
+    manifest: dict,
+    evidence_root: Path,
+    spike_name: str,
+    expected_files: set[str],
+    missing: list[str],
+    failures: list[str],
+) -> dict:
+    spikes = manifest.get("spikes", {})
+    spike = spikes.get(spike_name)
+    if not isinstance(spike, dict):
+        failures.append(f"Live evidence manifest missing spikes.{spike_name}")
+        return {}
+    if spike.get("status") != "passed":
+        failures.append(f"Live evidence manifest {spike_name}.status must be passed")
+    files = spike.get("evidence_files", [])
+    if not isinstance(files, list):
+        failures.append(f"Live evidence manifest {spike_name}.evidence_files must be a list")
+        return spike
+    actual_files = set(files)
+    missing_declared = sorted(expected_files - actual_files)
+    extra_declared = sorted(actual_files - expected_files)
+    if missing_declared:
+        failures.append(f"Live evidence manifest {spike_name} missing file declarations: {', '.join(missing_declared)}")
+    if extra_declared:
+        failures.append(f"Live evidence manifest {spike_name} has unexpected file declarations: {', '.join(extra_declared)}")
+    for relative in files:
+        path = Path(relative)
+        if path.is_absolute() or ".." in path.parts:
+            failures.append(f"Live evidence manifest {spike_name} has unsafe evidence path: {relative}")
+            continue
+        if not (evidence_root / path).exists():
+            missing.append(f"Live evidence manifest referenced file missing: {evidence_root / path}")
+    return spike
+
+
+def check_live_evidence_manifest(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+    path = evidence_root / "readiness-manifest.json"
+    missing: list[str] = []
+    failures: list[str] = []
+    passed: list[str] = []
+    if not path.exists():
+        missing.append(f"Live evidence manifest missing: {path}")
+        return passed, missing, failures
+
+    check_live_evidence_file(path, failures, "Live evidence manifest")
+    manifest = load_json_path(path)
+    if manifest.get("repository") != EXPECTED_GITHUB_REPO:
+        failures.append(f"Live evidence manifest repository must be {EXPECTED_GITHUB_REPO}")
+    for field in ["readiness_evidence_id", "generated_at", "commit", "reviewed_by"]:
+        if not manifest.get(field):
+            failures.append(f"Live evidence manifest missing {field}")
+    redaction_review = manifest.get("redaction_review", {})
+    if not isinstance(redaction_review, dict) or not redaction_review.get("reviewed_at") or not redaction_review.get("notes"):
+        failures.append("Live evidence manifest redaction_review must include reviewed_at and notes")
+
+    feishu = require_manifest_files(
+        manifest,
+        evidence_root,
+        "feishu_delivery",
+        {
+            "feishu-delivery/user-response.redacted.json",
+            "feishu-delivery/group-response.redacted.json",
+            "feishu-delivery/rendered-message.md",
+        },
+        missing,
+        failures,
+    )
+    requirements = set(feishu.get("requirements", []))
+    for requirement in ["one_user_delivery", "one_group_delivery", "source_line_present", "confidence_notice_present"]:
+        if requirement not in requirements:
+            failures.append(f"Live evidence manifest Feishu requirements missing {requirement}")
+
+    model = require_manifest_files(
+        manifest,
+        evidence_root,
+        "model_provider",
+        {
+            "model-provider/outputs/high-confidence-news.json",
+            "model-provider/outputs/low-confidence-news.json",
+            "model-provider/outputs/academic-paper.json",
+            "model-provider/usage-log.json",
+        },
+        missing,
+        failures,
+    )
+    model_usage_path = evidence_root / "model-provider/usage-log.json"
+    if model_usage_path.exists():
+        usage = load_json_path(model_usage_path)
+        if model.get("run_id") != usage.get("run_id"):
+            failures.append("Live evidence manifest model_provider.run_id must match usage-log run_id")
+        if model.get("provider") != usage.get("provider"):
+            failures.append("Live evidence manifest model_provider.provider must match usage-log provider")
+        if model.get("model") != usage.get("model"):
+            failures.append("Live evidence manifest model_provider.model must match usage-log model")
+        for output_name in ["high-confidence-news", "low-confidence-news", "academic-paper"]:
+            output_path = evidence_root / f"model-provider/outputs/{output_name}.json"
+            if output_path.exists():
+                output = load_json_path(output_path)
+                output_run_id = output.get("briefing_item", {}).get("run_id")
+                if output_run_id != usage.get("run_id"):
+                    failures.append(f"Live evidence manifest model run_id mismatch in {output_path}")
+
+    archive = require_manifest_files(
+        manifest,
+        evidence_root,
+        "archive_storage",
+        {
+            "archive-storage/sync-result.json",
+            "archive-storage/local-tree.txt",
+            "archive-storage/remote-tree.txt",
+        },
+        missing,
+        failures,
+    )
+    archive_sync_path = evidence_root / "archive-storage/sync-result.json"
+    if archive_sync_path.exists():
+        sync_result = load_json_path(archive_sync_path)
+        if archive.get("run_id") != sync_result.get("run_id"):
+            failures.append("Live evidence manifest archive_storage.run_id must match sync-result run_id")
+
+    if not failures and not missing:
+        passed.append("Live evidence manifest: declared files and spike run metadata are consistent")
+    return passed, missing, failures
+
+
 def check_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
     passed: list[str] = []
     missing: list[str] = []
     failures: list[str] = []
-    for checker in [check_feishu_live_evidence, check_archive_live_evidence, check_model_live_evidence]:
+    for checker in [
+        check_live_evidence_manifest,
+        check_feishu_live_evidence,
+        check_archive_live_evidence,
+        check_model_live_evidence,
+    ]:
         check_passed, check_missing, check_failures = checker(evidence_root)
         passed.extend(check_passed)
         missing.extend(check_missing)

@@ -66,6 +66,8 @@ Verification:
 
 Purpose: prove external dependencies before product code is built around them.
 
+Final live evidence for these spikes must include `evidence/readiness-manifest.json`, declaring the Feishu, model-provider, and archive-storage evidence files and matching live model/archive run metadata.
+
 ### Feishu Delivery Spike
 
 Default:

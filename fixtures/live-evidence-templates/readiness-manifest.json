@@ -1,0 +1,48 @@
+{
+  "readiness_evidence_id": "TEMPLATE_REPLACE_WITH_UNIQUE_EVIDENCE_ID",
+  "generated_at": "TEMPLATE_REPLACE_WITH_ISO_TIMESTAMP",
+  "repository": "KG9750/TechNews",
+  "commit": "TEMPLATE_REPLACE_WITH_COMMIT_SHA",
+  "reviewed_by": "Briefing Administrator",
+  "redaction_review": {
+    "reviewed_at": "TEMPLATE_REPLACE_WITH_ISO_TIMESTAMP",
+    "notes": "TEMPLATE_REPLACE_WITH_REDACTION_REVIEW_NOTE"
+  },
+  "spikes": {
+    "feishu_delivery": {
+      "status": "passed",
+      "evidence_files": [
+        "feishu-delivery/user-response.redacted.json",
+        "feishu-delivery/group-response.redacted.json",
+        "feishu-delivery/rendered-message.md"
+      ],
+      "requirements": [
+        "one_user_delivery",
+        "one_group_delivery",
+        "source_line_present",
+        "confidence_notice_present"
+      ]
+    },
+    "model_provider": {
+      "status": "passed",
+      "run_id": "run_2026-06-01_model_provider_spike",
+      "provider": "TEMPLATE_REPLACE_WITH_LIVE_PROVIDER",
+      "model": "TEMPLATE_REPLACE_WITH_LIVE_MODEL",
+      "evidence_files": [
+        "model-provider/outputs/high-confidence-news.json",
+        "model-provider/outputs/low-confidence-news.json",
+        "model-provider/outputs/academic-paper.json",
+        "model-provider/usage-log.json"
+      ]
+    },
+    "archive_storage": {
+      "status": "passed",
+      "run_id": "run_2026-06-01_archive_storage_spike",
+      "evidence_files": [
+        "archive-storage/sync-result.json",
+        "archive-storage/local-tree.txt",
+        "archive-storage/remote-tree.txt"
+      ]
+    }
+  }
+}
