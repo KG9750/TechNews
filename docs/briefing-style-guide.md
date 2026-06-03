@@ -1,7 +1,7 @@
 # Briefing Style Guide
 
 Status: Reviewed for model spike
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 This guide defines the writing style for Push Briefings and Deep-Dive Details. It is the canonical writing reference for the Model Provider Spike.
 
@@ -173,3 +173,4 @@ Before accepting generated output, verify:
 - Media Attribution exists when media is displayed.
 - Summary does not store or reproduce long article body text.
 - Section and subcategory names match `docs/taxonomy/technology-domain-template.md`.
+- `python3 scripts/check_readiness.py` verifies the required Push Briefing, Confidence Notice, Source/Media, Deep-Dive Detail, and quality checklist rules.

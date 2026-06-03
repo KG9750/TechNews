@@ -1,7 +1,7 @@
 # Technology Domain Template
 
 Status: Reviewed for model spike
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 This is the first Domain Template for TechNews Briefing. It defines the MVP Briefing Sections and Section Subcategories used by classification, Recipient Subscriptions, Push Briefings, and Archive Packages.
 
@@ -152,3 +152,4 @@ Examples:
 - Embodied Intelligence includes Robot body, Data collection, Model training, Recent papers, and Financing.
 - Section names match PRD and MVP scope language.
 - This template is ready for the Model Provider Spike as the canonical classification vocabulary.
+- `python3 scripts/check_readiness.py` verifies MVP sections, minimum subcategory coverage, and Embodied Intelligence required subcategories.

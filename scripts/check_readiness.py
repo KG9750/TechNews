@@ -168,6 +168,30 @@ CONTRACT_NESTED_SHAPES = {
     "ConfidenceNotice",
     "ModelUsage",
 }
+EXPECTED_TECHNOLOGY_SECTIONS = {
+    "AI",
+    "Software",
+    "Hardware",
+    "Embodied Intelligence",
+    "Academic Progress",
+    "Technology Industry Progress",
+}
+REQUIRED_EMBODIED_SUBCATEGORIES = {
+    "Robot body",
+    "Data collection",
+    "Model training",
+    "Recent papers",
+    "Financing",
+}
+STYLE_GUIDE_REQUIRED_HEADINGS = [
+    "Push Briefing Structure",
+    "Title Rules",
+    "Bullet Rules",
+    "Confidence Notice Rules",
+    "Source And Media Attribution",
+    "Deep-Dive Detail",
+    "Quality Checklist",
+]
 
 
 class CheckFailure(Exception):
@@ -597,6 +621,71 @@ def _legacy_source_registry_review_notes() -> list[str]:
         f"{len(needs_terms_review)} first-version seed sources still need full eligibility checklist review "
         "(terms, media reuse, rate limits, and disallowed behavior) before automated ingestion"
     ]
+
+
+def check_taxonomy_template() -> list[str]:
+    text = read("docs/taxonomy/technology-domain-template.md")
+    rows: dict[str, list[str]] = {}
+    for line in text.splitlines():
+        if not line.startswith("|") or line.startswith("| ---") or line.startswith("| Section"):
+            continue
+        columns = [part.strip() for part in line.strip().strip("|").split("|")]
+        if len(columns) != 2:
+            continue
+        section, subcategories = columns
+        if section in EXPECTED_TECHNOLOGY_SECTIONS:
+            rows[section] = [part.strip() for part in subcategories.split(";") if part.strip()]
+
+    missing_sections = sorted(EXPECTED_TECHNOLOGY_SECTIONS - set(rows))
+    extra_sections = sorted(set(rows) - EXPECTED_TECHNOLOGY_SECTIONS)
+    require(not missing_sections, f"taxonomy missing MVP sections: {', '.join(missing_sections)}")
+    require(not extra_sections, f"taxonomy has unexpected MVP sections: {', '.join(extra_sections)}")
+    for section, subcategories in rows.items():
+        require(len(subcategories) >= 3, f"taxonomy section {section} must have at least three subcategories")
+
+    embodied = set(rows["Embodied Intelligence"])
+    missing_embodied = sorted(REQUIRED_EMBODIED_SUBCATEGORIES - embodied)
+    require(not missing_embodied, "Embodied Intelligence missing subcategories: " + ", ".join(missing_embodied))
+
+    for needle in [
+        "One primary `section`",
+        "Zero or one primary `subcategory`",
+        "Selection Rationale",
+        "duplicate coverage",
+        "classification confidence is low",
+    ]:
+        require(needle in text, f"taxonomy template missing rule: {needle}")
+
+    return [
+        f"taxonomy template: {len(rows)} MVP sections verified",
+        "taxonomy template: Embodied Intelligence required subcategories present",
+    ]
+
+
+def check_briefing_style_guide() -> list[str]:
+    text = read("docs/briefing-style-guide.md")
+    for heading in STYLE_GUIDE_REQUIRED_HEADINGS:
+        require(f"## {heading}" in text, f"briefing style guide missing {heading}")
+
+    for needle in [
+        "One Chinese title sentence",
+        "Three to four concise Chinese bullets",
+        "Original Source Anchor",
+        "Confidence Notice when confidence is `medium` or `low`",
+        "Media attribution when Source Media is displayed",
+        "Do not copy long source passages",
+        "Use this shape:",
+        "Source name",
+        "Never generate news imagery with AI for MVP briefings",
+        "It must not include AI chat in the MVP",
+        "Section and subcategory names match `docs/taxonomy/technology-domain-template.md`",
+    ]:
+        require(needle in text, f"briefing style guide missing rule: {needle}")
+
+    for banned in ["震撼发布", "颠覆行业", "史诗级", "炸裂", "杀疯了"]:
+        require(banned in text, f"briefing style guide missing sensational wording ban: {banned}")
+
+    return ["briefing style guide: push, confidence, source/media, and deep-dive rules verified"]
 
 
 def check_golden_samples() -> list[str]:
@@ -1158,6 +1247,8 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_source_registry,
         check_source_eligibility_reviews,
         check_source_access_policy,
+        check_taxonomy_template,
+        check_briefing_style_guide,
         check_golden_samples,
         check_archive_fixture,
         check_model_fixtures,
