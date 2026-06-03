@@ -26,6 +26,7 @@ preflight = load_module("live_readiness_preflight", ROOT / "scripts/spikes/live_
 manifest = load_module("readiness_manifest", ROOT / "scripts/spikes/readiness_manifest.py")
 readiness = load_module("check_readiness", ROOT / "scripts/check_readiness.py")
 model_spike = load_module("model_provider_spike", ROOT / "scripts/spikes/model_provider_spike.py")
+archive_spike = load_module("archive_storage_spike", ROOT / "scripts/spikes/archive_storage_spike.py")
 
 
 def with_env(name: str, value: str):
@@ -183,6 +184,27 @@ def test_model_request_validation_rejects_full_body_metadata() -> None:
         assert "disallowed full-body keys" in str(error)
     else:
         raise AssertionError("expected full-body metadata to fail request validation")
+
+
+def test_archive_failure_reason_redacts_private_paths() -> None:
+    values = {
+        "ARCHIVE_LOCAL_ROOT": f"{Path.home()}/archive-secret-root",
+        "ARCHIVE_SYNC_TARGET": "/private/tmp/archive-secret-target",
+    }
+    raw = (
+        f"copy failed from {values['ARCHIVE_LOCAL_ROOT']}/2026-06-01/technology "
+        f"to {values['ARCHIVE_SYNC_TARGET']}/2026-06-01/technology inside {archive_spike.ROOT}"
+    )
+    with with_env_values(values):
+        redacted = archive_spike.redact_archive_text(raw)
+
+    assert values["ARCHIVE_LOCAL_ROOT"] not in redacted
+    assert values["ARCHIVE_SYNC_TARGET"] not in redacted
+    assert str(Path.home()) not in redacted
+    assert str(archive_spike.ROOT) not in redacted
+    assert "/private/" not in redacted
+    assert "REDACTED_LOCAL_ARCHIVE_ROOT" in redacted
+    assert "REDACTED_SYNC_TARGET" in redacted
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -410,6 +432,7 @@ def main() -> int:
     test_preflight_reports_template_evidence_validation_failures()
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()
+    test_archive_failure_reason_redacts_private_paths()
     test_synthetic_live_evidence_package_passes_gate()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

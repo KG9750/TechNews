@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -59,6 +60,31 @@ def write_json(path: Path, payload: dict) -> None:
 
 def redacted_archive_path(root_label: str) -> str:
     return f"{root_label}/2026-06-01/technology"
+
+
+def redact_archive_text(text: str) -> str:
+    replacements = {
+        str(ROOT): "REDACTED_WORKSPACE",
+        str(Path.home()): "REDACTED_HOME",
+    }
+    for env_name, label in [
+        ("ARCHIVE_LOCAL_ROOT", "REDACTED_LOCAL_ARCHIVE_ROOT"),
+        ("ARCHIVE_SYNC_TARGET", "REDACTED_SYNC_TARGET"),
+    ]:
+        value = os.environ.get(env_name)
+        if not value:
+            continue
+        replacements[value] = label
+        replacements[str(Path(value).expanduser())] = label
+
+    redacted = text
+    for needle, replacement in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
+        if needle:
+            redacted = redacted.replace(needle, replacement)
+    redacted = re.sub(r"/Users/[^/\s\"]+", "REDACTED_HOME", redacted)
+    redacted = re.sub(r"(?<![A-Za-z0-9_./-])/private/", "REDACTED_PRIVATE/", redacted)
+    redacted = redacted.replace("Mobile Documents/com~apple~CloudDocs", "REDACTED_ICLOUD_PATH")
+    return redacted
 
 
 def run(dry_run: bool, evidence_dir: Path) -> int:
@@ -129,7 +155,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
         result["remote_sync"] = {
             "status": "failed",
             "target": redacted_archive_path("REDACTED_SYNC_TARGET"),
-            "failure_reason": str(error),
+            "failure_reason": redact_archive_text(str(error)),
             "retryable": True,
         }
         exit_code = 2

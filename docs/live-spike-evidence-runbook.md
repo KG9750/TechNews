@@ -235,6 +235,7 @@ Validation rules:
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain private local paths, private sync target paths, tokens, or raw configured secret/env values.
 - The runner writes redacted path labels such as `REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology` and `REDACTED_SYNC_TARGET/2026-06-01/technology`; do not replace them with real host or NAS paths.
+- The runner also redacts local/archive/sync paths inside recorded retryable failure reasons before writing evidence.
 
 Template files:
 

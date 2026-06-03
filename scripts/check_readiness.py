@@ -1020,6 +1020,9 @@ def check_spike_runners() -> list[str]:
         text = read(path)
         require("evidence/" in text, f"{path} must write generated evidence outside tracked docs")
         require("--dry-run" in text, f"{path} must support --dry-run")
+    archive_text = read("scripts/spikes/archive_storage_spike.py")
+    require("redact_archive_text" in archive_text, "archive runner must redact sync failure paths")
+    require("failure_reason" in archive_text and "redact_archive_text(str(error))" in archive_text, "archive runner must redact OSError failure reasons")
     model_provider_text = read("scripts/spikes/model_provider_spike.py")
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
@@ -1041,13 +1044,14 @@ def check_spike_runners() -> list[str]:
         "test_preflight_reports_template_evidence_validation_failures",
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
+        "test_archive_failure_reason_redacts_private_paths",
         "test_readiness_manifest_dry_run_shape",
         "test_synthetic_live_evidence_package_passes_gate",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu, archive, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
+    return ["spike runners: Feishu, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:
