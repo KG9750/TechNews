@@ -201,6 +201,37 @@ def test_packet_all_writes_every_open_packet() -> None:
         assert "evidence/source-owner-reviews/src-the-verge.decision.json" in packet_text
 
 
+def test_packet_index_groups_status_and_paths() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        review.write_all_packets(evidence_dir)
+
+        index = review.review_packet_index(evidence_dir)
+
+        assert "# Source Owner Review Index" in index
+        assert "- Open decisions: 25" in index
+        assert "- Invalid decision files: 25" in index
+        assert "### summary_permission" in index
+        assert "src-the-verge.decision.json" in index
+        assert "src-the-verge.packet.md" in index
+        assert "| src-the-verge | The Verge | invalid | TEMPLATE_DECISION |" in index
+        assert "python3 scripts/source_owner_review_decision.py --packet-index" in index
+
+
+def test_packet_index_writes_index_file() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+
+        review.write_packet_index(evidence_dir)
+
+        index_path = evidence_dir / "index.md"
+        assert index_path.exists()
+        text = index_path.read_text(encoding="utf-8")
+        assert "Source Owner Review Index" in text
+        assert "Open Items By Decision Needed" in text
+
+
 def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -339,6 +370,8 @@ def main() -> int:
     test_draft_all_writes_every_open_review_without_overwriting_existing()
     test_packet_includes_review_context_and_commands()
     test_packet_all_writes_every_open_packet()
+    test_packet_index_groups_status_and_paths()
+    test_packet_index_writes_index_file()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_status_reports_template_drafts_as_invalid()
     test_status_reports_completed_drafts_as_valid()

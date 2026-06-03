@@ -190,6 +190,10 @@ def packet_path(evidence_dir: Path, source_id: str) -> Path:
     return evidence_dir / f"{source_id}.packet.md"
 
 
+def packet_index_path(evidence_dir: Path) -> Path:
+    return evidence_dir / "index.md"
+
+
 def markdown_bullets(items: list[str]) -> str:
     if not items:
         return "- None recorded."
@@ -198,6 +202,10 @@ def markdown_bullets(items: list[str]) -> str:
 
 def markdown_fields(row: dict, fields: list[str]) -> str:
     return "\n".join(f"- {field}: {row.get(field, '')}" for field in fields)
+
+
+def markdown_cell(value: object) -> str:
+    return str(value).replace("\n", " ").replace("|", "\\|")
 
 
 def review_packet(source_id: str, evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
@@ -308,6 +316,121 @@ def write_all_packets(evidence_dir: Path) -> int:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(review_packet(source_id, evidence_dir) + "\n", encoding="utf-8")
     print(f"Source owner review packets prepared: {len(source_ids)} written, {len(source_ids)} open items")
+    return 0
+
+
+def decision_file_state(evidence_dir: Path, source_id: str) -> dict[str, str]:
+    path = decision_path(evidence_dir, source_id)
+    if not path.exists():
+        return {
+            "status": "missing",
+            "decision": "",
+            "detail": str(path.relative_to(ROOT)),
+        }
+    decision = ""
+    try:
+        payload = read_json(path)
+        decision = str(payload.get("decision", ""))
+        validated_payload(path)
+    except (ReviewError, json.JSONDecodeError) as error:
+        return {
+            "status": "invalid",
+            "decision": decision,
+            "detail": str(error),
+        }
+    return {
+        "status": "valid",
+        "decision": decision,
+        "detail": "ready to apply",
+    }
+
+
+def review_packet_index(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:
+    items = load_queue_items()
+    rows = []
+    counts = {"valid": 0, "invalid": 0, "missing": 0}
+    for source_id in open_source_ids():
+        item = items[source_id]
+        registry = markdown_table_row(REGISTRY_PATH, source_id)
+        state = decision_file_state(evidence_dir, source_id)
+        counts[state["status"]] += 1
+        rows.append(
+            {
+                "source_id": source_id,
+                "source": registry["Source"],
+                "decision_needed": item["decision_needed"],
+                "status": state["status"],
+                "decision": state["decision"],
+                "decision_file": decision_path(evidence_dir, source_id).name,
+                "packet_file": packet_path(evidence_dir, source_id).name,
+                "next_action": item["next_action"],
+            }
+        )
+
+    grouped_sections = []
+    for decision_needed in sorted({row["decision_needed"] for row in rows}):
+        grouped_sections.extend(
+            [
+                f"### {decision_needed}",
+                "",
+                "| Source ID | Source | Status | Decision | Decision file | Packet | Next action |",
+                "| --- | --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for row in rows:
+            if row["decision_needed"] != decision_needed:
+                continue
+            grouped_sections.append(
+                "| "
+                + " | ".join(
+                    [
+                        markdown_cell(row["source_id"]),
+                        markdown_cell(row["source"]),
+                        markdown_cell(row["status"]),
+                        markdown_cell(row["decision"]),
+                        markdown_cell(row["decision_file"]),
+                        markdown_cell(row["packet_file"]),
+                        markdown_cell(row["next_action"]),
+                    ]
+                )
+                + " |"
+            )
+        grouped_sections.append("")
+
+    return "\n".join(
+        [
+            "# Source Owner Review Index",
+            "",
+            "This packet is context only. Complete the JSON decision files; do not edit this index as the source of truth.",
+            "",
+            f"- Open decisions: {len(rows)}",
+            f"- Valid decision files: {counts['valid']}",
+            f"- Invalid decision files: {counts['invalid']}",
+            f"- Missing decision files: {counts['missing']}",
+            "",
+            "## Suggested Commands",
+            "",
+            "```bash",
+            "python3 scripts/source_owner_review_decision.py --status",
+            "python3 scripts/source_owner_review_decision.py --draft-all",
+            "python3 scripts/source_owner_review_decision.py --packet-all",
+            "python3 scripts/source_owner_review_decision.py --packet-index",
+            "python3 scripts/source_owner_review_decision.py --validate-all",
+            "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+            "```",
+            "",
+            "## Open Items By Decision Needed",
+            "",
+            *grouped_sections,
+        ]
+    )
+
+
+def write_packet_index(evidence_dir: Path) -> int:
+    output = packet_index_path(evidence_dir)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(review_packet_index(evidence_dir) + "\n", encoding="utf-8")
+    print(f"Source owner review packet index written to {output.relative_to(ROOT)}")
     return 0
 
 
@@ -458,22 +581,17 @@ def decision_status(evidence_dir: Path) -> int:
     invalid = 0
     missing = 0
     for source_id in open_source_ids():
-        path = decision_path(evidence_dir, source_id)
-        if not path.exists():
+        state = decision_file_state(evidence_dir, source_id)
+        if state["status"] == "missing":
             missing += 1
-            print(f"{source_id}\tmissing\t\t{path.relative_to(ROOT)}")
+            print(f"{source_id}\tmissing\t\t{state['detail']}")
             continue
-        decision = ""
-        try:
-            payload = read_json(path)
-            decision = str(payload.get("decision", ""))
-            validated_payload(path)
-        except (ReviewError, json.JSONDecodeError) as error:
+        if state["status"] == "invalid":
             invalid += 1
-            print(f"{source_id}\tinvalid\t{decision}\t{error}")
+            print(f"{source_id}\tinvalid\t{state['decision']}\t{state['detail']}")
             continue
         valid += 1
-        print(f"{source_id}\tvalid\t{decision}\tready to apply")
+        print(f"{source_id}\tvalid\t{state['decision']}\t{state['detail']}")
 
     total = valid + invalid + missing
     print(f"Source owner decision status: {valid} valid, {invalid} invalid, {missing} missing, {total} open items")
@@ -600,6 +718,7 @@ def main() -> int:
     group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
     group.add_argument("--packet", metavar="SOURCE_ID", help="Write a derived Markdown review packet under evidence/.")
     group.add_argument("--packet-all", action="store_true", help="Write derived Markdown review packets for all open owner reviews.")
+    group.add_argument("--packet-index", action="store_true", help="Write a derived Markdown review index under evidence/.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
@@ -622,6 +741,8 @@ def main() -> int:
             return write_packet(args.packet, Path(args.evidence_dir))
         if args.packet_all:
             return write_all_packets(Path(args.evidence_dir))
+        if args.packet_index:
+            return write_packet_index(Path(args.evidence_dir))
         if args.refresh_context_all:
             return refresh_all_context(Path(args.evidence_dir))
         if args.validate:
