@@ -130,6 +130,28 @@ def test_draft_requires_owner_input() -> None:
     assert review.contains_template_marker(draft)
 
 
+def test_draft_all_writes_every_open_review_without_overwriting_existing() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        existing = evidence_dir / "src-the-verge.decision.json"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_text('{"keep": true}\n', encoding="utf-8")
+
+        review.write_all_drafts(evidence_dir)
+
+        open_ids = review.open_source_ids()
+        draft_ids = {
+            path.name.removesuffix(".decision.json")
+            for path in evidence_dir.glob("*.decision.json")
+        }
+        assert set(open_ids) == draft_ids
+        assert existing.read_text(encoding="utf-8") == '{"keep": true}\n'
+
+        generated = json.loads((evidence_dir / "src-techcrunch.decision.json").read_text(encoding="utf-8"))
+        assert generated["source_id"] == "src-techcrunch"
+        assert review.contains_template_marker(generated)
+
+
 def test_blocked_decision_updates_artifacts_and_closes_queue() -> None:
     with isolated_artifacts() as tmp:
         decision_path = write_decision(tmp, decision_payload("blocked"))
@@ -164,6 +186,7 @@ def test_needs_review_decision_keeps_queue_open() -> None:
 
 def main() -> int:
     test_draft_requires_owner_input()
+    test_draft_all_writes_every_open_review_without_overwriting_existing()
     test_blocked_decision_updates_artifacts_and_closes_queue()
     test_needs_review_decision_keeps_queue_open()
     print("source owner review decision tests passed")

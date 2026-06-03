@@ -23,7 +23,7 @@ Use this checklist before marking a source as first-version eligible in `docs/so
 
 After review rows are recorded, mirror the implementation-facing decision in `fixtures/source-ingestion/source-access-policy.json`.
 For every `needs_review` row, also keep one open owner decision item in `fixtures/source-ingestion/source-owner-review-queue.json`; use `docs/source-owner-review-runbook.md` to close or update those items.
-Use `scripts/source_owner_review_decision.py --draft <source_id>` to create an ignored owner-decision draft, `scripts/source_owner_review_decision.py --validate <path>` to check it, and `scripts/source_owner_review_decision.py --apply <path>` to update tracked artifacts after validation.
+Use `scripts/source_owner_review_decision.py --draft-all` to create missing ignored owner-decision drafts for all open items, `scripts/source_owner_review_decision.py --draft <source_id>` to refresh one explicit draft, `scripts/source_owner_review_decision.py --validate <path>` to check it, and `scripts/source_owner_review_decision.py --apply <path>` to update tracked artifacts after validation.
 
 Required policy behavior:
 

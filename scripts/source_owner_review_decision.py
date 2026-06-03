@@ -134,6 +134,25 @@ def write_draft(source_id: str, evidence_dir: Path) -> int:
     return 0
 
 
+def open_source_ids() -> list[str]:
+    items = load_queue_items()
+    return sorted(source_id for source_id, item in items.items() if item.get("review_status") == "open")
+
+
+def write_all_drafts(evidence_dir: Path) -> int:
+    written = 0
+    kept = 0
+    for source_id in open_source_ids():
+        output = evidence_dir / f"{source_id}.decision.json"
+        if output.exists():
+            kept += 1
+            continue
+        write_json(output, draft_payload(source_id))
+        written += 1
+    print(f"Draft owner decisions prepared: {written} written, {kept} existing, {written + kept} open items")
+    return 0
+
+
 def contains_template_marker(payload: dict) -> bool:
     return "TEMPLATE_" in json.dumps(payload, ensure_ascii=False)
 
@@ -303,6 +322,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--list-open", action="store_true", help="List open owner review queue items.")
     group.add_argument("--draft", metavar="SOURCE_ID", help="Write a fillable decision draft under evidence/.")
+    group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--apply", metavar="PATH", help="Validate and apply a completed source owner decision to tracked artifacts.")
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
@@ -314,6 +334,8 @@ def main() -> int:
             return list_open()
         if args.draft:
             return write_draft(args.draft, Path(args.evidence_dir))
+        if args.draft_all:
+            return write_all_drafts(Path(args.evidence_dir))
         if args.validate:
             return validate_decision(Path(args.validate))
         return apply_decision(Path(args.apply), args.dry_run)
