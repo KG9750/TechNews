@@ -754,6 +754,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "current_artifact_context",
         "artifact_updates",
         "TEMPLATE_",
+        "INCOMPLETE_REVIEW_TEXT",
+        "require_completed_review_text",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -772,6 +774,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_status_reports_completed_drafts_as_valid",
         "test_validate_all_fails_for_template_drafts",
         "test_validate_all_passes_completed_open_reviews",
+        "test_decision_rejects_placeholder_evidence_note",
+        "test_decision_rejects_placeholder_owner_answer",
         "test_apply_all_rejects_template_drafts_without_writing",
         "test_apply_all_dry_run_validates_without_writing",
         "test_apply_all_applies_completed_open_reviews",

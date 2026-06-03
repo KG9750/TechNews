@@ -20,6 +20,20 @@ REVIEW_PATH = ROOT / "docs/source-eligibility-reviews.md"
 REGISTRY_PATH = ROOT / "docs/source-registry.md"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/source-owner-reviews"
 VALID_DECISIONS = {"eligible", "needs_review", "blocked", "deferred"}
+INCOMPLETE_REVIEW_TEXT = {
+    "n/a",
+    "na",
+    "none",
+    "not sure",
+    "placeholder",
+    "pending",
+    "tbd",
+    "to be decided",
+    "to be determined",
+    "todo",
+    "unknown",
+    "unsure",
+}
 SOURCE_REVIEW_BATCHES = [
     {
         "title": "Batch 1 - Access Path Blockers",
@@ -733,8 +747,25 @@ def contains_template_marker(payload: dict) -> bool:
     return "TEMPLATE_" in json.dumps(payload, ensure_ascii=False)
 
 
-def require_markdown_cell(value: str, label: str) -> None:
-    require(bool(value), f"{label} is required")
+def normalized_review_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value.strip().lower()).strip(" .:;")
+
+
+def is_incomplete_review_text(value: str) -> bool:
+    normalized = normalized_review_text(value)
+    if normalized in INCOMPLETE_REVIEW_TEXT:
+        return True
+    return normalized.startswith(("placeholder:", "tbd:", "todo:"))
+
+
+def require_completed_review_text(value: object, label: str) -> None:
+    require(isinstance(value, str), f"{label} must be text")
+    require(bool(value.strip()), f"{label} is required")
+    require(not is_incomplete_review_text(value), f"{label} must be a concrete review note, not a placeholder")
+
+
+def require_markdown_cell(value: object, label: str) -> None:
+    require_completed_review_text(value, label)
     require("\n" not in value, f"{label} must be a single line")
     require("|" not in value, f"{label} must not contain markdown table pipes")
 
@@ -760,7 +791,7 @@ def validated_payload(path: Path) -> dict:
     require(len(evidence) >= len(item.get("evidence_required", [])), "all required evidence items must be addressed")
     for entry in evidence:
         require(entry.get("required_evidence"), "each evidence item needs required_evidence")
-        require(entry.get("url_or_note"), "each evidence item needs url_or_note")
+        require_completed_review_text(entry.get("url_or_note"), "each evidence item needs url_or_note")
         require(bool(re.match(r"^\d{4}-\d{2}-\d{2}$", entry.get("checked_at", ""))), "each evidence item needs checked_at YYYY-MM-DD")
 
     answers = payload.get("owner_question_answers", [])
@@ -768,7 +799,7 @@ def validated_payload(path: Path) -> dict:
     require(isinstance(answers, list), "owner_question_answers must be a list")
     require([entry.get("question") for entry in answers] == questions, "owner questions must match queue order")
     for entry in answers:
-        require(entry.get("answer"), "each owner question needs an answer")
+        require_completed_review_text(entry.get("answer"), "each owner question needs an answer")
 
     policy = payload.get("policy_after_decision", {})
     require(policy.get("eligibility_state") == decision, "policy_after_decision.eligibility_state must match decision")
@@ -787,7 +818,7 @@ def validated_payload(path: Path) -> dict:
     else:
         require(production_auto_ingestion is False, f"{decision} decisions must keep production_auto_ingestion disabled")
 
-    require(payload.get("implementation_guardrail"), "implementation_guardrail is required")
+    require_completed_review_text(payload.get("implementation_guardrail"), "implementation_guardrail is required")
     updates = payload.get("artifact_updates", {})
     review_matrix = updates.get("review_matrix", {})
     registry = updates.get("source_registry", {})

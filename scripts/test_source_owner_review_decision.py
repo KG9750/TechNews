@@ -133,6 +133,15 @@ def write_completed_open_decisions(evidence_dir: Path, decision: str) -> None:
         )
 
 
+def assert_review_error(path: Path, expected: str) -> None:
+    try:
+        review.validated_payload(path)
+    except review.ReviewError as error:
+        assert expected in str(error)
+        return
+    raise AssertionError("expected source owner decision validation to fail")
+
+
 def test_draft_requires_owner_input() -> None:
     draft = review.draft_payload("src-the-verge")
     assert "artifact_updates" in draft
@@ -366,6 +375,24 @@ def test_validate_all_passes_completed_open_reviews() -> None:
         assert review.validate_all_decisions(evidence_dir) == 0
 
 
+def test_decision_rejects_placeholder_evidence_note() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["evidence_checked"][0]["url_or_note"] = "TBD"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each evidence item needs url_or_note must be a concrete review note")
+
+
+def test_decision_rejects_placeholder_owner_answer() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["owner_question_answers"][0]["answer"] = "unknown"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each owner question needs an answer must be a concrete review note")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -453,6 +480,8 @@ def main() -> int:
     test_status_reports_completed_drafts_as_valid()
     test_validate_all_fails_for_template_drafts()
     test_validate_all_passes_completed_open_reviews()
+    test_decision_rejects_placeholder_evidence_note()
+    test_decision_rejects_placeholder_owner_answer()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()
