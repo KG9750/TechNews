@@ -231,8 +231,8 @@ def validate_decision(path: Path) -> int:
     return 0
 
 
-def validate_all_decisions(evidence_dir: Path) -> int:
-    valid = 0
+def checked_decision_payloads(evidence_dir: Path) -> tuple[list[dict], int, int]:
+    payloads: list[dict] = []
     invalid = 0
     missing = 0
     for source_id in open_source_ids():
@@ -247,11 +247,16 @@ def validate_all_decisions(evidence_dir: Path) -> int:
             invalid += 1
             print(f"INVALID source owner decision: {source_id} -> {error}")
             continue
-        valid += 1
+        payloads.append(payload)
         print(f"VALID source owner decision: {payload['source_id']} -> {payload['decision']}")
 
-    total = valid + invalid + missing
-    print(f"Source owner decisions checked: {valid} valid, {invalid} invalid, {missing} missing, {total} open items")
+    total = len(payloads) + invalid + missing
+    print(f"Source owner decisions checked: {len(payloads)} valid, {invalid} invalid, {missing} missing, {total} open items")
+    return payloads, invalid, missing
+
+
+def validate_all_decisions(evidence_dir: Path) -> int:
+    _, invalid, missing = checked_decision_payloads(evidence_dir)
     return 0 if invalid == 0 and missing == 0 else 1
 
 
@@ -310,13 +315,12 @@ def update_owner_queue(payload: dict) -> None:
     write_json(QUEUE_PATH, queue)
 
 
-def apply_decision(path: Path, dry_run: bool) -> int:
-    payload = validated_payload(path)
+def apply_payload(payload: dict, dry_run: bool) -> None:
     source_id = payload["source_id"]
     decision = payload["decision"]
     if dry_run:
         print(f"DRY-RUN would apply source owner decision: {source_id} -> {decision}")
-        return 0
+        return
 
     updates = payload["artifact_updates"]
     update_markdown_table_row(
@@ -342,6 +346,36 @@ def apply_decision(path: Path, dry_run: bool) -> int:
     update_access_policy(payload)
     update_owner_queue(payload)
     print(f"APPLIED source owner decision: {source_id} -> {decision}")
+
+
+def apply_decision(path: Path, dry_run: bool) -> int:
+    apply_payload(validated_payload(path), dry_run)
+    return 0
+
+
+def apply_all_decisions(evidence_dir: Path, dry_run: bool) -> int:
+    payloads, invalid, missing = checked_decision_payloads(evidence_dir)
+    if invalid or missing:
+        print("ERROR not applying source owner decisions until every open decision is valid")
+        return 1
+    if dry_run:
+        for payload in payloads:
+            apply_payload(payload, dry_run=True)
+        print(f"DRY-RUN would apply {len(payloads)} source owner decisions")
+        return 0
+
+    artifact_paths = [REVIEW_PATH, REGISTRY_PATH, POLICY_PATH, QUEUE_PATH]
+    snapshots = {path: path.read_text(encoding="utf-8") for path in artifact_paths}
+    try:
+        for payload in payloads:
+            apply_payload(payload, dry_run=False)
+    except Exception as error:
+        for path, text in snapshots.items():
+            path.write_text(text, encoding="utf-8")
+        print(f"ERROR rolled back batch source owner decisions: {error}")
+        return 1
+
+    print(f"APPLIED {len(payloads)} source owner decisions")
     return 0
 
 
@@ -354,8 +388,9 @@ def main() -> int:
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
     group.add_argument("--apply", metavar="PATH", help="Validate and apply a completed source owner decision to tracked artifacts.")
+    group.add_argument("--apply-all", action="store_true", help="Validate and apply every open owner review decision file.")
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
-    parser.add_argument("--dry-run", action="store_true", help="With --apply, validate and print the planned action without writing.")
+    parser.add_argument("--dry-run", action="store_true", help="With --apply or --apply-all, validate and print the planned action without writing.")
     args = parser.parse_args()
 
     try:
@@ -369,6 +404,8 @@ def main() -> int:
             return validate_decision(Path(args.validate))
         if args.validate_all:
             return validate_all_decisions(Path(args.evidence_dir))
+        if args.apply_all:
+            return apply_all_decisions(Path(args.evidence_dir), args.dry_run)
         return apply_decision(Path(args.apply), args.dry_run)
     except ReviewError as error:
         print(f"ERROR {error}")

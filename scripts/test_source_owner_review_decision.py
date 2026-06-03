@@ -117,6 +117,20 @@ def queued_source_ids(tmp: Path) -> set[str]:
     return {item["source_id"] for item in queue["items"]}
 
 
+def artifact_snapshot(tmp: Path) -> dict[str, str]:
+    return {rel_path: (tmp / rel_path).read_text(encoding="utf-8") for rel_path in ARTIFACTS}
+
+
+def write_completed_open_decisions(evidence_dir: Path, decision: str) -> None:
+    for source_id in review.open_source_ids():
+        output = review.decision_path(evidence_dir, source_id)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(decision_payload_for_source(source_id, decision), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
 def test_draft_requires_owner_input() -> None:
     draft = review.draft_payload("src-the-verge")
     assert "artifact_updates" in draft
@@ -156,15 +170,47 @@ def test_validate_all_fails_for_template_drafts() -> None:
 def test_validate_all_passes_completed_open_reviews() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
-        for source_id in review.open_source_ids():
-            output = review.decision_path(evidence_dir, source_id)
-            output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(
-                json.dumps(decision_payload_for_source(source_id, "needs_review"), ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+        write_completed_open_decisions(evidence_dir, "needs_review")
 
         assert review.validate_all_decisions(evidence_dir) == 0
+
+
+def test_apply_all_rejects_template_drafts_without_writing() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        before = artifact_snapshot(tmp)
+
+        assert review.apply_all_decisions(evidence_dir, dry_run=False) == 1
+        assert artifact_snapshot(tmp) == before
+
+
+def test_apply_all_dry_run_validates_without_writing() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        write_completed_open_decisions(evidence_dir, "needs_review")
+        before = artifact_snapshot(tmp)
+
+        assert review.apply_all_decisions(evidence_dir, dry_run=True) == 0
+        assert artifact_snapshot(tmp) == before
+
+
+def test_apply_all_applies_completed_open_reviews() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        write_completed_open_decisions(evidence_dir, "blocked")
+
+        assert review.apply_all_decisions(evidence_dir, dry_run=False) == 0
+
+        review_text = (tmp / "docs/source-eligibility-reviews.md").read_text(encoding="utf-8")
+        policy = source_policy(tmp, "src-the-verge")
+
+        assert "| src-the-verge | blocked |" in review_text
+        assert "| src-techcrunch | blocked |" in review_text
+        assert policy["eligibility_state"] == "blocked"
+        assert policy["production_auto_ingestion"] is False
+        assert policy["requires_owner_review"] is False
+        assert not queued_source_ids(tmp)
 
 
 def test_blocked_decision_updates_artifacts_and_closes_queue() -> None:
@@ -204,6 +250,9 @@ def main() -> int:
     test_draft_all_writes_every_open_review_without_overwriting_existing()
     test_validate_all_fails_for_template_drafts()
     test_validate_all_passes_completed_open_reviews()
+    test_apply_all_rejects_template_drafts_without_writing()
+    test_apply_all_dry_run_validates_without_writing()
+    test_apply_all_applies_completed_open_reviews()
     test_blocked_decision_updates_artifacts_and_closes_queue()
     test_needs_review_decision_keeps_queue_open()
     print("source owner review decision tests passed")

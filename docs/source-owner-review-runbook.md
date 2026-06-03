@@ -74,17 +74,21 @@ python3 scripts/source_owner_review_decision.py --validate-all
 
 This exits non-zero until every open source has a completed, template-free decision file.
 
-11. Preview the tracked artifact update:
+11. Preview one tracked artifact update, or preview every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run
+python3 scripts/source_owner_review_decision.py --apply-all --dry-run
 ```
 
-12. Apply the tracked artifact update:
+12. Apply one tracked artifact update, or apply every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json
+python3 scripts/source_owner_review_decision.py --apply-all
 ```
+
+Batch apply validates every open decision before writing. If any decision is missing, invalid, or still contains `TEMPLATE_`, it exits non-zero without changing tracked artifacts.
 
 13. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
 
@@ -94,16 +98,16 @@ When a source stays `needs_review`:
 
 - Keep it in `fixtures/source-ingestion/source-owner-review-queue.json` with `review_status: "open"`.
 - Keep `production_auto_ingestion: false` in `fixtures/source-ingestion/source-access-policy.json`.
-- Use `scripts/source_owner_review_decision.py --apply <decision-file>` to update `docs/source-eligibility-reviews.md`, `fixtures/source-ingestion/source-access-policy.json`, and `docs/source-registry.md` with the validated owner notes while keeping the queue item open.
+- Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md`, `fixtures/source-ingestion/source-access-policy.json`, and `docs/source-registry.md` with the validated owner notes while keeping the queue item open.
 
 When a source becomes `eligible`:
 
-- Use `scripts/source_owner_review_decision.py --apply <decision-file>` to update `docs/source-eligibility-reviews.md` to `eligible`, update `fixtures/source-ingestion/source-access-policy.json` to metadata-only production behavior, remove that source from `fixtures/source-ingestion/source-owner-review-queue.json`, and update `docs/source-registry.md` eligibility notes.
+- Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md` to `eligible`, update `fixtures/source-ingestion/source-access-policy.json` to metadata-only production behavior, remove that source from `fixtures/source-ingestion/source-owner-review-queue.json`, and update `docs/source-registry.md` eligibility notes.
 - Keep media blocked unless source-specific media reuse is approved and attribution behavior is implemented.
 
 When a source becomes `blocked` or `deferred`:
 
-- Use `scripts/source_owner_review_decision.py --apply <decision-file>` to update `docs/source-eligibility-reviews.md`, keep production auto-ingestion disabled in `fixtures/source-ingestion/source-access-policy.json`, update `docs/source-registry.md` notes, and remove it from the open owner queue once the decision is recorded.
+- Use `scripts/source_owner_review_decision.py --apply <decision-file>` or `scripts/source_owner_review_decision.py --apply-all` to update `docs/source-eligibility-reviews.md`, keep production auto-ingestion disabled in `fixtures/source-ingestion/source-access-policy.json`, update `docs/source-registry.md` notes, and remove it from the open owner queue once the decision is recorded.
 
 ## Evidence Note Template
 
@@ -127,5 +131,5 @@ Required implementation guardrail: <policy row / connector mode / test expectati
 - Queue connector modes match `fixtures/source-ingestion/source-access-policy.json`.
 - Production auto-ingestion and source media reuse stay disabled while review is open.
 - Manual URL and pending-permission sources use the correct review decision type.
-- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, validating one or all completed decisions, and applying validated decisions to tracked artifacts.
-- `scripts/test_source_owner_review_decision.py` verifies that batch draft generation covers every open item without overwriting existing drafts, that batch validation fails template drafts and passes completed open-review decisions, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.
+- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files, validating one or all completed decisions, and applying one or all validated decisions to tracked artifacts.
+- `scripts/test_source_owner_review_decision.py` verifies that batch draft generation covers every open item without overwriting existing drafts, that batch validation fails template drafts and passes completed open-review decisions, that batch apply refuses template drafts without writing, that batch apply dry-run does not write, that batch apply can update completed open-review decisions, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.
