@@ -506,6 +506,16 @@ def github_source_owner_status(source_summary: dict) -> str:
     return "ready (all open source owner decisions validate)"
 
 
+def source_owner_followup_guardrail(source_summary: dict) -> str:
+    counts = source_summary["counts"]
+    if counts["invalid"] or counts["missing"]:
+        return "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied."
+    return (
+        "All open owner decisions validate; keep production auto-ingestion blocked for `needs_review` "
+        "sources until explicit source permission or eligibility approval is documented."
+    )
+
+
 def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
@@ -536,7 +546,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
         f"- Worksheet: {source_summary['worksheet_path']}",
         f"- Request packet: {source_summary['request_packet_path']}",
         "",
-        "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied.",
+        source_owner_followup_guardrail(source_summary),
     ]
     mvp_comment = [
         "MVP issue triage update:",
@@ -869,7 +879,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "- Do not commit anything under `evidence/`.",
             "- Do not paste real secrets, Feishu recipient ids, local paths, or NAS/cloud targets into tracked files.",
             "- Keep MVP issues `needs-triage` until the final readiness and GitHub tracker gates pass.",
-            "- Complete JSON source owner decisions before applying source policy changes.",
+            "- Complete JSON source owner decisions before applying source policy changes; valid decisions do not production-approve `needs_review` sources.",
         ]
     )
 

@@ -109,6 +109,7 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Final readiness gate: blocked" in text
     assert "Source owner decisions: blocked (25 decision drafts not generated yet)" in text
     assert "Decision drafts not generated yet: 25" in text
+    assert "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied." in text
     assert "Invalid decisions:" not in text
     assert "25 invalid decisions" not in text
     assert "FEISHU_APP_ID" in text
@@ -134,6 +135,12 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Decision drafts needing owner input or validation fixes: 25" in draft_text
     assert "Invalid decisions:" not in draft_text
     assert "25 invalid decisions" not in draft_text
+
+    ready_summary = {"counts": {"valid": 25, "invalid": 0, "missing": 0}}
+    assert packet.source_owner_followup_guardrail(ready_summary) == (
+        "All open owner decisions validate; keep production auto-ingestion blocked for `needs_review` "
+        "sources until explicit source permission or eligibility approval is documented."
+    )
 
 
 def test_external_input_request_packet_names_inputs_without_secret_values() -> None:
