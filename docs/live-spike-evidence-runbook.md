@@ -254,7 +254,8 @@ Validation rules:
 - `local_archive.status` must be `written`.
 - `remote_sync.status` must be `synced`.
 - Local and remote file counts must be greater than zero.
-- Local and remote tree files must exist.
+- Local and remote file counts must match.
+- Local and remote tree files must exist, be non-empty, and list the same redacted relative package files in the same order.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain private local paths, private sync target paths, tokens, or raw configured secret/env values.
 - The runner writes redacted path labels such as `REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology` and `REDACTED_SYNC_TARGET/2026-06-01/technology`; do not replace them with real host or NAS paths.

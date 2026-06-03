@@ -318,6 +318,35 @@ def test_archive_failure_reason_redacts_private_paths() -> None:
     assert "REDACTED_SYNC_TARGET" in redacted
 
 
+def test_archive_live_evidence_requires_matching_counts_and_trees() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "archive-storage/sync-result.json",
+            {
+                "run_id": "run_synthetic_archive_storage",
+                "local_archive": {
+                    "status": "written",
+                    "package_path": "REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology",
+                    "file_count": 2,
+                },
+                "remote_sync": {
+                    "status": "synced",
+                    "target": "REDACTED_SYNC_TARGET/2026-06-01/technology",
+                    "file_count": 3,
+                    "retryable": False,
+                },
+            },
+        )
+        (evidence_root / "archive-storage/local-tree.txt").write_text("briefing.md\nmetadata.json\n", encoding="utf-8")
+        (evidence_root / "archive-storage/remote-tree.txt").write_text("briefing.md\nsummary.json\n", encoding="utf-8")
+        _, missing, failures = readiness.check_archive_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Archive live evidence local and remote file_count values must match" in failures
+    assert "Archive live evidence local and remote tree listings must match" in failures
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -625,6 +654,7 @@ def main() -> int:
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()
     test_archive_failure_reason_redacts_private_paths()
+    test_archive_live_evidence_requires_matching_counts_and_trees()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()

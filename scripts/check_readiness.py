@@ -1114,6 +1114,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
         "test_archive_failure_reason_redacts_private_paths",
+        "test_archive_live_evidence_requires_matching_counts_and_trees",
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
         "test_readiness_manifest_tracks_dirty_worktree_guard",
@@ -1132,6 +1133,7 @@ def check_spike_runners() -> list[str]:
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
+        "local and remote tree listings must match",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
@@ -1662,10 +1664,15 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
         failures.append("Archive live evidence local_archive.status must be written")
     if remote_status != "synced":
         failures.append("Archive live evidence remote_sync.status must be synced")
-    if int(payload.get("local_archive", {}).get("file_count") or 0) <= 0:
+    local_file_count = int(payload.get("local_archive", {}).get("file_count") or 0)
+    remote_file_count = int(payload.get("remote_sync", {}).get("file_count") or 0)
+    if local_file_count <= 0:
         failures.append("Archive live evidence local_archive.file_count must be > 0")
-    if int(payload.get("remote_sync", {}).get("file_count") or 0) <= 0:
+    if remote_file_count <= 0:
         failures.append("Archive live evidence remote_sync.file_count must be > 0")
+    if local_file_count > 0 and remote_file_count > 0 and local_file_count != remote_file_count:
+        failures.append("Archive live evidence local and remote file_count values must match")
+    tree_lines: dict[str, list[str]] = {}
     for label, path in [
         ("local tree", evidence_dir / "local-tree.txt"),
         ("remote tree", evidence_dir / "remote-tree.txt"),
@@ -1674,6 +1681,12 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
             missing.append(f"Archive live evidence missing {label}: {path}")
         else:
             check_live_evidence_file(path, failures, f"Archive live evidence {label}")
+            lines = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+            if not lines:
+                failures.append(f"Archive live evidence {label} must list at least one file")
+            tree_lines[label] = lines
+    if tree_lines.get("local tree") and tree_lines.get("remote tree") and tree_lines["local tree"] != tree_lines["remote tree"]:
+        failures.append("Archive live evidence local and remote tree listings must match")
     if not failures and not missing:
         passed.append("Archive live evidence: local write and remote sync success present")
     return passed, missing, failures
