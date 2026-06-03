@@ -86,7 +86,7 @@ evidence/source-owner-reviews/
 
 Keep each decision filename matched to its `source_id`, for example `src-the-verge.decision.json` must contain `"source_id": "src-the-verge"`.
 
-9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include exactly one `evidence_checked` entry for each required item, with no duplicates or unlisted evidence labels.
+9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include exactly one `evidence_checked` entry for each required item, with no duplicates or unlisted evidence labels. Each `url_or_note` must include an `http(s)` URL or start with `internal note:`, `owner note:`, or `legal note:` and include concrete evidence detail.
 10. Answer every `owner_questions` item in the generated decision file.
 11. Use real ISO dates: `reviewed_at` and every evidence `checked_at` must be valid `YYYY-MM-DD` dates, and evidence `checked_at` must be on or before `reviewed_at`.
 12. Replace every placeholder with concrete review text, including `reviewed_by`, owner answers, implementation guardrails, and `policy_after_decision` fields. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.

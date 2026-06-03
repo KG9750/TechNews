@@ -39,6 +39,7 @@ INCOMPLETE_REVIEW_TEXT = {
     "unknown",
     "unsure",
 }
+EVIDENCE_NOTE_PREFIXES = ("internal note:", "owner note:", "legal note:")
 SOURCE_REVIEW_BATCHES = [
     {
         "title": "Batch 1 - Access Path Blockers",
@@ -793,6 +794,20 @@ def require_markdown_cell(value: object, label: str) -> None:
     require("|" not in value, f"{label} must not contain markdown table pipes")
 
 
+def require_evidence_reference(value: object, label: str) -> None:
+    require_completed_review_text(value, label)
+    normalized = normalized_review_text(value)
+    has_url = bool(re.search(r"https?://\S+", value))
+    has_note_prefix = normalized.startswith(EVIDENCE_NOTE_PREFIXES)
+    if has_note_prefix:
+        note_body = normalized.split(":", 1)[1].strip()
+        require(len(note_body) >= 20, f"{label} internal/owner/legal note must include concrete evidence detail")
+    require(
+        has_url or has_note_prefix,
+        f"{label} must include an http(s) URL or start with internal note:, owner note:, or legal note:",
+    )
+
+
 def expected_source_id_from_path(path: Path) -> str | None:
     suffix = ".decision.json"
     if path.name.endswith(suffix):
@@ -835,7 +850,7 @@ def validated_payload(path: Path, expected_source_id: str | None = None) -> dict
     require(not unexpected_evidence, "evidence_checked has unexpected required_evidence values: " + ", ".join(unexpected_evidence))
     for entry in evidence:
         require(entry.get("required_evidence"), "each evidence item needs required_evidence")
-        require_completed_review_text(entry.get("url_or_note"), "each evidence item needs url_or_note")
+        require_evidence_reference(entry.get("url_or_note"), "each evidence item needs url_or_note")
         checked_at = parse_review_date(entry.get("checked_at", ""), "each evidence item needs checked_at")
         require(checked_at <= reviewed_at, "each evidence item checked_at must be on or before reviewed_at")
 

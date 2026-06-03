@@ -62,7 +62,7 @@ def decision_payload_for_source(source_id: str, decision: str) -> dict:
         "evidence_checked": [
             {
                 "required_evidence": evidence,
-                "url_or_note": f"Owner note: reviewed {evidence}.",
+                "url_or_note": f"Owner note: reviewed {evidence} against source terms and recorded metadata-only constraints.",
                 "checked_at": "2026-06-03",
             }
             for evidence in queue_item["evidence_required"]
@@ -384,6 +384,27 @@ def test_decision_rejects_placeholder_evidence_note() -> None:
         assert_review_error(path, "each evidence item needs url_or_note must be a concrete review note")
 
 
+def test_decision_rejects_evidence_note_without_reference_type() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["evidence_checked"][0]["url_or_note"] = "Reviewed source terms and recorded decision."
+        path = write_decision(tmp, payload)
+
+        assert_review_error(
+            path,
+            "each evidence item needs url_or_note must include an http(s) URL or start with internal note:, owner note:, or legal note:",
+        )
+
+
+def test_decision_rejects_short_internal_evidence_note() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["evidence_checked"][0]["url_or_note"] = "Owner note: yes"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each evidence item needs url_or_note internal/owner/legal note must include concrete evidence detail")
+
+
 def test_decision_rejects_placeholder_owner_answer() -> None:
     with isolated_artifacts() as tmp:
         payload = decision_payload("needs_review")
@@ -595,6 +616,8 @@ def main() -> int:
     test_validate_all_fails_for_template_drafts()
     test_validate_all_passes_completed_open_reviews()
     test_decision_rejects_placeholder_evidence_note()
+    test_decision_rejects_evidence_note_without_reference_type()
+    test_decision_rejects_short_internal_evidence_note()
     test_decision_rejects_placeholder_owner_answer()
     test_decision_rejects_missing_required_evidence_item()
     test_decision_rejects_duplicate_required_evidence_item()
