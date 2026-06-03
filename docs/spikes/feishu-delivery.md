@@ -53,6 +53,7 @@ The test Push Briefing must include:
 - Draft delivery status examples: `fixtures/feishu-delivery/delivery-status-examples.json`.
 - Dry-run command: `python3 scripts/spikes/feishu_delivery_spike.py --dry-run`.
 - Live command: `python3 scripts/spikes/feishu_delivery_spike.py`.
+- Optional fallback command after internal app group delivery fails: `python3 scripts/spikes/feishu_delivery_spike.py --attempt-group-webhook-fallback`.
 - Pending: redacted success response for user delivery.
 - Pending: redacted success response for group delivery.
 - Pending: screenshot or copied rendered-message text from Feishu.
@@ -60,10 +61,11 @@ The test Push Briefing must include:
 
 ## Current Finding
 
-The message shape is ready for a live internal app bot test. The fixture covers two sections, a source link, a Confidence Notice, and an archive/deep-dive link placeholder. The spike is not complete until real Feishu credentials, one user recipient id, and one group chat id are available and both sends are proven.
+The message shape is ready for a live internal app bot test. The fixture covers two sections, a source link, a Confidence Notice, and an archive/deep-dive link placeholder. The dry-run also documents the custom group bot fallback request shape, but that fallback does not replace the internal app user and group evidence gate. The spike is not complete until real Feishu credentials, one user recipient id, and one group chat id are available and both internal app sends are proven.
 
 ## Official References
 
 - Feishu send message API: https://open.feishu.cn/document/server-docs/im-v1/message/create?lang=zh-CN
 - Feishu card sending guide: https://open.feishu.cn/document/feishu-cards/send-feishu-card
 - Message card OpenAPI reference: https://open.larksuite.com/document/common-capabilities/message-card/api-and-resource-reference
+- Feishu custom group bot guide: https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot

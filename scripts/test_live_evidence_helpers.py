@@ -25,6 +25,7 @@ def load_module(name: str, path: Path):
 preflight = load_module("live_readiness_preflight", ROOT / "scripts/spikes/live_readiness_preflight.py")
 manifest = load_module("readiness_manifest", ROOT / "scripts/spikes/readiness_manifest.py")
 readiness = load_module("check_readiness", ROOT / "scripts/check_readiness.py")
+feishu_spike = load_module("feishu_delivery_spike", ROOT / "scripts/spikes/feishu_delivery_spike.py")
 model_spike = load_module("model_provider_spike", ROOT / "scripts/spikes/model_provider_spike.py")
 archive_spike = load_module("archive_storage_spike", ROOT / "scripts/spikes/archive_storage_spike.py")
 
@@ -134,6 +135,36 @@ def test_preflight_writes_issue_facing_spike_packets() -> None:
     assert "https://github.com/KG9750/TechNews/issues/5" in model_packet
     assert "https://github.com/KG9750/TechNews/issues/6" in archive_packet
     assert "Do not paste raw secrets" in archive_packet
+
+
+def test_feishu_dry_run_documents_group_webhook_fallback() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_dir = Path(tmp_name) / "feishu-delivery"
+        assert feishu_spike.run(dry_run=True, evidence_dir=evidence_dir) == 0
+        payload = json.loads((evidence_dir / "dry-run-request-shape.redacted.json").read_text(encoding="utf-8"))
+
+    fallback = payload["group_webhook_fallback"]
+    assert fallback["path"] == "custom_group_bot_fallback"
+    assert fallback["attempted_by_default"] is False
+    assert fallback["requires_explicit_flag"] == "--attempt-group-webhook-fallback"
+    assert fallback["does_not_replace_internal_app_group_evidence"] is True
+    assert fallback["body"]["msg_type"] == "interactive"
+    assert fallback["body"]["sign"] == "REDACTED"
+
+
+def test_feishu_group_webhook_payload_redacts_signature() -> None:
+    secret = "group-webhook-secret-123456789"
+    card = {"elements": [{"tag": "markdown", "content": "Synthetic card."}]}
+    payload = feishu_spike.build_group_webhook_payload(card, secret=secret, timestamp=1234567890)
+    redacted = feishu_spike.redact(payload)
+    encoded = json.dumps(redacted, ensure_ascii=False)
+
+    assert payload["msg_type"] == "interactive"
+    assert payload["card"] == card
+    assert payload["timestamp"] == "1234567890"
+    assert payload["sign"]
+    assert redacted["sign"] == "REDACTED"
+    assert secret not in encoded
 
 
 def test_readiness_manifest_dry_run_shape() -> None:
@@ -428,6 +459,8 @@ def main() -> int:
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_packet_lists_status_without_secret_values()
     test_preflight_writes_issue_facing_spike_packets()
+    test_feishu_dry_run_documents_group_webhook_fallback()
+    test_feishu_group_webhook_payload_redacts_signature()
     test_readiness_manifest_dry_run_shape()
     test_preflight_reports_template_evidence_validation_failures()
     test_model_request_envelopes_validate_metadata_only()

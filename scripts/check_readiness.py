@@ -1023,6 +1023,10 @@ def check_spike_runners() -> list[str]:
     archive_text = read("scripts/spikes/archive_storage_spike.py")
     require("redact_archive_text" in archive_text, "archive runner must redact sync failure paths")
     require("failure_reason" in archive_text and "redact_archive_text(str(error))" in archive_text, "archive runner must redact OSError failure reasons")
+    feishu_text = read("scripts/spikes/feishu_delivery_spike.py")
+    require("--attempt-group-webhook-fallback" in feishu_text, "Feishu runner must expose explicit group webhook fallback")
+    require("build_group_webhook_payload" in feishu_text, "Feishu runner must build group webhook fallback payloads")
+    require("does_not_replace_internal_app_group_evidence" in feishu_text, "Feishu fallback must not replace internal-app group evidence")
     model_provider_text = read("scripts/spikes/model_provider_spike.py")
     require("--validate-evidence" in model_provider_text, "model provider runner must validate evidence")
     require("--validate-requests" in model_provider_text, "model provider runner must validate request envelopes")
@@ -1041,6 +1045,8 @@ def check_spike_runners() -> list[str]:
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_packet_lists_status_without_secret_values",
         "test_preflight_writes_issue_facing_spike_packets",
+        "test_feishu_dry_run_documents_group_webhook_fallback",
+        "test_feishu_group_webhook_payload_redacts_signature",
         "test_preflight_reports_template_evidence_validation_failures",
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
@@ -1051,7 +1057,7 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_rejects_raw_environment_values",
     ]:
         require(needle in test_text, f"live evidence helper tests missing: {needle}")
-    return ["spike runners: Feishu, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
+    return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation and per-spike packets, and live evidence tests present"]
 
 
 def check_feishu_runner_redaction() -> list[str]:

@@ -9,6 +9,9 @@ available, and writes redacted evidence under evidence/feishu-delivery/.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -35,12 +38,14 @@ SENSITIVE_KEY_EXACT = {
     "open_id",
     "chat_id",
     "app_id",
+    "sign",
 }
 SENSITIVE_VALUE_PATTERNS = [
     re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
     re.compile(r"\bou_[A-Za-z0-9]{8,}\b"),
     re.compile(r"\boc_[A-Za-z0-9]{8,}\b"),
     re.compile(r"\bcli_[A-Za-z0-9]{8,}\b"),
+    re.compile(r"https://open\.(?:feishu|larksuite)\.cn/open-apis/bot/v2/hook/[A-Za-z0-9_-]+", re.IGNORECASE),
 ]
 
 
@@ -119,6 +124,47 @@ def send_message(token: str, receive_id_type: str, receive_id: str, card: dict) 
     return payload, response
 
 
+def build_group_webhook_sign(timestamp: int, secret: str) -> str:
+    string_to_sign = f"{timestamp}\n{secret}".encode("utf-8")
+    digest = hmac.new(string_to_sign, digestmod=hashlib.sha256).digest()
+    return base64.b64encode(digest).decode("utf-8")
+
+
+def build_group_webhook_payload(card: dict, secret: str = "", timestamp: int | None = None) -> dict:
+    payload = {
+        "msg_type": "interactive",
+        "card": card,
+    }
+    if secret:
+        actual_timestamp = timestamp if timestamp is not None else int(time.time())
+        payload["timestamp"] = str(actual_timestamp)
+        payload["sign"] = build_group_webhook_sign(actual_timestamp, secret)
+    return payload
+
+
+def build_group_webhook_dry_run_shape(card: dict) -> dict:
+    payload = build_group_webhook_payload(card, secret="DRY_RUN_SIGNING_SECRET", timestamp=0)
+    return {
+        "path": "custom_group_bot_fallback",
+        "attempted_by_default": False,
+        "requires_explicit_flag": "--attempt-group-webhook-fallback",
+        "does_not_satisfy_personal_delivery": True,
+        "does_not_replace_internal_app_group_evidence": True,
+        "body": payload,
+    }
+
+
+def send_group_webhook(webhook_url: str, card: dict, secret: str = "") -> tuple[dict, dict]:
+    payload = build_group_webhook_payload(card, secret=secret)
+    response = request_json(
+        "POST",
+        webhook_url,
+        payload,
+        {"Content-Type": "application/json"},
+    )
+    return payload, response
+
+
 def redact(value):
     if isinstance(value, dict):
         redacted = {}
@@ -143,7 +189,7 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def run(dry_run: bool, evidence_dir: Path) -> int:
+def run(dry_run: bool, evidence_dir: Path, attempt_group_webhook_fallback: bool = False) -> int:
     load_env_file(ROOT / ".env")
     card = json.loads(CARD_PATH.read_text(encoding="utf-8"))
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -159,6 +205,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
                 "receive_id_type": "chat_id",
                 "body": build_message_request("${FEISHU_DEFAULT_CHAT_ID}", card),
             },
+            "group_webhook_fallback": build_group_webhook_dry_run_shape(card),
             "dry_run": True,
             "generated_at_epoch": int(time.time()),
         }
@@ -192,6 +239,22 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
         write_json(evidence_dir / f"{name}-response.redacted.json", redact(response))
 
     failed = {name: response for name, response in results.items() if response.get("code") != 0}
+    if failed.get("group") and attempt_group_webhook_fallback:
+        webhook_url = os.environ.get("FEISHU_GROUP_WEBHOOK_URL", "")
+        webhook_secret = os.environ.get("FEISHU_GROUP_WEBHOOK_SECRET", "")
+        if webhook_url:
+            fallback_request, fallback_response = send_group_webhook(webhook_url, card, webhook_secret)
+            write_json(evidence_dir / "group-fallback-request.redacted.json", redact(fallback_request))
+            write_json(evidence_dir / "group-fallback-response.redacted.json", redact(fallback_response))
+        else:
+            write_json(
+                evidence_dir / "group-fallback-skipped.redacted.json",
+                {
+                    "path": "custom_group_bot_fallback",
+                    "status": "skipped",
+                    "reason": "FEISHU_GROUP_WEBHOOK_URL is not configured.",
+                },
+            )
     if failed:
         print("LIVE send completed with Feishu errors; inspect redacted evidence")
         return 2
@@ -202,10 +265,19 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Validate payload shape without credentials or network.")
+    parser.add_argument(
+        "--attempt-group-webhook-fallback",
+        action="store_true",
+        help="After internal app group delivery fails, try the optional custom group bot fallback. This does not satisfy the internal-app group evidence gate.",
+    )
     parser.add_argument("--evidence-dir", default=str(DEFAULT_EVIDENCE_DIR))
     args = parser.parse_args()
     try:
-        return run(dry_run=args.dry_run, evidence_dir=Path(args.evidence_dir))
+        return run(
+            dry_run=args.dry_run,
+            evidence_dir=Path(args.evidence_dir),
+            attempt_group_webhook_fallback=args.attempt_group_webhook_fallback,
+        )
     except SpikeError as error:
         print(f"ERROR {error}")
         return 1

@@ -108,12 +108,22 @@ Live run:
 python3 scripts/spikes/feishu_delivery_spike.py
 ```
 
+Optional group-chat fallback after internal app group delivery fails:
+
+```bash
+python3 scripts/spikes/feishu_delivery_spike.py --attempt-group-webhook-fallback
+```
+
+This fallback uses `FEISHU_GROUP_WEBHOOK_URL` and optional `FEISHU_GROUP_WEBHOOK_SECRET` for a custom group bot. It is only group-chat fallback evidence; it does not satisfy the final internal-app user and group delivery gate.
+
 Required environment:
 
 - `FEISHU_APP_ID`
 - `FEISHU_APP_SECRET`
 - `FEISHU_DEFAULT_USER_OPEN_ID`
 - `FEISHU_DEFAULT_CHAT_ID`
+- `FEISHU_GROUP_WEBHOOK_URL`, optional fallback only
+- `FEISHU_GROUP_WEBHOOK_SECRET`, optional fallback signing secret only
 
 Required evidence:
 
@@ -132,6 +142,7 @@ Validation rules:
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw tokens, Feishu recipient ids, app ids, authorization headers, private local paths, or raw configured secret/env values.
 - The Feishu runner redacts common sensitive response keys and values before writing evidence; still inspect output and run the final gate before sharing.
+- The fallback request shape is included in dry-run evidence. Signed fallback payloads redact `sign` before writing evidence.
 
 Template files:
 
