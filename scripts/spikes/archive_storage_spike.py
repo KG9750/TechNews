@@ -57,6 +57,10 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def redacted_archive_path(root_label: str) -> str:
+    return f"{root_label}/2026-06-01/technology"
+
+
 def run(dry_run: bool, evidence_dir: Path) -> int:
     load_env_file(ROOT / ".env")
     evidence_dir.mkdir(parents=True, exist_ok=True)
@@ -94,7 +98,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
     copy_package(FIXTURE_PACKAGE, local_package)
     result["local_archive"] = {
         "status": "written",
-        "package_path": str(local_package),
+        "package_path": redacted_archive_path("REDACTED_LOCAL_ARCHIVE_ROOT"),
         "file_count": len([p for p in local_package.rglob("*") if p.is_file()]),
     }
     (evidence_dir / "local-tree.txt").write_text("\n".join(tree_lines(local_package)) + "\n", encoding="utf-8")
@@ -115,7 +119,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
         copy_package(local_package, remote_package)
         result["remote_sync"] = {
             "status": "synced",
-            "target": str(remote_package),
+            "target": redacted_archive_path("REDACTED_SYNC_TARGET"),
             "file_count": len([p for p in remote_package.rglob("*") if p.is_file()]),
             "retryable": False,
         }
@@ -124,7 +128,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
     except OSError as error:
         result["remote_sync"] = {
             "status": "failed",
-            "target": str(remote_package),
+            "target": redacted_archive_path("REDACTED_SYNC_TARGET"),
             "failure_reason": str(error),
             "retryable": True,
         }
