@@ -1,9 +1,11 @@
 # Architecture Notes
 
 Status: Draft
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 These notes describe the first-version system shape. Framework, deployment, storage, model-boundary, and console-access defaults are now recorded in ADRs under `docs/adr/`.
+
+`python3 scripts/check_readiness.py` verifies that required ADRs record tradeoffs, consequences, decision keywords, and matching architecture defaults before MVP issues are moved out of `needs-triage`.
 
 ## Assumptions
 

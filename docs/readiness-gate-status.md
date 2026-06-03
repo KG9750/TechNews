@@ -72,7 +72,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | Source registry contains at least 30 seed sources | Passed | `docs/source-registry.md`; 37 total seed sources, 32 first-version, 5 deferred | None |
 | Source eligibility review covers first-version seed sources | Review | `docs/source-eligibility-reviews.md`; `fixtures/source-ingestion/source-access-policy.json`; 32 first-version sources covered, 7 `eligible`, 25 `needs_review`; readiness checks that `needs_review` sources have `production_auto_ingestion: false` | Owner must complete source-specific terms/media/rate-limit review before automated production ingestion for `needs_review` sources |
 | Golden samples cover at least 20 real-world items | Passed | `fixtures/golden-samples/items.json`; 22 total fixtures, 21 real-world items; issue #8 closed | None |
-| Required ADRs exist | Passed | 8 ADRs in `docs/adr/`; issue #9 closed | None |
+| Required ADRs exist | Passed | 8 ADRs in `docs/adr/`; readiness verifies 7 required architecture ADRs for status, tradeoffs, consequences, decision keywords, and matching `docs/ARCHITECTURE-NOTES.md` defaults; issue #9 closed | None |
 | MVP issue breakdown exists and is labeled | Passed | `docs/github-issue-breakdown.md`; GitHub issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 created with milestone `mvp` and label `needs-triage`; `--require-github` verifies none are marked `ready-for-agent` before readiness passes | None |
 
 ## External Inputs Needed

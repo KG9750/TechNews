@@ -194,6 +194,7 @@ Verification:
 - Each ADR records a real tradeoff and a decision.
 - `docs/ARCHITECTURE-NOTES.md` is updated if an ADR changes the system shape.
 - MVP implementation issues are not marked `ready-for-agent` until the relevant ADRs exist.
+- `python3 scripts/check_readiness.py` verifies required ADR tradeoffs, consequences, decision keywords, and architecture defaults.
 
 ## Phase 5: GitHub Issue Breakdown
 

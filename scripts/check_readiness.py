@@ -192,6 +192,36 @@ STYLE_GUIDE_REQUIRED_HEADINGS = [
     "Deep-Dive Detail",
     "Quality Checklist",
 ]
+REQUIRED_ADRS = {
+    "docs/adr/0002-feishu-internal-app-bot-first.md": {
+        "keywords": ["internal app bot", "custom group bot", "personal delivery", "group delivery"],
+        "architecture_default": "Feishu delivery:",
+    },
+    "docs/adr/0003-python-single-service-stack.md": {
+        "keywords": ["Python 3.12", "FastAPI", "single service"],
+        "architecture_default": "Application stack:",
+    },
+    "docs/adr/0004-docker-compose-briefing-host.md": {
+        "keywords": ["Docker Compose", "Briefing Host", "mounted archive"],
+        "architecture_default": "Deployment target:",
+    },
+    "docs/adr/0005-sqlite-operational-store.md": {
+        "keywords": ["SQLite", "Archive Packages remain file-based", "Secrets must not be stored"],
+        "architecture_default": "Operational data:",
+    },
+    "docs/adr/0006-local-first-archive-sync.md": {
+        "keywords": ["local-first", "ARCHIVE_LOCAL_ROOT", "sync failure"],
+        "architecture_default": "Archive strategy:",
+    },
+    "docs/adr/0007-model-provider-boundary.md": {
+        "keywords": ["generation boundary", "provider adapter", "usage metadata"],
+        "architecture_default": "Model boundary:",
+    },
+    "docs/adr/0008-single-admin-console-access.md": {
+        "keywords": ["ADMIN_USERNAME", "ADMIN_PASSWORD_HASH", "SESSION_SECRET"],
+        "architecture_default": "Console access:",
+    },
+}
 
 
 class CheckFailure(Exception):
@@ -887,22 +917,44 @@ def check_readiness_ci_workflow() -> list[str]:
     return ["readiness CI workflow: local gate, script compile, template-negative, and redaction-negative checks present"]
 
 
+def adr_section_bullet_count(text: str, marker: str) -> int:
+    require(marker in text, f"ADR missing {marker}")
+    section = text.split(marker, 1)[1]
+    next_marker = re.search(r"\n\*\*[^*]+\*\*", section)
+    if next_marker:
+        section = section[: next_marker.start()]
+    return sum(1 for line in section.splitlines() if line.strip().startswith("- "))
+
+
 def check_adrs() -> list[str]:
-    required = [
-        "docs/adr/0002-feishu-internal-app-bot-first.md",
-        "docs/adr/0003-python-single-service-stack.md",
-        "docs/adr/0004-docker-compose-briefing-host.md",
-        "docs/adr/0005-sqlite-operational-store.md",
-        "docs/adr/0006-local-first-archive-sync.md",
-        "docs/adr/0007-model-provider-boundary.md",
-        "docs/adr/0008-single-admin-console-access.md",
-    ]
+    required = list(REQUIRED_ADRS)
     require_files(required)
-    for path in required:
+    architecture_notes = read("docs/ARCHITECTURE-NOTES.md")
+    statuses: dict[str, int] = {"accepted": 0, "proposed": 0}
+    for path, expectations in REQUIRED_ADRS.items():
         text = read(path)
-        require("Status:" in text, f"{path} missing Status")
-        require("**Consequences**" in text, f"{path} missing Consequences")
-    return [f"required ADRs present: {len(required)}"]
+        require(text.startswith("# "), f"{path} missing title")
+        status_match = re.search(r"^Status:\s+([a-z-]+)\s*$", text, re.MULTILINE)
+        require(status_match is not None, f"{path} missing Status")
+        status = status_match.group(1)
+        require(status in statuses, f"{path} status must be accepted or proposed")
+        statuses[status] += 1
+        require(adr_section_bullet_count(text, "**Tradeoffs**") >= 2, f"{path} must record real tradeoffs")
+        require(adr_section_bullet_count(text, "**Consequences**") >= 2, f"{path} must record consequences")
+        for keyword in expectations["keywords"]:
+            require(keyword in text, f"{path} missing decision keyword: {keyword}")
+        require(
+            expectations["architecture_default"] in architecture_notes,
+            f"ARCHITECTURE-NOTES.md missing ADR default: {expectations['architecture_default']}",
+        )
+
+    require("AI chat can later be added" in architecture_notes, "ARCHITECTURE-NOTES.md must keep post-MVP AI chat extension")
+    return [
+        f"required ADRs present: {len(required)}",
+        "required ADRs: "
+        + ", ".join(f"{status}={count}" for status, count in sorted(statuses.items()) if count),
+        "required ADRs: tradeoffs, consequences, decision keywords, and architecture defaults verified",
+    ]
 
 
 def check_mvp_issue_drafts() -> list[str]:
