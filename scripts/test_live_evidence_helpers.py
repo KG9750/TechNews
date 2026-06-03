@@ -116,6 +116,8 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "Dry-Run Artifact Inventory" in packet
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
+    assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in packet
+    assert "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
     assert secret not in packet
     assert str(preflight.ROOT) not in packet

@@ -320,13 +320,13 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
             "",
             markdown_command_block(
                 [
-                    "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet",
+                    "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
                     "python3 scripts/spikes/feishu_delivery_spike.py",
                     "python3 scripts/spikes/model_provider_spike.py --validate-requests",
                     "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
                     "python3 scripts/spikes/archive_storage_spike.py",
                     "python3 scripts/spikes/readiness_manifest.py",
-                    "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet",
+                    "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
                     "python3 scripts/check_readiness.py --require-live --require-evidence",
                 ]
             ),

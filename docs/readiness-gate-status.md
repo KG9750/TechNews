@@ -84,14 +84,14 @@ Use `docs/live-spike-evidence-runbook.md` for the exact commands, redaction rule
 Before live execution, run:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet
-python3 scripts/readiness_action_packet.py
+python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets
+python3 scripts/readiness_action_packet.py --write-mvp-issue-packets
 ```
 
 After credentials and redacted evidence are configured, run:
 
 ```bash
-python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet
+python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets
 ```
 
 ### Evidence Manifest

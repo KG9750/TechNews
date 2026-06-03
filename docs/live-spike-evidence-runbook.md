@@ -11,7 +11,7 @@ Before running live external spikes, generate a local preflight summary:
 
 ```bash
 python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets
-python3 scripts/readiness_action_packet.py
+python3 scripts/readiness_action_packet.py --write-mvp-issue-packets
 ```
 
 This writes:
@@ -23,9 +23,10 @@ evidence/live-spike-packets/feishu-delivery.md
 evidence/live-spike-packets/model-provider.md
 evidence/live-spike-packets/archive-storage.md
 evidence/readiness-action-packet.md
+evidence/mvp-issue-packets/issue-10.md through issue-20.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index and worksheet, readiness-manifest blocker, relevant GitHub issues, and an MVP issue unlock matrix into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6. The top-level readiness action packet links the live packet, per-spike packets, source-owner review index, worksheet, batch plan, readiness-manifest blocker, relevant GitHub issues, an MVP issue unlock matrix, and per-MVP-issue triage packets into one execution view. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
 

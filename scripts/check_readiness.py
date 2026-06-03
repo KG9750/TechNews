@@ -1043,6 +1043,14 @@ def check_spike_runners() -> list[str]:
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     require("DRY_RUN_ARTIFACT_FILES" in preflight_text, "live readiness preflight must define dry-run artifact inventory")
     require("dry_run_artifacts" in preflight_text, "live readiness preflight must summarize dry-run artifacts separately")
+    require(
+        "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in preflight_text,
+        "live readiness preflight packet must document per-spike dry-run packet generation",
+    )
+    require(
+        "live_readiness_preflight.py --strict --write-packet --write-spike-packets" in preflight_text,
+        "live readiness preflight packet must document per-spike strict packet generation",
+    )
     require("--validate-requests" in preflight_text, "live readiness preflight must validate model request envelopes")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
@@ -1066,6 +1074,8 @@ def check_spike_runners() -> list[str]:
     for needle in [
         "summary[\"dry_run_artifacts\"][\"present\"]",
         "They do not count as final live evidence.",
+        "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
+        "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
     ]:
         require(needle in test_text, f"live evidence helper tests missing dry-run inventory assertion: {needle}")
     return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, preflight packet helper with live evidence validation, dry-run artifact inventory, per-spike packets, and live evidence tests present"]
@@ -1136,8 +1146,11 @@ def check_readiness_action_packet_helper() -> list[str]:
         "mvp-issue-packets",
     ]:
         require(needle in test_text, f"readiness action packet tests missing: {needle}")
-    for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md"]:
+    for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md", "docs/live-spike-evidence-runbook.md"]:
         require("scripts/readiness_action_packet.py" in read(path), f"{path} must document readiness action packet helper")
+        require("--write-mvp-issue-packets" in read(path), f"{path} must document MVP issue packet generation")
+    for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
+        require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
     return ["readiness action packet helper: blocked-workstream, MVP issue unlock, and per-issue triage packets with regression tests present"]
 
 
