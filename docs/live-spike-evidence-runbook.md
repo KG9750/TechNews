@@ -91,6 +91,7 @@ Validation rules:
 
 - `repository` must be `KG9750/TechNews`.
 - `commit`, `generated_at`, `reviewed_by`, and `redaction_review` must be filled in.
+- `commit` must match the current git `HEAD` when the final readiness gate runs; regenerate the manifest after any tracked file changes.
 - Feishu, model-provider, and archive-storage spike statuses must be `passed`.
 - Manifest evidence file declarations must exactly match the required live evidence files below.
 - Model Provider `run_id`, `provider`, and `model` must match `evidence/model-provider/usage-log.json`, and every model output must use that same `run_id`.

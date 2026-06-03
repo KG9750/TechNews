@@ -425,7 +425,7 @@ def write_synthetic_live_evidence(evidence_root: Path) -> None:
             "readiness_evidence_id": "readiness_synthetic_redacted",
             "generated_at": "2026-06-03T00:00:00Z",
             "repository": "KG9750/TechNews",
-            "commit": "synthetic-redacted-commit",
+            "commit": readiness.current_git_commit(),
             "reviewed_by": "Briefing Administrator",
             "redaction_review": {
                 "reviewed_at": "2026-06-03T00:00:00Z",
@@ -483,6 +483,20 @@ def test_synthetic_live_evidence_package_passes_gate() -> None:
     assert "Feishu live evidence: user and group delivery responses with archive/deep-dive link present" in passed
     assert "Archive live evidence: local write and remote sync success present" in passed
     assert "Model live evidence: three live outputs and usage log valid" in passed
+
+
+def test_live_evidence_manifest_rejects_stale_commit() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        manifest_path = evidence_root / "readiness-manifest.json"
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload["commit"] = "0" * 40
+        write_json(manifest_path, payload)
+        _, missing, failures = readiness.check_live_evidence_manifest(evidence_root)
+
+    assert not missing
+    assert "Live evidence manifest commit must match current git HEAD" in failures
 
 
 def test_feishu_live_evidence_requires_archive_or_deep_dive_link() -> None:
@@ -556,6 +570,7 @@ def main() -> int:
     test_model_request_validation_rejects_full_body_metadata()
     test_archive_failure_reason_redacts_private_paths()
     test_synthetic_live_evidence_package_passes_gate()
+    test_live_evidence_manifest_rejects_stale_commit()
     test_feishu_live_evidence_requires_archive_or_deep_dive_link()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

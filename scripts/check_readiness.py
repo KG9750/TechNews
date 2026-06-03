@@ -1076,6 +1076,7 @@ def check_spike_runners() -> list[str]:
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
         "test_synthetic_live_evidence_package_passes_gate",
+        "test_live_evidence_manifest_rejects_stale_commit",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
@@ -1084,6 +1085,7 @@ def check_spike_runners() -> list[str]:
     for needle in [
         "summary[\"dry_run_artifacts\"][\"present\"]",
         "summary[\"final_evidence_groups\"][\"feishu_delivery\"]",
+        "current_git_commit()",
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
@@ -1464,6 +1466,17 @@ def check_external_environment() -> tuple[list[str], list[str]]:
     return ok, missing_messages
 
 
+def current_git_commit() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def check_no_template_marker(path: Path, failures: list[str], label: str) -> None:
     if TEMPLATE_MARKER in read_path(path):
         failures.append(f"{label} still contains a TEMPLATE_ placeholder: {path}")
@@ -1706,6 +1719,10 @@ def check_live_evidence_manifest(evidence_root: Path) -> tuple[list[str], list[s
     for field in ["readiness_evidence_id", "generated_at", "commit", "reviewed_by"]:
         if not manifest.get(field):
             failures.append(f"Live evidence manifest missing {field}")
+    manifest_commit = manifest.get("commit")
+    head_commit = current_git_commit()
+    if manifest_commit and head_commit and manifest_commit != head_commit:
+        failures.append("Live evidence manifest commit must match current git HEAD")
     redaction_review = manifest.get("redaction_review", {})
     if not isinstance(redaction_review, dict) or not redaction_review.get("reviewed_at") or not redaction_review.get("notes"):
         failures.append("Live evidence manifest redaction_review must include reviewed_at and notes")
