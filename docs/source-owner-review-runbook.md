@@ -86,20 +86,21 @@ evidence/source-owner-reviews/
 
 9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include exactly one `evidence_checked` entry for each required item, with no duplicates or unlisted evidence labels.
 10. Answer every `owner_questions` item in the generated decision file.
-11. Replace every placeholder with concrete review text. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.
-12. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.
-13. Decide one outcome:
+11. Use real ISO dates: `reviewed_at` and every evidence `checked_at` must be valid `YYYY-MM-DD` dates, and evidence `checked_at` must be on or before `reviewed_at`.
+12. Replace every placeholder with concrete review text. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.
+13. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.
+14. Decide one outcome:
    - Keep `needs_review` if permission, license obligations, media rules, or rate limits remain unclear.
    - Move to `eligible` only when metadata-only generated summaries, access method, attribution, rate behavior, and media policy are all approved.
    - Move to `blocked` if automated access or summary reuse is disallowed.
    - Move to `deferred` if the source should remain a seed source but not an MVP production source.
-14. Validate the completed decision file:
+15. Validate the completed decision file:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json
 ```
 
-15. Validate every open owner decision after batch completion:
+16. Validate every open owner decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --validate-all
@@ -107,14 +108,14 @@ python3 scripts/source_owner_review_decision.py --validate-all
 
 This exits non-zero until every open source has a completed, template-free decision file.
 
-16. Preview one tracked artifact update, or preview every open decision after batch completion:
+17. Preview one tracked artifact update, or preview every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run
 python3 scripts/source_owner_review_decision.py --apply-all --dry-run
 ```
 
-17. Apply one tracked artifact update, or apply every open decision after batch completion:
+18. Apply one tracked artifact update, or apply every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from datetime import date
 from pathlib import Path
 
 
@@ -768,6 +769,14 @@ def duplicate_values(values: list[str]) -> list[str]:
     return sorted(duplicates)
 
 
+def parse_review_date(value: object, label: str) -> date:
+    require(isinstance(value, str), f"{label} must be YYYY-MM-DD")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as error:
+        raise ReviewError(f"{label} must be a valid YYYY-MM-DD date") from error
+
+
 def require_completed_review_text(value: object, label: str) -> None:
     require(isinstance(value, str), f"{label} must be text")
     require(bool(value.strip()), f"{label} is required")
@@ -789,8 +798,7 @@ def validated_payload(path: Path) -> dict:
     require(item.get("review_status") == "open", f"source owner review is not open: {source_id}")
     require(not contains_template_marker(payload), "decision file still contains TEMPLATE_ placeholders")
 
-    reviewed_at = payload.get("reviewed_at", "")
-    require(bool(re.match(r"^\d{4}-\d{2}-\d{2}$", reviewed_at)), "reviewed_at must be YYYY-MM-DD")
+    reviewed_at = parse_review_date(payload.get("reviewed_at", ""), "reviewed_at")
     require(payload.get("reviewed_by"), "reviewed_by is required")
 
     decision = payload.get("decision")
@@ -811,7 +819,8 @@ def validated_payload(path: Path) -> dict:
     for entry in evidence:
         require(entry.get("required_evidence"), "each evidence item needs required_evidence")
         require_completed_review_text(entry.get("url_or_note"), "each evidence item needs url_or_note")
-        require(bool(re.match(r"^\d{4}-\d{2}-\d{2}$", entry.get("checked_at", ""))), "each evidence item needs checked_at YYYY-MM-DD")
+        checked_at = parse_review_date(entry.get("checked_at", ""), "each evidence item needs checked_at")
+        require(checked_at <= reviewed_at, "each evidence item checked_at must be on or before reviewed_at")
 
     answers = payload.get("owner_question_answers", [])
     questions = item.get("owner_questions", [])

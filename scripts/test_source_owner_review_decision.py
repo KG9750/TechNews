@@ -427,6 +427,25 @@ def test_decision_rejects_unexpected_required_evidence_item() -> None:
         assert_review_error(path, "evidence_checked has unexpected required_evidence values")
 
 
+def test_decision_rejects_invalid_reviewed_at_date() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["reviewed_at"] = "2026-99-99"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "reviewed_at must be a valid YYYY-MM-DD date")
+
+
+def test_decision_rejects_evidence_checked_after_review_date() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        payload["reviewed_at"] = "2026-06-03"
+        payload["evidence_checked"][0]["checked_at"] = "2026-06-04"
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "each evidence item checked_at must be on or before reviewed_at")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -519,6 +538,8 @@ def main() -> int:
     test_decision_rejects_missing_required_evidence_item()
     test_decision_rejects_duplicate_required_evidence_item()
     test_decision_rejects_unexpected_required_evidence_item()
+    test_decision_rejects_invalid_reviewed_at_date()
+    test_decision_rejects_evidence_checked_after_review_date()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()
