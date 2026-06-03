@@ -60,6 +60,7 @@ fixtures/archive-storage/
 - Failure status example: `sync_status.remote_sync.status = failed` in fixture `metadata.json`.
 - Dry-run command: `python3 scripts/spikes/archive_storage_spike.py --dry-run`.
 - Live command: `python3 scripts/spikes/archive_storage_spike.py`.
+- Live evidence validation command: `python3 scripts/spikes/archive_storage_spike.py --validate-evidence`.
 - The live runner uses real `ARCHIVE_LOCAL_ROOT` and `ARCHIVE_SYNC_TARGET` for copying, but writes redacted path labels in `sync-result.json`.
 - Pending: redacted success evidence for a real `ARCHIVE_SYNC_TARGET`.
 

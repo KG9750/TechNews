@@ -1113,6 +1113,12 @@ def check_spike_runners() -> list[str]:
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets" in preflight_text,
         "live readiness preflight packet must document per-spike strict packet generation",
     )
+    for command in [
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
+    ]:
+        require(command in preflight_text, f"live readiness preflight packet must document validation command: {command}")
     require("--validate-requests" in preflight_text, "live readiness preflight must validate model request envelopes")
     require("require_clean_worktree=args.strict" in preflight_text, "strict live readiness preflight must require a clean tracked worktree")
     test_text = read("scripts/test_live_evidence_helpers.py")
@@ -1158,6 +1164,9 @@ def check_spike_runners() -> list[str]:
         "Strict mode requires a clean tracked worktree",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
     ]:
         require(needle in test_text, f"live evidence helper tests missing dry-run inventory assertion: {needle}")
     return ["spike runners: Feishu fallback guardrails, archive redaction, model-provider request guardrails, readiness-manifest, final redaction review packet, preflight packet helper with live evidence validation, dry-run artifact inventory, final evidence group status, per-spike packets, and live evidence tests present"]
@@ -1220,6 +1229,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "build_packet",
         "source_owner_summary",
         "python3 scripts/check_readiness.py --require-live --require-evidence",
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
         "--write-spike-packets",
         "--write-final-review-packet",
         "python3 scripts/check_readiness.py --require-github",
@@ -1236,6 +1248,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source-owner-reviews/batch-plan.md",
         "mvp-issue-packets",
         "final-redaction-review.md",
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
     ]:
         require(needle in test_text, f"readiness action packet tests missing: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md", "docs/live-spike-evidence-runbook.md"]:

@@ -75,7 +75,10 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "final-redaction-review.md" in text
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet" in text
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in text
     assert "python3 scripts/spikes/model_provider_spike.py --validate-requests" in text
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in text
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
     assert "python3 scripts/source_owner_review_decision.py --worksheet" in text
     assert "python3 scripts/source_owner_review_decision.py --batch-plan" in text
     assert "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets" in text

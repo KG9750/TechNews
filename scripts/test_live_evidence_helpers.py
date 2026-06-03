@@ -150,6 +150,9 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in packet
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in packet
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in packet
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in packet
     assert "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
     assert secret not in packet
@@ -173,9 +176,12 @@ def test_preflight_writes_issue_facing_spike_packets() -> None:
     assert "https://github.com/KG9750/TechNews/issues/3" in feishu_packet
     assert "FEISHU_APP_ID" in feishu_packet
     assert "feishu-delivery/user-response.redacted.json" in feishu_packet
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in feishu_packet
     assert "MODEL_API_KEY" not in feishu_packet
     assert "https://github.com/KG9750/TechNews/issues/5" in model_packet
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in model_packet
     assert "https://github.com/KG9750/TechNews/issues/6" in archive_packet
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in archive_packet
     assert "Do not paste raw secrets" in archive_packet
 
 
