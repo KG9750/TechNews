@@ -291,6 +291,9 @@ def test_readiness_manifest_final_review_packet_shape() -> None:
     assert "readiness-manifest.json" in packet
     assert "feishu-delivery/user-response.redacted.json" in packet
     assert "Redaction Checklist" in packet
+    assert "Validation Basis" in packet
+    assert "Manifest spike status declares that required final evidence files are present" in packet
+    assert "does not replace per-spike validators, strict preflight, or the final readiness gate" in packet
     assert "Share Guardrails" in packet
     assert "Confirm tracked git worktree is clean" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet

@@ -1139,6 +1139,11 @@ def check_spike_runners() -> list[str]:
     require("--write-final-review-packet" in manifest_text, "readiness manifest helper must write a final redaction review packet")
     require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")
     require("Final Redaction Review Packet" in manifest_text, "readiness manifest helper must label final redaction review packets")
+    require("Validation Basis" in manifest_text, "final redaction review packet must explain validation basis")
+    require(
+        "does not replace per-spike validators, strict preflight, or the final readiness gate" in manifest_text,
+        "final redaction review packet must not imply manifest status replaces validators",
+    )
     require("require_clean_tracked_worktree" in manifest_text, "readiness manifest helper must require a clean tracked worktree for final manifests")
     require("tracked_worktree_changes_from_status" in manifest_text, "readiness manifest helper must expose tracked worktree status parsing")
     readiness_text = read("scripts/check_readiness.py")
@@ -1232,6 +1237,8 @@ def check_spike_runners() -> list[str]:
         "local and remote tree listings must match",
         "file_count must match local tree file entries",
         "final-redaction-review.md",
+        "Validation Basis",
+        "does not replace per-spike validators, strict preflight, or the final readiness gate",
         "They do not count as final live evidence.",
         "some final evidence files exist",
         "Closure gate: blocked",
