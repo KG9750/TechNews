@@ -37,7 +37,7 @@ After credentials and redacted evidence are configured, use strict mode as a qui
 python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets
 ```
 
-Strict mode fails until all required environment variable names are present and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
+Strict mode fails until all required environment variable names are present, the tracked git worktree is clean, and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. Ignored files under `evidence/` do not need to be committed. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
 
 CI regression coverage:
 
@@ -55,11 +55,12 @@ After credentials and live evidence are available, run:
 python3 scripts/check_readiness.py --require-live --require-evidence
 ```
 
-The gate only passes when both conditions are true:
+The gate only passes when these conditions are true:
 
 - Required environment variables are present.
 - Redacted evidence files pass validation.
 - `evidence/readiness-manifest.json` declares the final evidence set and matches the live model/archive run metadata.
+- The tracked git worktree is clean, so the manifest `commit` and final gate refer to the same tracked files. Ignored `evidence/` files may remain untracked.
 
 ## Evidence Manifest
 
@@ -92,6 +93,7 @@ Validation rules:
 - `repository` must be `KG9750/TechNews`.
 - `commit`, `generated_at`, `reviewed_by`, and `redaction_review` must be filled in.
 - `commit` must match the current git `HEAD` when the final readiness gate runs; regenerate the manifest after any tracked file changes.
+- Final manifest generation and the final readiness gate require a clean tracked worktree. Commit or revert tracked changes before writing `evidence/readiness-manifest.json`; ignored evidence files may remain untracked.
 - Feishu, model-provider, and archive-storage spike statuses must be `passed`.
 - Manifest evidence file declarations must exactly match the required live evidence files below.
 - Model Provider `run_id`, `provider`, and `model` must match `evidence/model-provider/usage-log.json`, and every model output must use that same `run_id`.

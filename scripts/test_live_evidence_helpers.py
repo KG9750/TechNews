@@ -145,6 +145,7 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert "readiness-manifest.json" in packet
     assert "Final Evidence Group Status" in packet
     assert "final-redaction-review.md" in packet
+    assert "Strict mode requires a clean tracked worktree" in packet
     assert "Dry-Run Artifact Inventory" in packet
     assert "They do not count as final live evidence." in packet
     assert "Evidence Validation Status" in packet
@@ -240,9 +241,25 @@ def test_readiness_manifest_final_review_packet_shape() -> None:
     assert "feishu-delivery/user-response.redacted.json" in packet
     assert "Redaction Checklist" in packet
     assert "Share Guardrails" in packet
+    assert "Confirm tracked git worktree is clean" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
     assert str(manifest.ROOT) not in packet
     assert str(Path.home()) not in packet
+
+
+def test_readiness_manifest_tracks_dirty_worktree_guard() -> None:
+    status_output = " M docs/readiness-gate-status.md\nM  scripts/check_readiness.py\n"
+
+    assert readiness.tracked_worktree_changes_from_status("") == []
+    assert manifest.tracked_worktree_changes_from_status("") == []
+    assert readiness.tracked_worktree_changes_from_status(status_output) == [
+        " M docs/readiness-gate-status.md",
+        "M  scripts/check_readiness.py",
+    ]
+    assert manifest.tracked_worktree_changes_from_status(status_output) == [
+        " M docs/readiness-gate-status.md",
+        "M  scripts/check_readiness.py",
+    ]
 
 
 def test_preflight_reports_template_evidence_validation_failures() -> None:
@@ -565,6 +582,7 @@ def main() -> int:
     test_feishu_group_webhook_payload_redacts_signature()
     test_readiness_manifest_dry_run_shape()
     test_readiness_manifest_final_review_packet_shape()
+    test_readiness_manifest_tracks_dirty_worktree_guard()
     test_preflight_reports_template_evidence_validation_failures()
     test_model_request_envelopes_validate_metadata_only()
     test_model_request_validation_rejects_full_body_metadata()

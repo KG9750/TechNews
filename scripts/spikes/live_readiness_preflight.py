@@ -195,8 +195,11 @@ def dry_run_artifact_summary(evidence_root: Path) -> dict[str, list[str]]:
     }
 
 
-def evidence_validation_summary(evidence_root: Path) -> dict[str, list[str]]:
-    passed, missing, failures = readiness.check_live_evidence(evidence_root)
+def evidence_validation_summary(evidence_root: Path, require_clean_worktree: bool = False) -> dict[str, list[str]]:
+    passed, missing, failures = readiness.check_live_evidence(
+        evidence_root,
+        require_clean_worktree=require_clean_worktree,
+    )
     return {
         "passed": [redact_text(item) for item in passed],
         "missing": [redact_text(item) for item in missing],
@@ -544,7 +547,7 @@ def run_dry_runs(evidence_root: Path, run_helpers: bool) -> list[dict]:
     return results
 
 
-def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
+def build_summary(evidence_root: Path, run_helpers: bool, require_clean_worktree: bool = False) -> dict:
     dry_run_results = run_dry_runs(evidence_root, run_helpers)
     return {
         "generated_at": utc_now(),
@@ -554,7 +557,10 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
         "evidence": evidence_summary(evidence_root),
         "final_evidence_groups": final_evidence_group_summary(evidence_root),
         "dry_run_artifacts": dry_run_artifact_summary(evidence_root),
-        "evidence_validation": evidence_validation_summary(evidence_root),
+        "evidence_validation": evidence_validation_summary(
+            evidence_root,
+            require_clean_worktree=require_clean_worktree,
+        ),
         "final_gate_command": "python3 scripts/check_readiness.py --require-live --require-evidence",
         "next_commands": [
             "python3 scripts/spikes/feishu_delivery_spike.py",
@@ -568,6 +574,7 @@ def build_summary(evidence_root: Path, run_helpers: bool) -> dict:
             "Environment values are not written, only variable names.",
             "Dry-run outputs are generated under ignored evidence/.",
             "Strict mode fails until all required environment variables and valid live evidence files are present.",
+            "Strict mode requires a clean tracked worktree; ignored evidence files do not need to be committed.",
         ],
     }
 
@@ -639,7 +646,7 @@ def main() -> int:
     packet_path = Path(args.packet_path) if args.packet_path else evidence_root / "live-readiness-packet.md"
     spike_packet_dir = Path(args.spike_packet_dir) if args.spike_packet_dir else evidence_root / "live-spike-packets"
     run_helpers = args.dry_run and not args.skip_helper_dry_runs
-    summary = build_summary(evidence_root, run_helpers=run_helpers)
+    summary = build_summary(evidence_root, run_helpers=run_helpers, require_clean_worktree=args.strict)
     write_json(output_path, summary)
     if args.write_packet:
         write_markdown(packet_path, build_markdown_packet(summary, evidence_root, output_path, packet_path))

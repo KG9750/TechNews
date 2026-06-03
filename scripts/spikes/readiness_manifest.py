@@ -64,6 +64,33 @@ def current_commit() -> str:
     return result.stdout.strip()
 
 
+def tracked_worktree_changes_from_status(status_output: str) -> list[str]:
+    return [line for line in status_output.splitlines() if line.strip()]
+
+
+def tracked_worktree_changes() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise ManifestError("unable to inspect tracked git worktree status")
+    return tracked_worktree_changes_from_status(result.stdout)
+
+
+def require_clean_tracked_worktree() -> None:
+    changes = tracked_worktree_changes()
+    if not changes:
+        return
+    preview = ", ".join(changes[:5])
+    if len(changes) > 5:
+        preview += ", ..."
+    raise ManifestError(f"tracked worktree must be clean before writing final readiness manifest: {preview}")
+
+
 def read_json_if_present(path: Path) -> dict:
     if not path.exists():
         return {}
@@ -109,6 +136,7 @@ def require_complete_live_evidence(evidence_root: Path) -> None:
 def build_manifest(evidence_root: Path, reviewed_by: str, redaction_notes: str, dry_run: bool) -> dict:
     if not dry_run:
         require_complete_live_evidence(evidence_root)
+        require_clean_tracked_worktree()
 
     model_usage = read_json_if_present(evidence_root / "model-provider/usage-log.json")
     archive_sync = read_json_if_present(evidence_root / "archive-storage/sync-result.json")
@@ -199,6 +227,7 @@ def build_final_review_packet(evidence_root: Path, manifest: dict, packet_path: 
             "- Confirm rendered Feishu evidence includes Source, Confidence Notice, and Archive or Deep-Dive link text.",
             "- Confirm model evidence is metadata-only and does not include full article bodies, PDFs, transcripts, or unapproved media.",
             "- Confirm archive evidence redacts local and remote roots while preserving file counts, sync status, and retryability.",
+            "- Confirm tracked git worktree is clean; ignored evidence files may remain untracked.",
             "",
             "## Share Guardrails",
             "",

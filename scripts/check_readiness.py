@@ -1038,6 +1038,8 @@ def check_spike_runners() -> list[str]:
     require("--write-final-review-packet" in manifest_text, "readiness manifest helper must write a final redaction review packet")
     require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")
     require("Final Redaction Review Packet" in manifest_text, "readiness manifest helper must label final redaction review packets")
+    require("require_clean_tracked_worktree" in manifest_text, "readiness manifest helper must require a clean tracked worktree for final manifests")
+    require("tracked_worktree_changes_from_status" in manifest_text, "readiness manifest helper must expose tracked worktree status parsing")
     preflight_text = read("scripts/spikes/live_readiness_preflight.py")
     require("--write-packet" in preflight_text, "live readiness preflight must support Markdown packet output")
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
@@ -1060,6 +1062,7 @@ def check_spike_runners() -> list[str]:
         "live readiness preflight packet must document per-spike strict packet generation",
     )
     require("--validate-requests" in preflight_text, "live readiness preflight must validate model request envelopes")
+    require("require_clean_worktree=args.strict" in preflight_text, "strict live readiness preflight must require a clean tracked worktree")
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
         "test_preflight_redacts_workspace_and_env_values",
@@ -1075,6 +1078,7 @@ def check_spike_runners() -> list[str]:
         "test_archive_failure_reason_redacts_private_paths",
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
+        "test_readiness_manifest_tracks_dirty_worktree_guard",
         "test_synthetic_live_evidence_package_passes_gate",
         "test_live_evidence_manifest_rejects_stale_commit",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
@@ -1089,6 +1093,7 @@ def check_spike_runners() -> list[str]:
         "final-redaction-review.md",
         "They do not count as final live evidence.",
         "some final evidence files exist",
+        "Strict mode requires a clean tracked worktree",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
     ]:
@@ -1477,6 +1482,33 @@ def current_git_commit() -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def tracked_worktree_changes_from_status(status_output: str) -> list[str]:
+    return [line for line in status_output.splitlines() if line.strip()]
+
+
+def tracked_worktree_changes() -> list[str]:
+    result = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return ["unable to inspect tracked git worktree status"]
+    return tracked_worktree_changes_from_status(result.stdout)
+
+
+def check_clean_tracked_worktree_for_live_evidence(failures: list[str]) -> None:
+    changes = tracked_worktree_changes()
+    if not changes:
+        return
+    preview = ", ".join(changes[:5])
+    if len(changes) > 5:
+        preview += ", ..."
+    failures.append(f"Live evidence manifest requires a clean tracked worktree before final gate: {preview}")
+
+
 def check_no_template_marker(path: Path, failures: list[str], label: str) -> None:
     if TEMPLATE_MARKER in read_path(path):
         failures.append(f"{label} still contains a TEMPLATE_ placeholder: {path}")
@@ -1703,7 +1735,10 @@ def require_manifest_files(
     return spike
 
 
-def check_live_evidence_manifest(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+def check_live_evidence_manifest(
+    evidence_root: Path,
+    require_clean_worktree: bool = False,
+) -> tuple[list[str], list[str], list[str]]:
     path = evidence_root / "readiness-manifest.json"
     missing: list[str] = []
     failures: list[str] = []
@@ -1712,6 +1747,8 @@ def check_live_evidence_manifest(evidence_root: Path) -> tuple[list[str], list[s
         missing.append(f"Live evidence manifest missing: {path}")
         return passed, missing, failures
 
+    if require_clean_worktree:
+        check_clean_tracked_worktree_for_live_evidence(failures)
     check_live_evidence_file(path, failures, "Live evidence manifest")
     manifest = load_json_path(path)
     if manifest.get("repository") != EXPECTED_GITHUB_REPO:
@@ -1797,16 +1834,21 @@ def check_live_evidence_manifest(evidence_root: Path) -> tuple[list[str], list[s
     return passed, missing, failures
 
 
-def check_live_evidence(evidence_root: Path) -> tuple[list[str], list[str], list[str]]:
+def check_live_evidence(
+    evidence_root: Path,
+    require_clean_worktree: bool = False,
+) -> tuple[list[str], list[str], list[str]]:
     passed: list[str] = []
     missing: list[str] = []
     failures: list[str] = []
-    for checker in [
-        check_live_evidence_manifest,
-        check_feishu_live_evidence,
-        check_archive_live_evidence,
-        check_model_live_evidence,
-    ]:
+    manifest_passed, manifest_missing, manifest_failures = check_live_evidence_manifest(
+        evidence_root,
+        require_clean_worktree=require_clean_worktree,
+    )
+    passed.extend(manifest_passed)
+    missing.extend(manifest_missing)
+    failures.extend(manifest_failures)
+    for checker in [check_feishu_live_evidence, check_archive_live_evidence, check_model_live_evidence]:
         check_passed, check_missing, check_failures = checker(evidence_root)
         passed.extend(check_passed)
         missing.extend(check_missing)
@@ -1857,7 +1899,10 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
     evidence_missing: list[str] = []
     evidence_failures: list[str] = []
     if require_evidence:
-        evidence_ok, evidence_missing, evidence_failures = check_live_evidence(evidence_root)
+        evidence_ok, evidence_missing, evidence_failures = check_live_evidence(
+            evidence_root,
+            require_clean_worktree=True,
+        )
         passed.extend(evidence_ok)
         failures.extend(evidence_failures)
 
