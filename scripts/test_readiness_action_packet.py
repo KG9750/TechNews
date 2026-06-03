@@ -76,6 +76,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "mvp-issue-packets" in text
     assert "live-spike-packets" in text
     assert "external-input-request.md" in text
+    assert "github-update-packet.md" in text
     assert "final-redaction-review.md" in text
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet" in text
@@ -85,6 +86,38 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
     assert "python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets" in text
     assert "MODEL_API_KEY" in text
+    assert secret not in text
+    assert str(packet.ROOT) not in text
+    assert str(Path.home()) not in text
+
+
+def test_github_update_packet_names_label_guardrails_without_secret_values() -> None:
+    secret = "github-update-secret-123456789"
+    with with_env("ARCHIVE_SYNC_TARGET", secret):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+            evidence_root = Path(tmp_name) / "evidence"
+            text = packet.build_github_update_packet(evidence_root)
+
+    assert "# GitHub Update Packet" in text
+    assert "Label Guardrails" in text
+    assert "Keep #1 `needs-triage` while the final readiness gate is blocked." in text
+    assert "Keep #3, #5, and #6 `needs-info` while their live evidence groups are incomplete." in text
+    assert "Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass." in text
+    assert "Copy-Safe Issue Comments" in text
+    assert "### #1 Pre-development Tracking" in text
+    assert "### #10-#20 MVP Issue Triage" in text
+    assert "Final readiness gate: blocked" in text
+    assert "Source owner decisions: blocked" in text
+    assert "FEISHU_APP_ID" in text
+    assert "MODEL_PROVIDER" in text
+    assert "ARCHIVE_LOCAL_ROOT" in text
+    assert "ARCHIVE_SYNC_TARGET" in text
+    assert "evidence/readiness-action-packet.md" in text
+    assert "evidence/external-input-request.md" in text
+    assert "evidence/github-update-packet.md" in text
+    assert "evidence/mvp-issue-packets/issue-10.md through issue-20.md" in text
+    assert "python3 scripts/check_readiness.py --require-github" in text
+    assert "Do not paste secrets" in text
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text
@@ -153,17 +186,22 @@ def test_action_packet_writes_markdown() -> None:
         output = Path(tmp_name) / "evidence/readiness-action-packet.md"
         evidence_root = Path(tmp_name) / "evidence"
         external_input_output = evidence_root / packet.EXTERNAL_INPUT_REQUEST_RELATIVE
+        github_update_output = evidence_root / packet.GITHUB_UPDATE_PACKET_RELATIVE
 
         packet.write_packet(output, evidence_root)
         packet.write_external_input_request_packet(external_input_output, evidence_root)
+        packet.write_github_update_packet(github_update_output, evidence_root)
 
         assert output.exists()
         assert external_input_output.exists()
+        assert github_update_output.exists()
         text = output.read_text(encoding="utf-8")
         external_input_text = external_input_output.read_text(encoding="utf-8")
+        github_update_text = github_update_output.read_text(encoding="utf-8")
         assert "Blocking Workstreams" in text
         assert "Source owner decisions" in text
         assert "External Input Request Packet" in external_input_text
+        assert "GitHub Update Packet" in github_update_text
 
 
 def test_source_owner_packets_can_be_written_from_action_packet() -> None:
@@ -213,6 +251,7 @@ def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
 
 def main() -> int:
     test_action_packet_summarizes_blockers_without_secret_values()
+    test_github_update_packet_names_label_guardrails_without_secret_values()
     test_external_input_request_packet_names_inputs_without_secret_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()

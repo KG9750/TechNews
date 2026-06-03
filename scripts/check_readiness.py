@@ -1297,6 +1297,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     for needle in [
         "readiness-action-packet.md",
         "external-input-request.md",
+        "github-update-packet.md",
         "live-readiness-packet.md",
         "live-spike-packets",
         "source-owner-reviews/index.md",
@@ -1309,9 +1310,14 @@ def check_readiness_action_packet_helper() -> list[str]:
         "EXTERNAL_INPUT_REQUESTS",
         "External Input Request Checklist",
         "External Input Request Packet",
+        "GitHub Update Packet",
+        "Label Guardrails",
+        "Copy-Safe Issue Comments",
         "external_input_request_rows",
         "build_external_input_request_packet",
         "write_external_input_request_packet",
+        "build_github_update_packet",
+        "write_github_update_packet",
         "Required evidence files",
         "Briefing Host secret store or local `.env`; never GitHub.",
         "GitHub Issue Links",
@@ -1343,6 +1349,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         require(needle in text, f"readiness action packet helper missing: {needle}")
     for needle in [
         "test_action_packet_summarizes_blockers_without_secret_values",
+        "test_github_update_packet_names_label_guardrails_without_secret_values",
         "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
         "test_source_owner_packets_can_be_written_from_action_packet",
@@ -1352,6 +1359,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Feishu delivery spike: final evidence group partial",
         "Global readiness gate: blocked",
         "External Input Request Packet",
+        "GitHub Update Packet",
+        "Label Guardrails",
         "Required evidence files",
         "External Input Request Checklist",
         "FEISHU_APP_ID, FEISHU_APP_SECRET",
@@ -1360,6 +1369,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source-owner-reviews/request-packet.md",
         "--write-source-owner-packets",
         "mvp-issue-packets",
+        "github-update-packet.md",
         "final-redaction-review.md",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
         "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
@@ -1372,7 +1382,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         require("--write-source-owner-packets" in read(path), f"{path} must document source-owner packet generation")
     for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
         require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
-    return ["readiness action packet helper: blocked-workstream, MVP issue unlock, and per-issue triage packets with regression tests present"]
+    return ["readiness action packet helper: blocked-workstream, MVP issue unlock, GitHub update, and per-issue triage packets with regression tests present"]
 
 
 def check_readiness_ci_workflow() -> list[str]:

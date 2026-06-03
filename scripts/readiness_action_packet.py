@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 EXTERNAL_INPUT_REQUEST_RELATIVE = "external-input-request.md"
+GITHUB_UPDATE_PACKET_RELATIVE = "github-update-packet.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
@@ -453,6 +454,156 @@ def write_external_input_request_packet(output_path: Path, evidence_root: Path) 
     output_path.write_text(build_external_input_request_packet(evidence_root) + "\n", encoding="utf-8")
 
 
+def workstream_row_by_label(live_summary: dict) -> dict[str, dict[str, object]]:
+    return {str(row["workstream"]): row for row in live_workstream_rows(live_summary)}
+
+
+def github_workstream_sections(live_summary: dict) -> list[str]:
+    rows_by_label = workstream_row_by_label(live_summary)
+    sections = []
+    for request in EXTERNAL_INPUT_REQUESTS:
+        row = rows_by_label[request["workstream"]]
+        env = live_summary["environment"][request["env_group"]]
+        evidence_missing = [
+            path
+            for path in live_summary["evidence"]["missing"]
+            if matches_any_prefix(
+                path,
+                next(spec["evidence_prefixes"] for spec in LIVE_WORKSTREAMS if spec["env_group"] == request["env_group"]),
+            )
+        ]
+        sections.extend(
+            [
+                f"### {request['workstream']}",
+                "",
+                f"- Linked issue: {request['issue']}",
+                f"- Workstream status: {row['status']}",
+                f"- Final evidence group: {row['final_group_status']}",
+                "",
+                "Required variable names:",
+                markdown_bullets(live_preflight.ENV_GROUPS[request["env_group"]]),
+                "",
+                "Missing variable names now:",
+                markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Missing final evidence files:",
+                markdown_bullets(evidence_missing, empty_label="None missing."),
+                "",
+            ]
+        )
+    return sections
+
+
+def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
+    live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
+    source_summary = source_owner_summary(evidence_root)
+    states = prerequisite_states(live_summary, source_summary)
+    final_state = states["final_readiness_gate"]
+    source_state = states["source_owner_decisions"]
+    mvp_statuses = mvp_issue_statuses(live_summary, source_summary)
+    ready_mvp_count = sum(1 for status in mvp_statuses if status["issue_specific_status"] == "ready for final triage")
+    blocked_mvp_count = len(mvp_statuses) - ready_mvp_count
+
+    issue_one_comment = [
+        "Readiness update:",
+        f"- Final readiness gate: {final_state['status']} ({final_state['detail']})",
+        f"- Source owner decisions: {source_state['status']} ({source_state['detail']})",
+        f"- MVP issue unlock status: {blocked_mvp_count} blocked, {ready_mvp_count} ready for final triage",
+        f"- Action packet: evidence/readiness-action-packet.md",
+        f"- External input request packet: evidence/{EXTERNAL_INPUT_REQUEST_RELATIVE}",
+        f"- GitHub update packet: evidence/{GITHUB_UPDATE_PACKET_RELATIVE}",
+        "",
+        "No secret values, recipient ids, local paths, provider responses, or NAS/cloud targets should be posted to GitHub.",
+    ]
+    source_owner_comment = [
+        "Source owner review update:",
+        f"- Open decisions: {source_summary['open']}",
+        f"- Valid decisions: {source_summary['counts']['valid']}",
+        f"- Invalid decisions: {source_summary['counts']['invalid']}",
+        f"- Missing decisions: {source_summary['counts']['missing']}",
+        f"- Worksheet: {source_summary['worksheet_path']}",
+        f"- Request packet: {source_summary['request_packet_path']}",
+        "",
+        "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied.",
+    ]
+    mvp_comment = [
+        "MVP issue triage update:",
+        f"- Final readiness gate: {final_state['status']} ({final_state['detail']})",
+        f"- Issue-specific blocked: {blocked_mvp_count}",
+        f"- Ready for final triage after GitHub tracker gate: {ready_mvp_count}",
+        f"- Per-issue packets: evidence/{MVP_ISSUE_PACKET_DIR_RELATIVE}/issue-10.md through issue-20.md",
+        "",
+        "Keep MVP issues `needs-triage` until the final readiness gate and GitHub tracker gate pass.",
+    ]
+
+    return "\n".join(
+        [
+            "# GitHub Update Packet",
+            "",
+            "This ignored packet is for safe GitHub status updates. It provides copy-safe comment text and label guardrails only; it does not move labels, close issues, or replace `scripts/check_readiness.py`.",
+            "",
+            f"- Generated at: {utc_now()}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            "- Final gate: `python3 scripts/check_readiness.py --require-live --require-evidence`",
+            "- GitHub tracker gate: `python3 scripts/check_readiness.py --require-github`",
+            "",
+            "## Status Snapshot",
+            "",
+            f"- Final readiness gate: {final_state['status']} ({final_state['detail']})",
+            f"- Source owner decisions: {source_state['status']} ({source_state['detail']})",
+            f"- MVP issue packet status: {blocked_mvp_count} blocked, {ready_mvp_count} ready for final triage",
+            "",
+            "## Label Guardrails",
+            "",
+            "- Keep #1 `needs-triage` while the final readiness gate is blocked.",
+            "- Keep #3, #5, and #6 `needs-info` while their live evidence groups are incomplete.",
+            "- Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass.",
+            "- Move an issue to `ready-for-agent` only when the generated packet shows no remaining product or evidence decision.",
+            "",
+            "## Live Spike Issue Inputs",
+            "",
+            *github_workstream_sections(live_summary),
+            "## Copy-Safe Issue Comments",
+            "",
+            "### #1 Pre-development Tracking",
+            "",
+            "```text",
+            *issue_one_comment,
+            "```",
+            "",
+            "### Source Owner Review Follow-Up",
+            "",
+            "```text",
+            *source_owner_comment,
+            "```",
+            "",
+            "### #10-#20 MVP Issue Triage",
+            "",
+            "```text",
+            *mvp_comment,
+            "```",
+            "",
+            "## Verification Before Posting",
+            "",
+            "```bash",
+            "python3 scripts/check_readiness.py --require-live --require-evidence",
+            "python3 scripts/check_readiness.py --require-github",
+            "```",
+            "",
+            "## Share Guardrails",
+            "",
+            "- Post status, missing variable names, and evidence path names only.",
+            "- Do not paste secrets, Feishu recipient ids, local paths, NAS/cloud targets, or raw provider responses.",
+            "- Link to committed docs and ignored packet names; do not attach ignored evidence contents unless they have been redacted for the issue.",
+        ]
+    )
+
+
+def write_github_update_packet(output_path: Path, evidence_root: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(build_github_update_packet(evidence_root) + "\n", encoding="utf-8")
+
+
 def mvp_issue_packet_filename(issue: str) -> str:
     return f"issue-{issue.lstrip('#')}.md"
 
@@ -652,6 +803,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Live preflight summary: `{display_path(evidence_root / 'live-readiness-preflight.json')}`",
             f"- Final redaction review packet: `{display_path(evidence_root / 'final-redaction-review.md')}`",
             f"- External input request packet: `{display_path(evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE)}`",
+            f"- GitHub update packet: `{display_path(evidence_root / GITHUB_UPDATE_PACKET_RELATIVE)}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
@@ -733,6 +885,9 @@ def main() -> int:
     external_input_path = evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE
     write_external_input_request_packet(external_input_path, evidence_root)
     print(f"External input request packet written to {display_path(external_input_path)}")
+    github_update_path = evidence_root / GITHUB_UPDATE_PACKET_RELATIVE
+    write_github_update_packet(github_update_path, evidence_root)
+    print(f"GitHub update packet written to {display_path(github_update_path)}")
     if args.write_mvp_issue_packets:
         packet_dir = Path(args.mvp_issue_packet_dir) if args.mvp_issue_packet_dir else evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE
         write_mvp_issue_packets(packet_dir, evidence_root)
