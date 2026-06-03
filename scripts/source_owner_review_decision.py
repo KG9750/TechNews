@@ -789,6 +789,10 @@ def validated_payload(path: Path) -> dict:
     evidence = payload.get("evidence_checked", [])
     require(isinstance(evidence, list), "evidence_checked must be a list")
     require(len(evidence) >= len(item.get("evidence_required", [])), "all required evidence items must be addressed")
+    required_evidence = set(item.get("evidence_required", []))
+    covered_evidence = {entry.get("required_evidence") for entry in evidence}
+    missing_evidence = sorted(required_evidence - covered_evidence)
+    require(not missing_evidence, "evidence_checked missing required evidence: " + ", ".join(missing_evidence))
     for entry in evidence:
         require(entry.get("required_evidence"), "each evidence item needs required_evidence")
         require_completed_review_text(entry.get("url_or_note"), "each evidence item needs url_or_note")

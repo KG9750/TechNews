@@ -84,7 +84,7 @@ This writes an ignored file under:
 evidence/source-owner-reviews/
 ```
 
-9. Collect the listed `evidence_required` from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes.
+9. Collect every listed `evidence_required` item from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes. The decision file must include one `evidence_checked` entry for each required item.
 10. Answer every `owner_questions` item in the generated decision file.
 11. Replace every placeholder with concrete review text. Values such as `TBD`, `todo`, `unknown`, `pending`, `n/a`, or `placeholder` are rejected by validation even if `TEMPLATE_` is gone.
 12. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.

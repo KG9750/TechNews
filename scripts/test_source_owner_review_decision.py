@@ -393,6 +393,16 @@ def test_decision_rejects_placeholder_owner_answer() -> None:
         assert_review_error(path, "each owner question needs an answer must be a concrete review note")
 
 
+def test_decision_rejects_missing_required_evidence_item() -> None:
+    with isolated_artifacts() as tmp:
+        payload = decision_payload("needs_review")
+        required = payload["evidence_checked"]
+        required[1]["required_evidence"] = required[0]["required_evidence"]
+        path = write_decision(tmp, payload)
+
+        assert_review_error(path, "evidence_checked missing required evidence")
+
+
 def test_apply_all_rejects_template_drafts_without_writing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -482,6 +492,7 @@ def main() -> int:
     test_validate_all_passes_completed_open_reviews()
     test_decision_rejects_placeholder_evidence_note()
     test_decision_rejects_placeholder_owner_answer()
+    test_decision_rejects_missing_required_evidence_item()
     test_apply_all_rejects_template_drafts_without_writing()
     test_apply_all_dry_run_validates_without_writing()
     test_apply_all_applies_completed_open_reviews()
