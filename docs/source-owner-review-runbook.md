@@ -31,7 +31,15 @@ This is a product and compliance review workflow, not legal advice. If source te
 python3 scripts/source_owner_review_decision.py --list-open
 ```
 
-2. Generate missing fillable owner decision drafts for all open items:
+2. Report draft completion status:
+
+```bash
+python3 scripts/source_owner_review_decision.py --status
+```
+
+This is a read-only report. Use it to see which open decisions are still missing, invalid, or ready to apply.
+
+3. Generate missing fillable owner decision drafts for all open items:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --draft-all
@@ -40,14 +48,14 @@ python3 scripts/source_owner_review_decision.py --draft-all
 This writes only missing drafts and keeps any existing partially completed decision file unchanged.
 Each draft includes `current_artifact_context` so the owner can see the current review matrix row, source registry row, source access policy row, and owner queue item without switching files.
 
-3. Refresh current artifact context in existing drafts without overwriting owner answers:
+4. Refresh current artifact context in existing drafts without overwriting owner answers:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --refresh-context-all
 ```
 
-4. Pick an `open` item from `fixtures/source-ingestion/source-owner-review-queue.json`.
-5. To refresh or create one fillable owner decision draft explicitly:
+5. Pick an `open` item from `fixtures/source-ingestion/source-owner-review-queue.json`.
+6. To refresh or create one fillable owner decision draft explicitly:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --draft src-the-verge
@@ -59,21 +67,21 @@ This writes an ignored file under:
 evidence/source-owner-reviews/
 ```
 
-6. Collect the listed `evidence_required` from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes.
-7. Answer every `owner_questions` item in the generated decision file.
-8. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.
-9. Decide one outcome:
+7. Collect the listed `evidence_required` from source terms, feed/API policy, robots guidance, permissions pages, or owner/legal notes.
+8. Answer every `owner_questions` item in the generated decision file.
+9. Fill the `artifact_updates` section with the exact Markdown table cell text that should be written back to the tracked docs.
+10. Decide one outcome:
    - Keep `needs_review` if permission, license obligations, media rules, or rate limits remain unclear.
    - Move to `eligible` only when metadata-only generated summaries, access method, attribution, rate behavior, and media policy are all approved.
    - Move to `blocked` if automated access or summary reuse is disallowed.
    - Move to `deferred` if the source should remain a seed source but not an MVP production source.
-10. Validate the completed decision file:
+11. Validate the completed decision file:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json
 ```
 
-11. Validate every open owner decision after batch completion:
+12. Validate every open owner decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --validate-all
@@ -81,14 +89,14 @@ python3 scripts/source_owner_review_decision.py --validate-all
 
 This exits non-zero until every open source has a completed, template-free decision file.
 
-12. Preview one tracked artifact update, or preview every open decision after batch completion:
+13. Preview one tracked artifact update, or preview every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run
 python3 scripts/source_owner_review_decision.py --apply-all --dry-run
 ```
 
-13. Apply one tracked artifact update, or apply every open decision after batch completion:
+14. Apply one tracked artifact update, or apply every open decision after batch completion:
 
 ```bash
 python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json
@@ -97,7 +105,7 @@ python3 scripts/source_owner_review_decision.py --apply-all
 
 Batch apply validates every open decision before writing. If any decision is missing, invalid, or still contains `TEMPLATE_`, it exits non-zero without changing tracked artifacts.
 
-14. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
+15. Run `python3 scripts/check_readiness.py` before changing GitHub issue labels.
 
 ## Artifact Update Rules
 
@@ -138,5 +146,5 @@ Required implementation guardrail: <policy row / connector mode / test expectati
 - Queue connector modes match `fixtures/source-ingestion/source-access-policy.json`.
 - Production auto-ingestion and source media reuse stay disabled while review is open.
 - Manual URL and pending-permission sources use the correct review decision type.
-- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, drafting ignored decision files with current artifact context, refreshing context in existing drafts, validating one or all completed decisions, and applying one or all validated decisions to tracked artifacts.
-- `scripts/test_source_owner_review_decision.py` verifies that drafts include current artifact context, that context refresh preserves owner answers, that batch draft generation covers every open item without overwriting existing drafts, that batch validation fails template drafts and passes completed open-review decisions, that batch apply refuses template drafts without writing, that batch apply dry-run does not write, that batch apply can update completed open-review decisions, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.
+- `scripts/source_owner_review_decision.py` exists and supports listing open reviews, reporting draft status, drafting ignored decision files with current artifact context, refreshing context in existing drafts, validating one or all completed decisions, and applying one or all validated decisions to tracked artifacts.
+- `scripts/test_source_owner_review_decision.py` verifies that drafts include current artifact context, that context refresh preserves owner answers, that status reports template drafts as invalid and completed drafts as valid, that batch draft generation covers every open item without overwriting existing drafts, that batch validation fails template drafts and passes completed open-review decisions, that batch apply refuses template drafts without writing, that batch apply dry-run does not write, that batch apply can update completed open-review decisions, that `blocked` decisions close queue items, and that `needs_review` decisions keep queue items open while updating copied artifacts.

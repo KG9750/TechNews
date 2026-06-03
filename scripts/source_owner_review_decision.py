@@ -328,6 +328,33 @@ def validate_all_decisions(evidence_dir: Path) -> int:
     return 0 if invalid == 0 and missing == 0 else 1
 
 
+def decision_status(evidence_dir: Path) -> int:
+    valid = 0
+    invalid = 0
+    missing = 0
+    for source_id in open_source_ids():
+        path = decision_path(evidence_dir, source_id)
+        if not path.exists():
+            missing += 1
+            print(f"{source_id}\tmissing\t\t{path.relative_to(ROOT)}")
+            continue
+        decision = ""
+        try:
+            payload = read_json(path)
+            decision = str(payload.get("decision", ""))
+            validated_payload(path)
+        except (ReviewError, json.JSONDecodeError) as error:
+            invalid += 1
+            print(f"{source_id}\tinvalid\t{decision}\t{error}")
+            continue
+        valid += 1
+        print(f"{source_id}\tvalid\t{decision}\tready to apply")
+
+    total = valid + invalid + missing
+    print(f"Source owner decision status: {valid} valid, {invalid} invalid, {missing} missing, {total} open items")
+    return 0
+
+
 def update_markdown_table_row(path: Path, source_id: str, updates: dict[str, str]) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
     header: list[str] | None = None
@@ -443,6 +470,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--list-open", action="store_true", help="List open owner review queue items.")
+    group.add_argument("--status", action="store_true", help="Report status for every open owner review decision file.")
     group.add_argument("--draft", metavar="SOURCE_ID", help="Write a fillable decision draft under evidence/.")
     group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
     group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
@@ -457,6 +485,8 @@ def main() -> int:
     try:
         if args.list_open:
             return list_open()
+        if args.status:
+            return decision_status(Path(args.evidence_dir))
         if args.draft:
             return write_draft(args.draft, Path(args.evidence_dir))
         if args.draft_all:

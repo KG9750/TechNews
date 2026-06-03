@@ -7,6 +7,8 @@ import json
 import shutil
 import tempfile
 from contextlib import contextmanager
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 import source_owner_review_decision as review
@@ -187,6 +189,34 @@ def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers
         assert refreshed["current_artifact_context"]["source_registry_row"]["Source"] == "The Verge"
 
 
+def test_status_reports_template_drafts_as_invalid() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        output = StringIO()
+
+        with redirect_stdout(output):
+            assert review.decision_status(evidence_dir) == 0
+
+        text = output.getvalue()
+        assert "src-the-verge\tinvalid\tTEMPLATE_DECISION" in text
+        assert "Source owner decision status: 0 valid, 25 invalid, 0 missing, 25 open items" in text
+
+
+def test_status_reports_completed_drafts_as_valid() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        write_completed_open_decisions(evidence_dir, "needs_review")
+        output = StringIO()
+
+        with redirect_stdout(output):
+            assert review.decision_status(evidence_dir) == 0
+
+        text = output.getvalue()
+        assert "src-the-verge\tvalid\tneeds_review\tready to apply" in text
+        assert "Source owner decision status: 25 valid, 0 invalid, 0 missing, 25 open items" in text
+
+
 def test_validate_all_fails_for_template_drafts() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -278,6 +308,8 @@ def main() -> int:
     test_draft_includes_current_artifact_context()
     test_draft_all_writes_every_open_review_without_overwriting_existing()
     test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
+    test_status_reports_template_drafts_as_invalid()
+    test_status_reports_completed_drafts_as_valid()
     test_validate_all_fails_for_template_drafts()
     test_validate_all_passes_completed_open_reviews()
     test_apply_all_rejects_template_drafts_without_writing()
