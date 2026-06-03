@@ -137,6 +137,16 @@ def test_draft_requires_owner_input() -> None:
     assert review.contains_template_marker(draft)
 
 
+def test_draft_includes_current_artifact_context() -> None:
+    draft = review.draft_payload("src-the-verge")
+    context = draft["current_artifact_context"]
+
+    assert context["review_matrix_row"]["Eligibility state"] == "needs_review"
+    assert context["source_registry_row"]["Source"] == "The Verge"
+    assert context["source_access_policy"]["source_id"] == "src-the-verge"
+    assert context["owner_review_queue_item"]["source_id"] == "src-the-verge"
+
+
 def test_draft_all_writes_every_open_review_without_overwriting_existing() -> None:
     with isolated_artifacts() as tmp:
         evidence_dir = tmp / "evidence/source-owner-reviews"
@@ -157,6 +167,24 @@ def test_draft_all_writes_every_open_review_without_overwriting_existing() -> No
         generated = json.loads((evidence_dir / "src-techcrunch.decision.json").read_text(encoding="utf-8"))
         assert generated["source_id"] == "src-techcrunch"
         assert review.contains_template_marker(generated)
+
+
+def test_refresh_context_all_updates_existing_drafts_without_overwriting_answers() -> None:
+    with isolated_artifacts() as tmp:
+        evidence_dir = tmp / "evidence/source-owner-reviews"
+        review.write_all_drafts(evidence_dir)
+        for path in evidence_dir.glob("*.decision.json"):
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload.pop("current_artifact_context")
+            payload["reviewed_by"] = "Owner In Progress"
+            path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        assert review.refresh_all_context(evidence_dir) == 0
+
+        refreshed = json.loads((evidence_dir / "src-the-verge.decision.json").read_text(encoding="utf-8"))
+        assert refreshed["reviewed_by"] == "Owner In Progress"
+        assert refreshed["decision"] == "TEMPLATE_DECISION"
+        assert refreshed["current_artifact_context"]["source_registry_row"]["Source"] == "The Verge"
 
 
 def test_validate_all_fails_for_template_drafts() -> None:
@@ -247,7 +275,9 @@ def test_needs_review_decision_keeps_queue_open() -> None:
 
 def main() -> int:
     test_draft_requires_owner_input()
+    test_draft_includes_current_artifact_context()
     test_draft_all_writes_every_open_review_without_overwriting_existing()
+    test_refresh_context_all_updates_existing_drafts_without_overwriting_answers()
     test_validate_all_fails_for_template_drafts()
     test_validate_all_passes_completed_open_reviews()
     test_apply_all_rejects_template_drafts_without_writing()

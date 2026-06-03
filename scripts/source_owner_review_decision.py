@@ -50,6 +50,29 @@ def require(condition: bool, message: str) -> None:
         raise ReviewError(message)
 
 
+def split_markdown_row(line: str) -> list[str]:
+    return [part.strip() for part in line.strip().strip("|").split("|")]
+
+
+def build_markdown_row(columns: list[str]) -> str:
+    return "| " + " | ".join(columns) + " |"
+
+
+def markdown_table_row(path: Path, source_id: str) -> dict[str, str]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    header: list[str] | None = None
+    for line in lines:
+        if line.startswith("| ID |"):
+            header = split_markdown_row(line)
+            continue
+        if not header or not line.startswith(f"| {source_id} |"):
+            continue
+        columns = split_markdown_row(line)
+        require(len(columns) == len(header), f"{path.relative_to(ROOT)} row has wrong column count: {source_id}")
+        return dict(zip(header, columns))
+    raise ReviewError(f"{path.relative_to(ROOT)} missing row: {source_id}")
+
+
 def list_open() -> int:
     items = load_queue_items()
     for source_id in sorted(items):
@@ -68,6 +91,15 @@ def list_open() -> int:
     return 0
 
 
+def current_artifact_context(source_id: str, item: dict, policy: dict) -> dict:
+    return {
+        "review_matrix_row": markdown_table_row(REVIEW_PATH, source_id),
+        "source_registry_row": markdown_table_row(REGISTRY_PATH, source_id),
+        "source_access_policy": policy,
+        "owner_review_queue_item": item,
+    }
+
+
 def draft_payload(source_id: str) -> dict:
     items = load_queue_items()
     policies = load_policy_rows()
@@ -81,6 +113,7 @@ def draft_payload(source_id: str) -> dict:
         "reviewed_by": item.get("review_owner", "Briefing Administrator"),
         "decision": "TEMPLATE_DECISION",
         "decision_options": sorted(VALID_DECISIONS),
+        "current_artifact_context": current_artifact_context(source_id, item, policy),
         "evidence_checked": [
             {
                 "required_evidence": evidence,
@@ -151,6 +184,41 @@ def write_all_drafts(evidence_dir: Path) -> int:
         written += 1
     print(f"Draft owner decisions prepared: {written} written, {kept} existing, {written + kept} open items")
     return 0
+
+
+def refresh_context(path: Path) -> str:
+    payload = read_json(path)
+    source_id = payload.get("source_id")
+    items = load_queue_items()
+    policies = load_policy_rows()
+    require(source_id in items, f"decision source is not in owner review queue: {source_id}")
+    item = items[source_id]
+    require(item.get("review_status") == "open", f"source owner review is not open: {source_id}")
+    payload["current_artifact_context"] = current_artifact_context(source_id, item, policies.get(source_id, {}))
+    write_json(path, payload)
+    return source_id
+
+
+def refresh_all_context(evidence_dir: Path) -> int:
+    refreshed = 0
+    missing = 0
+    invalid = 0
+    for source_id in open_source_ids():
+        path = decision_path(evidence_dir, source_id)
+        if not path.exists():
+            missing += 1
+            print(f"MISSING source owner decision: {source_id} -> {path.relative_to(ROOT)}")
+            continue
+        try:
+            refreshed_source_id = refresh_context(path)
+        except (ReviewError, json.JSONDecodeError) as error:
+            invalid += 1
+            print(f"INVALID source owner decision: {source_id} -> {error}")
+            continue
+        refreshed += 1
+        print(f"REFRESHED source owner decision context: {refreshed_source_id}")
+    print(f"Source owner decision contexts refreshed: {refreshed} refreshed, {invalid} invalid, {missing} missing")
+    return 0 if invalid == 0 and missing == 0 else 1
 
 
 def decision_path(evidence_dir: Path, source_id: str) -> Path:
@@ -258,14 +326,6 @@ def checked_decision_payloads(evidence_dir: Path) -> tuple[list[dict], int, int]
 def validate_all_decisions(evidence_dir: Path) -> int:
     _, invalid, missing = checked_decision_payloads(evidence_dir)
     return 0 if invalid == 0 and missing == 0 else 1
-
-
-def split_markdown_row(line: str) -> list[str]:
-    return [part.strip() for part in line.strip().strip("|").split("|")]
-
-
-def build_markdown_row(columns: list[str]) -> str:
-    return "| " + " | ".join(columns) + " |"
 
 
 def update_markdown_table_row(path: Path, source_id: str, updates: dict[str, str]) -> None:
@@ -385,6 +445,7 @@ def main() -> int:
     group.add_argument("--list-open", action="store_true", help="List open owner review queue items.")
     group.add_argument("--draft", metavar="SOURCE_ID", help="Write a fillable decision draft under evidence/.")
     group.add_argument("--draft-all", action="store_true", help="Write missing decision drafts for all open owner reviews.")
+    group.add_argument("--refresh-context-all", action="store_true", help="Refresh current artifact context in existing owner review drafts.")
     group.add_argument("--validate", metavar="PATH", help="Validate a completed source owner decision file.")
     group.add_argument("--validate-all", action="store_true", help="Validate every open owner review decision file.")
     group.add_argument("--apply", metavar="PATH", help="Validate and apply a completed source owner decision to tracked artifacts.")
@@ -400,6 +461,8 @@ def main() -> int:
             return write_draft(args.draft, Path(args.evidence_dir))
         if args.draft_all:
             return write_all_drafts(Path(args.evidence_dir))
+        if args.refresh_context_all:
+            return refresh_all_context(Path(args.evidence_dir))
         if args.validate:
             return validate_decision(Path(args.validate))
         if args.validate_all:
