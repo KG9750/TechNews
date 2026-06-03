@@ -1,7 +1,7 @@
 # GitHub Issue Breakdown
 
 Status: Ready as issue-body drafts; live MVP issues must stay `needs-triage` until the readiness gate passes
-Last updated: 2026-06-01
+Last updated: 2026-06-03
 
 Use this breakdown to create GitHub issues after the remaining external spike evidence is available, or earlier as `needs-triage` placeholders if the maintainer wants the MVP backlog visible. Do not mark implementation issues `ready-for-agent` until the relevant blockers in each issue are cleared.
 
@@ -26,8 +26,8 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 | --- | --- | --- | --- | --- |
 | Repo and CI | #10 | `docs/issues/mvp/01-repo-ci-foundation.md` | `needs-triage` | Readiness gate |
 | Contracts | #11 | `docs/issues/mvp/02-contract-schemas.md` | `needs-triage` | Live model/archive/Feishu spike feedback |
-| Taxonomy and source registry | #12 | `docs/issues/mvp/03-taxonomy-source-registry.md` | `needs-triage` | Source registry owner review |
-| Source connectors | #13 | `docs/issues/mvp/04-source-connectors.md` | `needs-triage` | Source connector acceptance from source spike |
+| Taxonomy and source registry | #12 | `docs/issues/mvp/03-taxonomy-source-registry.md` | `needs-triage` | Source registry owner review and source access policy updates |
+| Source connectors | #13 | `docs/issues/mvp/04-source-connectors.md` | `needs-triage` | Readiness gate and source access policy enforcement |
 | Ranking and Selection Rationale | #14 | `docs/issues/mvp/05-ranking-selection-rationale.md` | `needs-triage` | Model provider spike |
 | Briefing generation and Confidence Notices | #15 | `docs/issues/mvp/06-briefing-generation-confidence.md` | `needs-triage` | Model provider spike and Feishu card verification |
 | Archive Package | #16 | `docs/issues/mvp/07-archive-package.md` | `needs-triage` | Archive sync target |
