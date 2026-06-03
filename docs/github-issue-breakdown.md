@@ -22,6 +22,7 @@ Use this breakdown to create GitHub issues after the remaining external spike ev
 
 Every draft below contains the required sections: Problem, Scope, Out of scope, Acceptance criteria, Test expectations, Relevant docs, Dependencies, and Triage label.
 `python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, `needs-triage` labels, and the acceptance coverage map.
+Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
@@ -56,3 +57,4 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 ## Creation Rule
 
 If these drafts are created as GitHub issues before the readiness gate passes, add milestone `mvp` and label `needs-triage`. After #3, #5, and #6 have live evidence, each issue can be reviewed individually and only decision-complete issues should move to `ready-for-agent`.
+The ignored MVP issue triage packets are comment-ready context only; they do not replace `python3 scripts/check_readiness.py --require-live --require-evidence` or `python3 scripts/check_readiness.py --require-github`.

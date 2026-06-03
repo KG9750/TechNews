@@ -63,11 +63,13 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "source-owner-reviews/index.md" in text
     assert "source-owner-reviews/worksheet.md" in text
     assert "source-owner-reviews/batch-plan.md" in text
+    assert "mvp-issue-packets" in text
     assert "live-spike-packets" in text
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/spikes/model_provider_spike.py --validate-requests" in text
     assert "python3 scripts/source_owner_review_decision.py --worksheet" in text
     assert "python3 scripts/source_owner_review_decision.py --batch-plan" in text
+    assert "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets" in text
     assert "MODEL_API_KEY" in text
     assert secret not in text
     assert str(packet.ROOT) not in text
@@ -87,9 +89,37 @@ def test_action_packet_writes_markdown() -> None:
         assert "Source owner decisions" in text
 
 
+def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+        output_dir = evidence_root / "mvp-issue-packets"
+
+        written = packet.write_mvp_issue_packets(output_dir, evidence_root)
+
+        files = sorted(output_dir.glob("issue-*.md"))
+        assert written == 11
+        assert len(files) == 11
+
+        feishu_text = (output_dir / "issue-17.md").read_text(encoding="utf-8")
+        console_text = (output_dir / "issue-18.md").read_text(encoding="utf-8")
+
+        assert "MVP Issue Triage Packet: #17 Feishu delivery" in feishu_text
+        assert "Feishu delivery spike:" in feishu_text
+        assert "Issue-specific status: blocked" in feishu_text
+        assert "docs/issues/mvp/08-feishu-delivery.md" in feishu_text
+        assert "Do not paste secrets" in feishu_text
+
+        assert "MVP Issue Triage Packet: #18 Operations Console" in console_text
+        assert "Issue-specific status: ready for final triage" in console_text
+        assert "Label action: Keep `needs-triage` until final readiness and GitHub tracker gates pass." in console_text
+        assert "Remaining Issue-Specific Inputs" in console_text
+        assert "- None." in console_text
+
+
 def main() -> int:
     test_action_packet_summarizes_blockers_without_secret_values()
     test_action_packet_writes_markdown()
+    test_mvp_issue_packets_are_written_with_label_guardrails()
     print("readiness action packet tests passed")
     return 0
 

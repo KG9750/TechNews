@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate a top-level pre-development readiness action packet.
 
-This helper writes an ignored Markdown file that points reviewers to the live
-evidence packet, source owner review index, and owner worksheet. It does not
-collect credentials or replace the authoritative readiness gate.
+This helper writes ignored Markdown packets that point reviewers to the live
+evidence packet, source owner review packets, and MVP issue triage state. It
+does not collect credentials or replace the authoritative readiness gate.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
+MVP_ISSUE_PACKET_DIR_RELATIVE = "mvp-issue-packets"
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
@@ -72,6 +73,19 @@ MVP_ISSUE_UNLOCKS = [
     ("#19", "Deployment and secrets", ["final_readiness_gate"]),
     ("#20", "End-to-end MVP acceptance", ["final_readiness_gate", "source_owner_decisions", "core_mvp_issues"]),
 ]
+MVP_ISSUE_DRAFTS = {
+    "#10": "docs/issues/mvp/01-repo-ci-foundation.md",
+    "#11": "docs/issues/mvp/02-contract-schemas.md",
+    "#12": "docs/issues/mvp/03-taxonomy-source-registry.md",
+    "#13": "docs/issues/mvp/04-source-connectors.md",
+    "#14": "docs/issues/mvp/05-ranking-selection-rationale.md",
+    "#15": "docs/issues/mvp/06-briefing-generation-confidence.md",
+    "#16": "docs/issues/mvp/07-archive-package.md",
+    "#17": "docs/issues/mvp/08-feishu-delivery.md",
+    "#18": "docs/issues/mvp/09-operations-console.md",
+    "#19": "docs/issues/mvp/10-deployment-secrets.md",
+    "#20": "docs/issues/mvp/11-e2e-mvp-acceptance.md",
+}
 
 
 def load_module(name: str, path: Path):
@@ -244,32 +258,109 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
     return states
 
 
-def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]:
+def mvp_issue_statuses(live_summary: dict, source_summary: dict) -> list[dict[str, object]]:
     states = prerequisite_states(live_summary, source_summary)
-    rows = [
-        "| Issue | Module | Issue-specific status | Remaining issue-specific inputs | Label gate |",
-        "| --- | --- | --- | --- | --- |",
-    ]
+    final_gate_blocked = states["final_readiness_gate"]["status"] == "blocked"
+    rows = []
     for issue, module, prerequisites in MVP_ISSUE_UNLOCKS:
-        blockers = [
+        blocker_details = [
             f"{PREREQUISITE_LABELS[key]}: {states[key]['detail']}"
             for key in prerequisites
             if states[key]["status"] == "blocked"
         ]
         rows.append(
+            {
+                "issue": issue,
+                "module": module,
+                "draft_path": MVP_ISSUE_DRAFTS[issue],
+                "url": f"https://github.com/KG9750/TechNews/issues/{issue.lstrip('#')}",
+                "issue_specific_status": "blocked" if blocker_details else "ready for final triage",
+                "blocker_details": blocker_details,
+                "label_action": (
+                    "Keep `needs-triage` until final readiness and GitHub tracker gates pass."
+                    if final_gate_blocked or blocker_details
+                    else "Review for `ready-for-agent` after GitHub tracker gate passes."
+                ),
+            }
+        )
+    return rows
+
+
+def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]:
+    rows = [
+        "| Issue | Module | Issue-specific status | Remaining issue-specific inputs | Label gate |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for status in mvp_issue_statuses(live_summary, source_summary):
+        rows.append(
             "| "
             + " | ".join(
                 [
-                    markdown_cell(issue),
-                    markdown_cell(module),
-                    "blocked" if blockers else "ready for final triage",
-                    markdown_cell("; ".join(blockers) if blockers else "None."),
-                    "Keep `needs-triage` until final readiness and GitHub tracker gates pass.",
+                    markdown_cell(status["issue"]),
+                    markdown_cell(status["module"]),
+                    markdown_cell(status["issue_specific_status"]),
+                    markdown_cell("; ".join(status["blocker_details"]) if status["blocker_details"] else "None."),
+                    markdown_cell(status["label_action"]),
                 ]
             )
             + " |"
         )
     return rows
+
+
+def mvp_issue_packet_filename(issue: str) -> str:
+    return f"issue-{issue.lstrip('#')}.md"
+
+
+def mvp_issue_packet_path(output_dir: Path, issue: str) -> Path:
+    return output_dir / mvp_issue_packet_filename(issue)
+
+
+def build_mvp_issue_packet(status: dict[str, object]) -> str:
+    blockers = status["blocker_details"]
+    return "\n".join(
+        [
+            f"# MVP Issue Triage Packet: {status['issue']} {status['module']}",
+            "",
+            "This packet is context only. It does not change GitHub labels and does not replace the authoritative readiness gate.",
+            "",
+            f"- GitHub issue: {status['url']}",
+            f"- Issue body draft: `{status['draft_path']}`",
+            f"- Issue-specific status: {status['issue_specific_status']}",
+            f"- Label action: {status['label_action']}",
+            "",
+            "## Remaining Issue-Specific Inputs",
+            "",
+            markdown_bullets(blockers, empty_label="None."),
+            "",
+            "## Verification Before Label Change",
+            "",
+            "```bash",
+            "python3 scripts/check_readiness.py --require-live --require-evidence",
+            "python3 scripts/check_readiness.py --require-github",
+            "```",
+            "",
+            "## Guardrails",
+            "",
+            "- Keep `needs-triage` while any remaining input above is blocked.",
+            "- Move to `ready-for-agent` only when the issue body needs no extra product decision.",
+            "- Do not paste secrets, recipient ids, local paths, NAS targets, or raw provider responses into GitHub.",
+        ]
+    )
+
+
+def write_mvp_issue_packets(output_dir: Path, evidence_root: Path) -> int:
+    live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
+    source_summary = source_owner_summary(evidence_root)
+    statuses = mvp_issue_statuses(live_summary, source_summary)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for status in statuses:
+        mvp_issue_packet_path(output_dir, str(status["issue"])).write_text(
+            build_mvp_issue_packet(status) + "\n",
+            encoding="utf-8",
+        )
+    print(f"MVP issue triage packets written: {len(statuses)} -> {display_path(output_dir)}")
+    return len(statuses)
 
 
 def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
@@ -393,6 +484,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
+            f"- MVP issue triage packets: `{display_path(evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE)}`",
             "",
             "## GitHub Issue Links",
             "",
@@ -422,7 +514,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "python3 scripts/source_owner_review_decision.py --packet-index",
             "python3 scripts/source_owner_review_decision.py --worksheet",
             "python3 scripts/source_owner_review_decision.py --batch-plan",
-            "python3 scripts/readiness_action_packet.py",
+            "python3 scripts/readiness_action_packet.py --write-mvp-issue-packets",
             "python3 scripts/spikes/feishu_delivery_spike.py",
             "python3 scripts/spikes/model_provider_spike.py --validate-requests",
             "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
@@ -452,12 +544,17 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--output", default=str(DEFAULT_OUTPUT))
+    parser.add_argument("--write-mvp-issue-packets", action="store_true")
+    parser.add_argument("--mvp-issue-packet-dir", default="")
     args = parser.parse_args()
 
     evidence_root = Path(args.evidence_root)
     output_path = Path(args.output)
     write_packet(output_path, evidence_root)
     print(f"Readiness action packet written to {display_path(output_path)}")
+    if args.write_mvp_issue_packets:
+        packet_dir = Path(args.mvp_issue_packet_dir) if args.mvp_issue_packet_dir else evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE
+        write_mvp_issue_packets(packet_dir, evidence_root)
     return 0
 
 
