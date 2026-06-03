@@ -1083,6 +1083,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "source-owner-reviews/worksheet.md",
         "readiness-manifest.json",
         "GitHub Issue Links",
+        "MVP Issue Unlock Matrix",
+        "MVP_ISSUE_UNLOCKS",
+        "mvp_issue_unlock_rows",
         "https://github.com/KG9750/TechNews/issues/3",
         "build_packet",
         "source_owner_summary",
@@ -1094,11 +1097,12 @@ def check_readiness_action_packet_helper() -> list[str]:
     for needle in [
         "test_action_packet_summarizes_blockers_without_secret_values",
         "test_action_packet_writes_markdown",
+        "MVP Issue Unlock Matrix",
     ]:
         require(needle in test_text, f"readiness action packet tests missing: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/PRE-DEVELOPMENT-PLAN.md"]:
         require("scripts/readiness_action_packet.py" in read(path), f"{path} must document readiness action packet helper")
-    return ["readiness action packet helper: top-level blocked-workstream packet and regression tests present"]
+    return ["readiness action packet helper: blocked-workstream and MVP issue unlock packet with regression tests present"]
 
 
 def check_readiness_ci_workflow() -> list[str]:

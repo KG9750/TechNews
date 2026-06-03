@@ -27,6 +27,50 @@ GITHUB_ISSUES = [
     ("Model provider spike", "https://github.com/KG9750/TechNews/issues/5"),
     ("Archive/storage spike", "https://github.com/KG9750/TechNews/issues/6"),
 ]
+LIVE_WORKSTREAMS = [
+    {
+        "key": "feishu_delivery",
+        "label": "Feishu delivery",
+        "env_group": "feishu",
+        "evidence_prefixes": ["feishu-delivery/"],
+        "validation_needles": ["feishu", "feishu-delivery"],
+    },
+    {
+        "key": "model_provider",
+        "label": "Model provider",
+        "env_group": "model_provider",
+        "evidence_prefixes": ["model-provider/"],
+        "validation_needles": ["model", "model-provider"],
+    },
+    {
+        "key": "archive_sync",
+        "label": "Archive sync",
+        "env_group": "archive_sync",
+        "evidence_prefixes": ["archive-storage/"],
+        "validation_needles": ["archive", "archive-storage"],
+    },
+]
+PREREQUISITE_LABELS = {
+    "final_readiness_gate": "Final live readiness gate",
+    "source_owner_decisions": "Source owner decisions",
+    "feishu_delivery": "Feishu delivery spike",
+    "model_provider": "Model provider spike",
+    "archive_sync": "Archive/storage spike",
+    "core_mvp_issues": "Core MVP issues",
+}
+MVP_ISSUE_UNLOCKS = [
+    ("#10", "Repo and CI", ["final_readiness_gate"]),
+    ("#11", "Contracts", ["feishu_delivery", "model_provider", "archive_sync"]),
+    ("#12", "Taxonomy and source registry", ["source_owner_decisions"]),
+    ("#13", "Source connectors", ["source_owner_decisions"]),
+    ("#14", "Ranking and Selection Rationale", ["model_provider"]),
+    ("#15", "Briefing generation and Confidence Notices", ["model_provider", "feishu_delivery"]),
+    ("#16", "Archive Package", ["archive_sync"]),
+    ("#17", "Feishu delivery", ["feishu_delivery"]),
+    ("#18", "Operations Console", []),
+    ("#19", "Deployment and secrets", ["final_readiness_gate"]),
+    ("#20", "End-to-end MVP acceptance", ["final_readiness_gate", "source_owner_decisions", "core_mvp_issues"]),
+]
 
 
 def load_module(name: str, path: Path):
@@ -62,6 +106,19 @@ def markdown_bullets(items: list[str], empty_label: str = "None.") -> str:
 
 def markdown_cell(value: object) -> str:
     return str(value).replace("\n", " ").replace("|", "\\|")
+
+
+def count_phrase(count: int, singular: str, plural: str) -> str:
+    return f"{count} {singular if count == 1 else plural}"
+
+
+def matches_any_prefix(value: str, prefixes: list[str]) -> bool:
+    return any(value.startswith(prefix) for prefix in prefixes)
+
+
+def matches_any_needle(value: str, needles: list[str]) -> bool:
+    lowered = value.lower()
+    return any(needle in lowered for needle in needles)
 
 
 def source_decision_state(evidence_dir: Path, source_id: str) -> dict[str, str]:
@@ -101,24 +158,114 @@ def source_owner_summary(evidence_root: Path) -> dict:
 
 def live_workstream_rows(live_summary: dict) -> list[dict[str, object]]:
     evidence_missing = live_summary["evidence"]["missing"]
-    groups = [
-        ("Feishu delivery", "feishu", "feishu-delivery/"),
-        ("Model provider", "model_provider", "model-provider/"),
-        ("Archive sync", "archive_sync", "archive-storage/"),
-    ]
     rows = []
-    for label, env_group, evidence_prefix in groups:
+    for spec in LIVE_WORKSTREAMS:
+        env_group = spec["env_group"]
         env_missing = live_summary["environment"][env_group]["missing"]
-        files_missing = [path for path in evidence_missing if path.startswith(evidence_prefix)]
-        if env_group == "archive_sync":
-            files_missing = [path for path in evidence_missing if path.startswith("archive-storage/")]
+        files_missing = [
+            path
+            for path in evidence_missing
+            if matches_any_prefix(path, spec["evidence_prefixes"])
+        ]
+        validation_missing = [
+            item
+            for item in live_summary["evidence_validation"]["missing"]
+            if matches_any_needle(item, spec["validation_needles"])
+        ]
+        validation_failures = [
+            item
+            for item in live_summary["evidence_validation"]["failures"]
+            if matches_any_needle(item, spec["validation_needles"])
+        ]
         rows.append(
             {
-                "workstream": label,
-                "status": "blocked" if env_missing or files_missing else "ready for final gate",
+                "workstream": spec["label"],
+                "status": "blocked" if env_missing or files_missing or validation_missing or validation_failures else "ready for final gate",
                 "missing_env": len(env_missing),
                 "missing_evidence": len(files_missing),
+                "missing_validation": len(validation_missing),
+                "validation_failures": len(validation_failures),
             }
+        )
+    return rows
+
+
+def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, dict[str, str]]:
+    states: dict[str, dict[str, str]] = {}
+    for spec in LIVE_WORKSTREAMS:
+        row = next(row for row in live_workstream_rows(live_summary) if row["workstream"] == spec["label"])
+        blockers = []
+        if row["missing_env"]:
+            blockers.append(count_phrase(int(row["missing_env"]), "env var", "env vars"))
+        if row["missing_evidence"]:
+            blockers.append(count_phrase(int(row["missing_evidence"]), "evidence file", "evidence files"))
+        if row["missing_validation"]:
+            blockers.append(count_phrase(int(row["missing_validation"]), "validation input", "validation inputs"))
+        if row["validation_failures"]:
+            blockers.append(count_phrase(int(row["validation_failures"]), "validation failure", "validation failures"))
+        states[spec["key"]] = {
+            "status": "blocked" if blockers else "ready",
+            "detail": ", ".join(blockers) if blockers else "issue-specific evidence is ready",
+        }
+
+    live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
+    live_evidence_missing = len(live_summary["evidence"]["missing"])
+    validation_missing = len(live_summary["evidence_validation"]["missing"])
+    validation_failures = len(live_summary["evidence_validation"]["failures"])
+    final_blockers = []
+    if live_env_missing:
+        final_blockers.append(count_phrase(live_env_missing, "env var", "env vars"))
+    if live_evidence_missing:
+        final_blockers.append(count_phrase(live_evidence_missing, "evidence file", "evidence files"))
+    if validation_missing:
+        final_blockers.append(count_phrase(validation_missing, "validation input", "validation inputs"))
+    if validation_failures:
+        final_blockers.append(count_phrase(validation_failures, "validation failure", "validation failures"))
+    states["final_readiness_gate"] = {
+        "status": "blocked" if final_blockers else "ready",
+        "detail": ", ".join(final_blockers) if final_blockers else "live readiness evidence is ready",
+    }
+
+    source_blockers = []
+    if source_summary["counts"]["missing"]:
+        source_blockers.append(count_phrase(source_summary["counts"]["missing"], "missing decision", "missing decisions"))
+    if source_summary["counts"]["invalid"]:
+        source_blockers.append(count_phrase(source_summary["counts"]["invalid"], "invalid decision", "invalid decisions"))
+    states["source_owner_decisions"] = {
+        "status": "blocked" if source_blockers else "ready",
+        "detail": ", ".join(source_blockers) if source_blockers else "owner decisions are valid or no longer open",
+    }
+    states["core_mvp_issues"] = {
+        "status": "blocked",
+        "detail": "core MVP issues #10-#19 must complete before E2E acceptance",
+    }
+    return states
+
+
+def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]:
+    states = prerequisite_states(live_summary, source_summary)
+    rows = [
+        "| Issue | Module | Issue-specific status | Remaining issue-specific inputs | Label gate |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for issue, module, prerequisites in MVP_ISSUE_UNLOCKS:
+        blockers = [
+            f"{PREREQUISITE_LABELS[key]}: {states[key]['detail']}"
+            for key in prerequisites
+            if states[key]["status"] == "blocked"
+        ]
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(issue),
+                    markdown_cell(module),
+                    "blocked" if blockers else "ready for final triage",
+                    markdown_cell("; ".join(blockers) if blockers else "None."),
+                    "Keep `needs-triage` until final readiness and GitHub tracker gates pass.",
+                ]
+            )
+            + " |"
         )
     return rows
 
@@ -128,7 +275,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     source_summary = source_owner_summary(evidence_root)
     live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
     live_evidence_missing = len(live_summary["evidence"]["missing"])
+    live_validation_missing = len(live_summary["evidence_validation"]["missing"])
+    live_validation_failures = len(live_summary["evidence_validation"]["failures"])
     workstream_rows = live_workstream_rows(live_summary)
+    issue_unlock_rows = mvp_issue_unlock_rows(live_summary, source_summary)
 
     source_decision_rows = [
         f"{decision_needed}: {count}"
@@ -150,8 +300,8 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         )
 
     table_rows = [
-        "| Workstream | Status | Missing env vars | Missing evidence files |",
-        "| --- | --- | --- | --- |",
+        "| Workstream | Status | Missing env vars | Missing evidence files | Missing validation inputs | Validation failures |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in workstream_rows:
         table_rows.append(
@@ -162,18 +312,32 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                     markdown_cell(row["status"]),
                     markdown_cell(row["missing_env"]),
                     markdown_cell(row["missing_evidence"]),
+                    markdown_cell(row["missing_validation"]),
+                    markdown_cell(row["validation_failures"]),
                 ]
             )
             + " |"
         )
+    manifest_validation_missing = [
+        item
+        for item in live_summary["evidence_validation"]["missing"]
+        if "manifest" in item.lower()
+    ]
+    manifest_validation_failures = [
+        item
+        for item in live_summary["evidence_validation"]["failures"]
+        if "manifest" in item.lower()
+    ]
     table_rows.append(
         "| "
         + " | ".join(
             [
                 "Readiness manifest",
-                "blocked" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "ready for final gate",
+                "blocked" if "readiness-manifest.json" in live_summary["evidence"]["missing"] or manifest_validation_missing or manifest_validation_failures else "ready for final gate",
                 "0",
                 "1" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "0",
+                str(len(manifest_validation_missing)),
+                str(len(manifest_validation_failures)),
             ]
         )
         + " |"
@@ -186,6 +350,8 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                 "blocked" if source_summary["counts"]["invalid"] or source_summary["counts"]["missing"] else "ready to apply",
                 "0",
                 f"{source_summary['counts']['invalid']} invalid, {source_summary['counts']['missing']} missing",
+                "0",
+                "0",
             ]
         )
         + " |"
@@ -210,6 +376,8 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "",
             f"- Missing live environment variables: {live_env_missing}",
             f"- Missing live evidence files: {live_evidence_missing}",
+            f"- Missing live evidence validation inputs: {live_validation_missing}",
+            f"- Live evidence validation failures: {live_validation_failures}",
             f"- Open source owner decisions: {source_summary['open']}",
             f"- Valid source owner decisions: {source_summary['counts']['valid']}",
             f"- Invalid source owner decisions: {source_summary['counts']['invalid']}",
@@ -233,6 +401,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "## Blocking Workstreams",
             "",
             *table_rows,
+            "",
+            "## MVP Issue Unlock Matrix",
+            "",
+            *issue_unlock_rows,
             "",
             "## Source Owner Decision Types",
             "",

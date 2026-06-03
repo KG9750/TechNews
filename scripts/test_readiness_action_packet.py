@@ -48,10 +48,17 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
 
     assert "# Pre-development Readiness Action Packet" in text
     assert "Missing live environment variables:" in text
+    assert "Missing live evidence validation inputs:" in text
     assert "Open source owner decisions: 25" in text
     assert "Missing source owner decisions: 25" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
     assert "Readiness manifest | blocked | 0 | 1" in text
+    assert "Missing validation inputs | Validation failures" in text
+    assert "## MVP Issue Unlock Matrix" in text
+    assert "| #17 | Feishu delivery | blocked | Feishu delivery spike:" in text
+    assert "| #18 | Operations Console | ready for final triage | None." in text
+    assert "Core MVP issues: core MVP issues #10-#19 must complete before E2E acceptance" in text
+    assert "Keep `needs-triage` until final readiness and GitHub tracker gates pass." in text
     assert "https://github.com/KG9750/TechNews/issues/3" in text
     assert "source-owner-reviews/index.md" in text
     assert "source-owner-reviews/worksheet.md" in text
