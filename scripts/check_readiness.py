@@ -97,6 +97,7 @@ LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/archive-storage/local-tree.txt",
     "fixtures/live-evidence-templates/archive-storage/remote-tree.txt",
 ]
+MODEL_SUCCESS_USAGE_STATUSES = {"completed", "success", "succeeded", "passed"}
 REQUIRED_ARCHIVE_PACKAGE_FILES = (
     "briefing.html",
     "briefing.md",
@@ -1248,8 +1249,10 @@ def check_spike_runners() -> list[str]:
         "test_model_request_envelopes_validate_metadata_only",
         "test_model_request_validation_rejects_full_body_metadata",
         "test_model_usage_log_requires_expected_tasks",
+        "test_model_usage_log_requires_success_status_and_empty_failure_reasons",
         "test_model_live_evidence_requires_usage_metadata_consistency",
         "test_model_live_evidence_requires_meaningful_confidence_notice",
+        "test_model_live_evidence_rejects_output_failure_reason",
         "test_model_live_evidence_rejects_full_body_keys",
         "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
@@ -1286,6 +1289,8 @@ def check_spike_runners() -> list[str]:
         "feishu_spike.validate_evidence",
         "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
+        "Model usage log status must be completed, success, succeeded, or passed",
+        "Model usage log successful tasks must not include failure_reason",
         "briefing_item.run_id must match usage-log run_id",
         "model_usage.provider must match usage-log provider",
         "confidence_notice must be visibly labeled",
@@ -2038,6 +2043,8 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
             failures.append(f"{path}: model_usage.request_count must be > 0")
         if usage.get("task_type") != "briefing_item_generation":
             failures.append(f"{path}: model_usage.task_type must be briefing_item_generation")
+        if usage.get("failure_reason"):
+            failures.append(f"{path}: successful live output must not include failure_reason")
     if not usage_path.exists():
         missing.append(f"Model live evidence missing usage log: {usage_path}")
     else:
@@ -2050,6 +2057,9 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
             failures.append("Model usage log provider must identify a live provider")
         if usage_log.get("model") in {"not_called", None, ""}:
             failures.append("Model usage log model must identify a live model")
+        status = str(usage_log.get("status", "")).strip().lower()
+        if status not in MODEL_SUCCESS_USAGE_STATUSES:
+            failures.append("Model usage log status must be completed, success, succeeded, or passed")
         tasks = usage_log.get("tasks", [])
         if len(tasks) != 3:
             failures.append("Model usage log must include three tasks")
@@ -2071,6 +2081,8 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
                 failures.append("Model usage log every task request_count must be > 0")
             if "latency_ms" not in task:
                 failures.append("Model usage log every task must include latency_ms")
+            if task.get("failure_reason"):
+                failures.append("Model usage log successful tasks must not include failure_reason")
         for path, output in outputs:
             item = output.get("briefing_item", {})
             usage = output.get("model_usage", {})

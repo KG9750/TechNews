@@ -34,7 +34,7 @@
     "input_tokens": 10,
     "output_tokens": 20,
     "latency_ms": 100,
-    "failure_reason": "Authorization: Bearer syntheticModelProviderToken1234567890"
+    "failure_reason": null
   },
-  "guardrail_notes": ["Synthetic negative fixture intentionally leaks a bearer token."]
+  "guardrail_notes": ["Synthetic negative fixture intentionally leaks Authorization: Bearer syntheticModelProviderToken1234567890."]
 }

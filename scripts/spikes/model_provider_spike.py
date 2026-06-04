@@ -24,6 +24,7 @@ GOLDEN_SAMPLES_PATH = ROOT / "fixtures/golden-samples/items.json"
 PROMPT_CONTRACT_PATH = ROOT / "fixtures/model-provider/prompt-contract.md"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/model-provider"
 RUN_ID = "run_2026-06-01_model_provider_spike"
+SUCCESS_USAGE_STATUSES = {"completed", "success", "succeeded", "passed"}
 
 PROFILES = [
     ("high-confidence-news", "sample-001-openai-gpt-4o"),
@@ -339,6 +340,9 @@ def validate_usage_log(path: Path) -> dict:
         raise SpikeError(f"{path}: provider must identify a live provider")
     if payload.get("model") in {"not_called", None, ""}:
         raise SpikeError(f"{path}: model must identify a live model")
+    status = str(payload.get("status", "")).strip().lower()
+    if status not in SUCCESS_USAGE_STATUSES:
+        raise SpikeError(f"{path}: status must be one of completed, success, succeeded, passed")
     tasks = payload.get("tasks", [])
     if len(tasks) != 3:
         raise SpikeError(f"{path}: expected three usage tasks")
@@ -357,6 +361,8 @@ def validate_usage_log(path: Path) -> dict:
             raise SpikeError(f"{path}: every task request_count must be > 0")
         if "latency_ms" not in task:
             raise SpikeError(f"{path}: every task must include latency_ms")
+        if task.get("failure_reason"):
+            raise SpikeError(f"{path}: successful usage task failure_reason must be empty")
     return payload
 
 

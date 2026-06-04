@@ -233,8 +233,11 @@ Validation rules:
 - Each output `briefing_item.run_id` must match `usage-log.json` `run_id`.
 - Each output `model_usage.provider` and `model_usage.model` must match the usage log provider/model.
 - Each output `model_usage.task_type` must be `briefing_item_generation`.
+- Each successful output `model_usage.failure_reason` must be empty or `null`.
+- Usage log status must be `completed`, `success`, `succeeded`, or `passed`.
 - Usage log must include three tasks with `request_count > 0` and `latency_ms`.
 - Usage log tasks must use `briefing_item_generation` and exactly match the three expected output fixtures and input fixture ids.
+- Usage log tasks for successful outputs must not include a non-empty `failure_reason`.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw API keys, authorization headers, private local paths, or raw configured secret/env values.
 

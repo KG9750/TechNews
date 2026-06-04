@@ -3,6 +3,7 @@
   "status": "completed",
   "provider": "synthetic-live-provider",
   "model": "synthetic-live-model",
+  "redaction_probe": "Bearer syntheticUsageLogToken1234567890",
   "tasks": [
     {
       "task_type": "briefing_item_generation",
@@ -12,7 +13,7 @@
       "input_tokens": 10,
       "output_tokens": 20,
       "latency_ms": 100,
-      "failure_reason": "Bearer syntheticUsageLogToken1234567890"
+      "failure_reason": null
     },
     {
       "task_type": "briefing_item_generation",
