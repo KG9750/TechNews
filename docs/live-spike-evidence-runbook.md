@@ -3,7 +3,7 @@
 Status: Ready for external validation
 Last updated: 2026-06-04
 
-This runbook explains how to turn the remaining external spikes into evidence that can pass the readiness gate. Generated evidence belongs under `evidence/`, which is ignored by git. Do not commit real credentials, recipient ids, provider responses, or storage paths.
+This runbook explains how to turn the remaining external spikes into evidence that can pass the readiness gate, and how to route the source-owner approval inputs that also block the gate. Generated evidence belongs under `evidence/`, which is ignored by git. Do not commit real credentials, recipient ids, provider responses, storage paths, or private permission notes.
 
 The live spike runners, live readiness preflight, readiness action packet, and final readiness gate load root `.env` values when the file exists. Existing process environment values take precedence over `.env` values.
 
@@ -35,7 +35,7 @@ evidence/source-owner-reviews/request-packet.md
 evidence/mvp-issue-packets/issue-10.md through issue-20.md
 ```
 
-The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, generates a final redaction review packet, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6, including a closure gate that stays blocked until that spike's final evidence group is `complete`. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The final redaction review packet lists every final evidence file, explains that manifest spike status is only a file-presence declaration until validators and the final gate pass, preserves validation fields that should remain visible, lists all three per-spike evidence validators, and reminds the operator what must not be pasted into GitHub. The top-level readiness action packet can now generate and link the source-owner review index, worksheet, batch plan, request packet, MVP issue packets, live packet, per-spike packets, readiness-manifest blocker, final redaction review packet, an external input request checklist and `evidence/external-input-request.md`, the GitHub update packet, relevant GitHub issues, and an MVP issue unlock matrix into one execution view. The GitHub update packet provides copy-safe issue comments and label guardrails for #1, #3, #5, #6, and MVP issues without moving labels. The external input checklist and request packet name required variables, required evidence files, safe request wording, and commands only; they do not collect real secret values. These files do not print or store environment values. The generated summary and packets are ignored by git.
+The preflight runs the local helper dry-runs, reports required environment variable names as present or missing, lists missing live evidence files, groups final evidence by spike as `missing`, `partial`, or `complete`, generates a final redaction review packet, and summarizes live evidence validation failures from the same validator used by the final gate. The Markdown packet gives the same status as a human execution checklist with the command order, evidence checklist, final evidence group status, validation status, and redaction guardrails. The per-spike packets split Feishu, model-provider, and archive-storage status into issue-facing checklists for #3, #5, and #6, including a closure gate that stays blocked until that spike's final evidence group is `complete`. A `partial` final evidence group means some files exist but that spike is still incomplete and must not be closed. The final redaction review packet lists every final evidence file, explains that manifest spike status is only a file-presence declaration until validators and the final gate pass, preserves validation fields that should remain visible, lists all three per-spike evidence validators, and reminds the operator what must not be pasted into GitHub. The top-level readiness action packet can now generate and link the source-owner review index, worksheet, batch plan, request packet, MVP issue packets, live packet, per-spike packets, readiness-manifest blocker, final redaction review packet, an external input request checklist and `evidence/external-input-request.md`, the GitHub update packet, relevant GitHub issues, and an MVP issue unlock matrix into one execution view. The GitHub update packet provides copy-safe issue comments and label guardrails for #1, #3, #5, #6, #21, and MVP issues without moving labels. The external input checklist and request packet name required variables, required evidence files, source-owner approval inputs, safe request wording, and commands only; they do not collect real secret values or private review notes. These files do not print or store environment values. The generated summary and packets are ignored by git.
 
 The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
 
@@ -56,6 +56,39 @@ python3 scripts/test_live_evidence_helpers.py
 ```
 
 This test verifies preflight redaction, helper dry-runs in a temporary evidence directory, dry-run artifact inventory, partial final evidence group reporting, strict preflight blocking for incomplete final evidence groups, Markdown packet output without secret values, readiness manifest dry-run shape, final redaction review packet shape, model request-envelope metadata-only validation, template evidence failure reporting, a synthetic redacted evidence package that exercises the positive live-evidence validator path, preflight acceptance of that synthetic package, and rejection of raw sensitive environment values in evidence files.
+
+## Source Owner Approval Inputs
+
+Source owner approvals are not live spike credentials, but they are still required external inputs for the final readiness gate. GitHub issue #21 must remain `needs-info` while the source-owner queue still blocks production auto-ingestion.
+
+Generate the ignored owner-review packets:
+
+```bash
+python3 scripts/readiness_action_packet.py --write-source-owner-packets --write-mvp-issue-packets
+```
+
+Use these files for the owner/legal/product review workflow:
+
+```text
+evidence/source-owner-reviews/request-packet.md
+evidence/source-owner-reviews/worksheet.md
+evidence/source-owner-reviews/batch-plan.md
+```
+
+For each open source in `fixtures/source-ingestion/source-owner-review-queue.json`, collect an owner decision through a secure channel: explicit source permission, eligibility approval, blocking, deferral, or MVP source-set narrowing. Keep private permission notes and legal review details out of GitHub unless explicitly approved for sharing.
+
+After decisions are recorded:
+
+```bash
+python3 scripts/source_owner_review_decision.py --status
+python3 scripts/source_owner_review_decision.py --validate-all
+python3 scripts/source_owner_review_decision.py --apply-all --dry-run
+python3 scripts/source_owner_review_decision.py --apply-all
+python3 scripts/check_readiness.py
+python3 scripts/check_readiness.py --require-github
+```
+
+Valid decisions that still say `needs_review` do not unlock production auto-ingestion. The source-owner blocker clears only when the tracked artifacts show approved, blocked, deferred, or narrowed source behavior that no longer leaves open `needs_review` production decisions.
 
 ## Final Gate Command
 

@@ -1474,6 +1474,16 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Issue #21 must remain `needs-info`",
     ]:
         require(needle in readiness_text, f"docs/readiness-gate-status.md missing source-owner external input guidance: {needle}")
+    runbook_text = read("docs/live-spike-evidence-runbook.md")
+    for needle in [
+        "## Source Owner Approval Inputs",
+        "GitHub issue #21 must remain `needs-info`",
+        "evidence/source-owner-reviews/request-packet.md",
+        "python3 scripts/source_owner_review_decision.py --validate-all",
+        "Keep private permission notes and legal review details out of GitHub",
+        "Valid decisions that still say `needs_review` do not unlock production auto-ingestion",
+    ]:
+        require(needle in runbook_text, f"docs/live-spike-evidence-runbook.md missing source-owner external input guidance: {needle}")
     return ["readiness action packet helper: blocked-workstream, MVP issue unlock, GitHub update, and per-issue triage packets with regression tests present"]
 
 
