@@ -176,8 +176,21 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "### Delivery schedule" in text
     assert "DELIVERY_DEADLINE_LOCAL_TIME" in text
     assert "### #1 Pre-development Tracking" in text
+    assert "### #3 Feishu delivery Follow-Up" in text
+    assert "### #5 Model provider Follow-Up" in text
+    assert "### #6 Archive sync Follow-Up" in text
     assert "### #21 Source Owner Review Follow-Up" in text
     assert "### #10-#20 MVP Issue Triage" in text
+    assert "Feishu delivery spike update:" in text
+    assert "Model provider spike update:" in text
+    assert "Archive sync spike update:" in text
+    assert "Spike packet: evidence/live-spike-packets/feishu-delivery.md" in text
+    assert "Spike packet: evidence/live-spike-packets/model-provider.md" in text
+    assert "Spike packet: evidence/live-spike-packets/archive-storage.md" in text
+    assert "Missing final evidence files: feishu-delivery/user-request.redacted.json" in text
+    assert "Missing final evidence files: model-provider/outputs/high-confidence-news.json" in text
+    assert "Missing final evidence files: archive-storage/sync-result.json" in text
+    assert "Closure gate: keep this issue `needs-info` until the final evidence group is `complete`" in text
     assert "Final readiness gate: blocked" in text
     assert "Source owner decisions: blocked (25 decision drafts not generated yet)" in text
     assert "- Linked issue: https://github.com/KG9750/TechNews/issues/21" in text

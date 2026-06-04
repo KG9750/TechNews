@@ -703,6 +703,15 @@ def evidence_files_for_env_group(env_group: str) -> list[str]:
     return live_preflight.FINAL_EVIDENCE_GROUPS[evidence_group]
 
 
+def spike_packet_path_for_env_group(env_group: str) -> str:
+    spec = next(spec for spec in live_preflight.SPIKE_PACKET_SPECS if spec["env_group"] == env_group)
+    return f"evidence/live-spike-packets/{spec['key']}.md"
+
+
+def inline_items(items: list[str], empty_label: str = "None.") -> str:
+    return ", ".join(items) if items else empty_label
+
+
 def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
@@ -965,6 +974,48 @@ def github_config_sections(live_summary: dict) -> list[str]:
     return sections
 
 
+def github_live_spike_issue_comment_sections(live_summary: dict) -> list[str]:
+    rows_by_label = workstream_row_by_label(live_summary)
+    commands_by_env_group = spike_commands_by_env_group()
+    sections = []
+    for request in EXTERNAL_INPUT_REQUESTS:
+        row = rows_by_label[request["workstream"]]
+        env = live_summary["environment"][request["env_group"]]
+        evidence_missing = [
+            path
+            for path in live_summary["evidence"]["missing"]
+            if matches_any_prefix(
+                path,
+                next(spec["evidence_prefixes"] for spec in LIVE_WORKSTREAMS if spec["env_group"] == request["env_group"]),
+            )
+        ]
+        issue_number = request["issue"].rstrip("/").rsplit("/", 1)[-1]
+        comment = [
+            f"{request['workstream']} spike update:",
+            f"- Linked issue: {request['issue']}",
+            f"- Workstream status: {row['status']}",
+            f"- Final evidence group: {row['final_group_status']}",
+            f"- Missing variable names: {inline_items(env['missing'])}",
+            f"- Invalid environment values: {inline_items(env.get('invalid', []))}",
+            f"- Missing final evidence files: {inline_items(evidence_missing)}",
+            f"- Spike packet: {spike_packet_path_for_env_group(request['env_group'])}",
+            f"- Commands: {inline_items(commands_by_env_group[request['env_group']])}",
+            "",
+            "Closure gate: keep this issue `needs-info` until the final evidence group is `complete`, validators pass, and copy-safe evidence has been reviewed.",
+        ]
+        sections.extend(
+            [
+                f"### #{issue_number} {request['workstream']} Follow-Up",
+                "",
+                "```text",
+                *comment,
+                "```",
+                "",
+            ]
+        )
+    return sections
+
+
 def github_source_owner_status(source_summary: dict) -> str:
     blockers = source_owner_blockers(source_summary)
     if blockers:
@@ -1073,6 +1124,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             *issue_one_comment,
             "```",
             "",
+            *github_live_spike_issue_comment_sections(live_summary),
             "### #21 Source Owner Review Follow-Up",
             "",
             "```text",
