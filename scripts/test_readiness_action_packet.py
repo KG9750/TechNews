@@ -163,12 +163,15 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Label Guardrails" in text
     assert "Keep #1 `needs-triage` while the final readiness gate is blocked." in text
     assert "Keep #3, #5, and #6 `needs-info` while their live evidence groups are incomplete." in text
+    assert "Keep #21 `needs-info` while source owner approvals or source-set narrowing remain unresolved." in text
     assert "Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass." in text
     assert "Copy-Safe Issue Comments" in text
     assert "### #1 Pre-development Tracking" in text
+    assert "### #21 Source Owner Review Follow-Up" in text
     assert "### #10-#20 MVP Issue Triage" in text
     assert "Final readiness gate: blocked" in text
     assert "Source owner decisions: blocked (25 decision drafts not generated yet)" in text
+    assert "- Linked issue: https://github.com/KG9750/TechNews/issues/21" in text
     assert "Decision drafts not generated yet: 25" in text
     assert "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied." in text
     assert "Invalid decisions:" not in text

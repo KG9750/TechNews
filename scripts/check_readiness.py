@@ -123,7 +123,8 @@ REQUIRED_GITHUB_MILESTONES = {
     "mvp",
     "post-mvp",
 }
-PREDEVELOPMENT_ISSUES = set(range(1, 10))
+SOURCE_OWNER_REVIEW_ISSUE = 21
+PREDEVELOPMENT_ISSUES = set(range(1, 10)) | {SOURCE_OWNER_REVIEW_ISSUE}
 MVP_ISSUES = set(range(10, 21))
 MVP_ISSUE_DRAFTS = {
     10: "docs/issues/mvp/01-repo-ci-foundation.md",
@@ -1400,6 +1401,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "--write-mvp-issue-packets",
         "batch_plan_path",
         "https://github.com/KG9750/TechNews/issues/3",
+        "https://github.com/KG9750/TechNews/issues/21",
+        "Keep #21 `needs-info`",
         "build_packet",
         "source_owner_summary",
         "python3 scripts/check_readiness.py --require-live --require-evidence",
@@ -1427,6 +1430,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "External Input Request Packet",
         "GitHub Update Packet",
         "Label Guardrails",
+        "Keep #21 `needs-info`",
+        "### #21 Source Owner Review Follow-Up",
         "Required evidence files",
         "External Input Request Checklist",
         "FEISHU_APP_ID, FEISHU_APP_SECRET",
@@ -1694,6 +1699,21 @@ def check_github_tracker() -> list[str]:
         require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open until live evidence is attached")
         require("needs-info" in labels, f"GitHub issue #{number} must keep needs-info while external evidence is blocked")
 
+    source_owner_issue = issues[SOURCE_OWNER_REVIEW_ISSUE]
+    source_owner_labels = {label["name"] for label in source_owner_issue.get("labels", [])}
+    require(
+        source_owner_issue["state"] == "OPEN",
+        f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must remain open until source owner approvals are resolved",
+    )
+    require(
+        "needs-info" in source_owner_labels,
+        f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must keep needs-info while source approvals are blocked",
+    )
+    require(
+        "ready-for-agent" not in source_owner_labels,
+        f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must not be ready-for-agent before source approvals resolve",
+    )
+
     issue_1_labels = {label["name"] for label in issues[1].get("labels", [])}
     require(issues[1]["state"] == "OPEN", "GitHub issue #1 must remain open until the readiness gate passes")
     require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
@@ -1704,7 +1724,7 @@ def check_github_tracker() -> list[str]:
         f"GitHub tracker: {len(REQUIRED_GITHUB_LABELS)} triage labels present",
         f"GitHub tracker: {len(REQUIRED_GITHUB_MILESTONES)} milestones open",
         f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage",
-        "GitHub tracker: Feishu, model, and archive spike issues remain needs-info",
+        "GitHub tracker: Feishu, model, archive, and source owner blocker issues remain needs-info",
     ]
 
 

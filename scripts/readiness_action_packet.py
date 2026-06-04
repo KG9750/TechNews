@@ -31,6 +31,7 @@ GITHUB_ISSUES = [
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
     ("Model provider spike", "https://github.com/KG9750/TechNews/issues/5"),
     ("Archive/storage spike", "https://github.com/KG9750/TechNews/issues/6"),
+    ("Source owner approvals", "https://github.com/KG9750/TechNews/issues/21"),
 ]
 EXTERNAL_INPUT_REQUESTS = [
     {
@@ -568,6 +569,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
     ]
     source_owner_comment = [
         "Source owner review update:",
+        "- Linked issue: https://github.com/KG9750/TechNews/issues/21",
         f"- Open decisions: {source_summary['open']}",
         f"- Completed valid decisions: {source_summary['counts']['valid']}",
         f"- Decision drafts needing owner input or validation fixes: {source_summary['counts']['invalid']}",
@@ -608,6 +610,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             "",
             "- Keep #1 `needs-triage` while the final readiness gate is blocked.",
             "- Keep #3, #5, and #6 `needs-info` while their live evidence groups are incomplete.",
+            "- Keep #21 `needs-info` while source owner approvals or source-set narrowing remain unresolved.",
             "- Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass.",
             "- Move an issue to `ready-for-agent` only when the generated packet shows no remaining product or evidence decision.",
             "",
@@ -622,7 +625,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             *issue_one_comment,
             "```",
             "",
-            "### Source Owner Review Follow-Up",
+            "### #21 Source Owner Review Follow-Up",
             "",
             "```text",
             *source_owner_comment,
