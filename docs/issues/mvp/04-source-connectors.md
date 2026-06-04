@@ -46,6 +46,7 @@ The MVP needs reliable ingestion from controlled source types without global cra
 ## Dependencies
 
 - Source ingestion spike is complete, but implementation should still wait for readiness gate approval.
+- Source owner approvals (#21) or MVP source-set narrowing must resolve production connector behavior for sources that remain `needs_review`.
 
 ## Triage label
 

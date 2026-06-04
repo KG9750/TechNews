@@ -1614,6 +1614,10 @@ def check_mvp_issue_drafts() -> list[str]:
         check_issue_relevant_docs(path_label, sections["Relevant docs"])
         require("`needs-triage`" in sections["Triage label"], f"{path_label} must stay needs-triage")
         require("ready-for-agent" not in sections["Triage label"], f"{path_label} must not be ready-for-agent yet")
+        if number in {12, 13}:
+            dependencies = sections["Dependencies"]
+            require("#21" in dependencies, f"{path_label} Dependencies must name source owner issue #21")
+            require("Source owner approvals" in dependencies, f"{path_label} Dependencies must name source owner approvals")
 
     breakdown = read("docs/github-issue-breakdown.md")
     issue_rows = parse_issue_markdown_table(markdown_section(breakdown, "MVP Issue Drafts", "docs/github-issue-breakdown.md"))
@@ -1649,6 +1653,12 @@ def check_mvp_issue_drafts() -> list[str]:
         )
     for keyword in MVP_COVERAGE_KEYWORDS:
         require(keyword in coverage_section, f"acceptance coverage map missing keyword: {keyword}")
+    for needle in [
+        "#21 Resolve source owner eligibility approvals",
+        "Source owner approvals (#21)",
+        "After #3, #5, and #6 have live evidence and #21 no longer blocks source-owner approvals or source-set narrowing",
+    ]:
+        require(needle in breakdown, f"issue breakdown missing source-owner readiness gate wording: {needle}")
 
     return [
         f"MVP issue drafts: {len(MVP_ISSUE_DRAFTS)} mapped drafts linked to #10-#20",
