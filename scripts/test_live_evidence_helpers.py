@@ -639,13 +639,36 @@ def write_json(path: Path, payload: dict) -> None:
 
 
 def feishu_request_evidence(receive_id_type: str) -> dict:
+    card = {
+        "config": {"wide_screen_mode": True},
+        "elements": [
+            {
+                "tag": "markdown",
+                "content": "Synthetic Source line.\n[Source](https://example.invalid/source)",
+            },
+            {
+                "tag": "markdown",
+                "content": "置信提示: Synthetic confidence notice.",
+            },
+            {
+                "tag": "action",
+                "actions": [
+                    {
+                        "tag": "button",
+                        "text": {"tag": "plain_text", "content": "Open Archive"},
+                        "url": "https://archive.example.invalid/2026-06-01/technology/",
+                    }
+                ],
+            },
+        ],
+    }
     return {
         "path": "internal_app_bot",
         "receive_id_type": receive_id_type,
         "body": {
             "receive_id": "REDACTED",
             "msg_type": "interactive",
-            "content": json.dumps({"config": {"wide_screen_mode": True}, "elements": []}),
+            "content": json.dumps(card),
         },
     }
 
@@ -930,6 +953,29 @@ def test_feishu_live_evidence_requires_internal_app_request_types() -> None:
     assert "Feishu group request receive_id_type must be chat_id" in failures
 
 
+def test_feishu_live_evidence_rejects_empty_card_content() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        user_request_path = evidence_root / "feishu-delivery/user-request.redacted.json"
+        user_request = json.loads(user_request_path.read_text(encoding="utf-8"))
+        user_request["body"]["content"] = json.dumps({"config": {"wide_screen_mode": True}, "elements": []})
+        write_json(user_request_path, user_request)
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "request content must include non-empty elements" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject empty card content")
+        _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Feishu user request content must include non-empty elements" in failures
+    assert "Feishu user request content missing Source" in failures
+    assert "Feishu user request content missing 置信提示" in failures
+    assert "Feishu user request content missing Archive or Deep-Dive link" in failures
+
+
 def test_feishu_live_evidence_requires_message_ids() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
@@ -1041,6 +1087,7 @@ def main() -> int:
     test_live_evidence_manifest_rejects_invalid_timestamps()
     test_feishu_live_evidence_requires_archive_or_deep_dive_link()
     test_feishu_live_evidence_requires_internal_app_request_types()
+    test_feishu_live_evidence_rejects_empty_card_content()
     test_feishu_live_evidence_requires_message_ids()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()

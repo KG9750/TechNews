@@ -4,6 +4,6 @@
   "body": {
     "receive_id": "TEMPLATE_REPLACE_WITH_REDACTED_USER_OPEN_ID",
     "msg_type": "interactive",
-    "content": "{\"config\":{\"wide_screen_mode\":true},\"elements\":[]}"
+    "content": "{\"config\":{\"wide_screen_mode\":true},\"elements\":[{\"tag\":\"markdown\",\"content\":\"Synthetic Source line.\\n[Source](https://example.invalid/source)\"},{\"tag\":\"markdown\",\"content\":\"置信提示: Synthetic confidence notice.\"},{\"tag\":\"action\",\"actions\":[{\"tag\":\"button\",\"text\":{\"tag\":\"plain_text\",\"content\":\"Open Archive\"},\"url\":\"https://archive.example.invalid/2026-06-01/technology/\"}]}]}"
   }
 }

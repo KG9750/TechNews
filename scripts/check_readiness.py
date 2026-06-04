@@ -1256,6 +1256,7 @@ def check_spike_runners() -> list[str]:
         "test_live_evidence_manifest_rejects_invalid_timestamps",
         "test_feishu_live_evidence_requires_archive_or_deep_dive_link",
         "test_feishu_live_evidence_requires_internal_app_request_types",
+        "test_feishu_live_evidence_rejects_empty_card_content",
         "test_feishu_live_evidence_requires_message_ids",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
@@ -1268,6 +1269,10 @@ def check_spike_runners() -> list[str]:
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
         "receive_id_type must be chat_id",
+        "request content must include non-empty elements",
+        "request content missing Source",
+        "request content missing 置信提示",
+        "request content missing Archive or Deep-Dive link",
         "feishu_spike.validate_evidence",
         "model_spike.validate_evidence",
         "Model usage log tasks must match expected output fixtures and input fixture ids",
@@ -1822,9 +1827,22 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
             failures.append(f"Feishu {label} request must include card content")
         else:
             try:
-                json.loads(content)
+                card = json.loads(content)
             except json.JSONDecodeError:
                 failures.append(f"Feishu {label} request content must be JSON")
+                continue
+            if not isinstance(card, dict):
+                failures.append(f"Feishu {label} request content must be a card object")
+                continue
+            elements = card.get("elements")
+            if not isinstance(elements, list) or not elements:
+                failures.append(f"Feishu {label} request content must include non-empty elements")
+            card_text = json.dumps(card, ensure_ascii=False)
+            for needle in ["Source", "置信提示"]:
+                if needle not in card_text:
+                    failures.append(f"Feishu {label} request content missing {needle}")
+            if not any(needle in card_text for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
+                failures.append(f"Feishu {label} request content missing Archive or Deep-Dive link")
     for label, path in [
         ("user", required_files["user response"]),
         ("group", required_files["group response"]),

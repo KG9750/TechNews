@@ -161,6 +161,7 @@ Validation rules:
 - User request JSON must use `path = internal_app_bot` and `receive_id_type = open_id`.
 - Group request JSON must use `path = internal_app_bot` and `receive_id_type = chat_id`.
 - Internal app request bodies must use `msg_type = interactive`, include a redacted `receive_id`, and preserve parseable card content as the `content` JSON string.
+- Parsed request card content must include non-empty `elements` plus visible Source, Confidence Notice, and Archive or Deep-Dive signals.
 - User and group response JSON must have `code = 0`.
 - Each response must include a non-empty `data` object.
 - Each response must include a non-empty `data.message_id` so the send-message result remains verifiable after redaction.

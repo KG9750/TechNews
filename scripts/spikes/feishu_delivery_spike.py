@@ -266,9 +266,20 @@ def validate_delivery_request(path: Path, label: str, expected_receive_id_type: 
     if not isinstance(content, str) or not content.strip():
         raise SpikeError(f"{path}: Feishu {label} request must include card content")
     try:
-        json.loads(content)
+        card = json.loads(content)
     except json.JSONDecodeError as error:
         raise SpikeError(f"{path}: Feishu {label} request content must be JSON") from error
+    if not isinstance(card, dict):
+        raise SpikeError(f"{path}: Feishu {label} request content must be a card object")
+    elements = card.get("elements")
+    if not isinstance(elements, list) or not elements:
+        raise SpikeError(f"{path}: Feishu {label} request content must include non-empty elements")
+    card_text = json.dumps(card, ensure_ascii=False)
+    for needle in ["Source", "置信提示"]:
+        if needle not in card_text:
+            raise SpikeError(f"{path}: Feishu {label} request content missing {needle}")
+    if not any(needle in card_text for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
+        raise SpikeError(f"{path}: Feishu {label} request content missing Archive or Deep-Dive link")
 
 
 def validate_rendered_message(path: Path) -> None:
