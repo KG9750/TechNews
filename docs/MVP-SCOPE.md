@@ -1,7 +1,7 @@
 # MVP Scope
 
-Status: Draft
-Last updated: 2026-06-01
+Status: Active scope - readiness inputs pending
+Last updated: 2026-06-04
 
 ## MVP Goal
 
@@ -65,13 +65,11 @@ Ship a fully automatic daily technology briefing loop that collects from control
 - Show Related History for a repeated or follow-up item.
 - Show run status and delivery status in the Operations Console.
 
-## Decisions Still Needed Before Build
+## Readiness Inputs Still Needed Before Build
 
 - Exact daily Delivery Deadline.
-- Initial list of trusted public media sources.
-- Initial list of academic sources.
-- Initial Feishu user and group recipients.
-- Initial technology Domain Template taxonomy.
-- First Model Provider.
-- Local archive path and NAS/cloud sync target.
-- Administrator access method for the Operations Console.
+- Approved Feishu user and group recipients, app credentials, and live internal-app delivery evidence.
+- First Model Provider selection, API credentials, and live structured-output usage evidence.
+- Local archive path, NAS/cloud sync target, and live sync success evidence.
+- Source-owner approvals, blocking, deferral, or MVP source-set narrowing for the `needs_review` sources tracked by issue #21.
+- Final MVP source set confirmation after source-owner approvals are applied.

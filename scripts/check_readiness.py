@@ -997,6 +997,28 @@ def check_golden_samples() -> list[str]:
     ]
 
 
+def check_mvp_scope() -> list[str]:
+    text = read("docs/MVP-SCOPE.md")
+    for needle in [
+        "Status: Active scope - readiness inputs pending",
+        "## Readiness Inputs Still Needed Before Build",
+        "Approved Feishu user and group recipients, app credentials, and live internal-app delivery evidence.",
+        "First Model Provider selection, API credentials, and live structured-output usage evidence.",
+        "Local archive path, NAS/cloud sync target, and live sync success evidence.",
+        "Source-owner approvals, blocking, deferral, or MVP source-set narrowing for the `needs_review` sources tracked by issue #21.",
+        "Final MVP source set confirmation after source-owner approvals are applied.",
+    ]:
+        require(needle in text, f"docs/MVP-SCOPE.md missing current readiness input: {needle}")
+    for stale in [
+        "Status: Draft",
+        "## Decisions Still Needed Before Build",
+        "Initial technology Domain Template taxonomy.",
+        "Administrator access method for the Operations Console.",
+    ]:
+        require(stale not in text, f"docs/MVP-SCOPE.md still contains stale readiness wording: {stale}")
+    return ["MVP scope: active scope and current readiness inputs verified"]
+
+
 def check_json_fixtures() -> list[str]:
     paths = [
         "fixtures/source-ingestion/candidate-items.json",
@@ -2357,6 +2379,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_taxonomy_template,
         check_briefing_style_guide,
         check_golden_samples,
+        check_mvp_scope,
         check_archive_fixture,
         check_model_fixtures,
         check_feishu_fixture,
