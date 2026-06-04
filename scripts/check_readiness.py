@@ -1158,6 +1158,12 @@ def check_spike_runners() -> list[str]:
     require("build_final_review_packet" in manifest_text, "readiness manifest helper must build final redaction review packets")
     require("Final Redaction Review Packet" in manifest_text, "readiness manifest helper must label final redaction review packets")
     require("Validation Basis" in manifest_text, "final redaction review packet must explain validation basis")
+    for command in [
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
+    ]:
+        require(command in manifest_text, f"final redaction review packet must document validation command: {command}")
     require(
         "does not replace per-spike validators, strict preflight, or the final readiness gate" in manifest_text,
         "final redaction review packet must not imply manifest status replaces validators",
@@ -1263,6 +1269,8 @@ def check_spike_runners() -> list[str]:
         "final-redaction-review.md",
         "Validation Basis",
         "does not replace per-spike validators, strict preflight, or the final readiness gate",
+        "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
+        "python3 scripts/spikes/archive_storage_spike.py --validate-evidence",
         "They do not count as final live evidence.",
         "some final evidence files exist",
         "Closure gate: blocked",

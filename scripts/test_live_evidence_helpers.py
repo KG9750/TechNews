@@ -352,7 +352,10 @@ def test_readiness_manifest_final_review_packet_shape() -> None:
     assert "does not replace per-spike validators, strict preflight, or the final readiness gate" in packet
     assert "Share Guardrails" in packet
     assert "Confirm tracked git worktree is clean" in packet
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in packet
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in packet
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in packet
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in packet
     assert str(manifest.ROOT) not in packet
     assert str(Path.home()) not in packet
 
