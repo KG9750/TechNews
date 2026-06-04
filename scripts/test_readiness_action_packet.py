@@ -180,10 +180,21 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "### #5 Model provider Follow-Up" in text
     assert "### #6 Archive sync Follow-Up" in text
     assert "### #21 Source Owner Review Follow-Up" in text
+    assert "### #17 MVP Issue Follow-Up" in text
+    assert "### #18 MVP Issue Follow-Up" in text
     assert "### #10-#20 MVP Issue Triage" in text
     assert "Feishu delivery spike update:" in text
     assert "Model provider spike update:" in text
     assert "Archive sync spike update:" in text
+    assert "MVP issue triage update for #17 Feishu delivery:" in text
+    assert "MVP issue triage update for #18 Operations Console:" in text
+    assert "- Issue-specific status: blocked" in text
+    assert "- Issue-specific status: ready for final triage" in text
+    assert "- Remaining issue-specific inputs: Feishu delivery spike:" in text
+    assert "- Remaining issue-specific inputs: None." in text
+    assert "- Per-issue packet: evidence/mvp-issue-packets/issue-17.md" in text
+    assert "- Per-issue packet: evidence/mvp-issue-packets/issue-18.md" in text
+    assert "Verification before label change: run `python3 scripts/check_readiness.py --require-live --require-evidence` and `python3 scripts/check_readiness.py --require-github`." in text
     assert "Spike packet: evidence/live-spike-packets/feishu-delivery.md" in text
     assert "Spike packet: evidence/live-spike-packets/model-provider.md" in text
     assert "Spike packet: evidence/live-spike-packets/archive-storage.md" in text

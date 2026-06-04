@@ -1040,6 +1040,42 @@ def source_owner_followup_guardrail(source_summary: dict) -> str:
     )
 
 
+def mvp_issue_packet_display_path(issue: str) -> str:
+    return f"evidence/{MVP_ISSUE_PACKET_DIR_RELATIVE}/issue-{issue.lstrip('#')}.md"
+
+
+def github_mvp_issue_comment_sections(mvp_statuses: list[dict[str, object]]) -> list[str]:
+    sections = []
+    for status in mvp_statuses:
+        issue = str(status["issue"])
+        issue_number = issue.lstrip("#")
+        remaining_inputs = "; ".join(status["blocker_details"]) if status["blocker_details"] else "None."
+        comment = [
+            f"MVP issue triage update for {issue} {status['module']}:",
+            f"- Linked issue: {status['url']}",
+            f"- Issue-specific status: {status['issue_specific_status']}",
+            f"- Global readiness gate: {status['global_readiness_gate']} ({status['global_readiness_detail']})",
+            f"- Remaining issue-specific inputs: {remaining_inputs}",
+            f"- Issue body draft: {status['draft_path']}",
+            f"- Per-issue packet: {mvp_issue_packet_display_path(issue)}",
+            f"- Label action: {status['label_action']}",
+            "",
+            "Verification before label change: run `python3 scripts/check_readiness.py --require-live --require-evidence` and `python3 scripts/check_readiness.py --require-github`.",
+            "Share guardrail: do not paste secrets, recipient ids, local paths, NAS targets, or raw provider responses into GitHub.",
+        ]
+        sections.extend(
+            [
+                f"### #{issue_number} MVP Issue Follow-Up",
+                "",
+                "```text",
+                *comment,
+                "```",
+                "",
+            ]
+        )
+    return sections
+
+
 def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
@@ -1131,6 +1167,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             *source_owner_comment,
             "```",
             "",
+            *github_mvp_issue_comment_sections(mvp_statuses),
             "### #10-#20 MVP Issue Triage",
             "",
             "```text",

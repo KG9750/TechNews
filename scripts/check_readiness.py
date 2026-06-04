@@ -1498,6 +1498,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "### #3 Feishu delivery Follow-Up",
         "### #5 Model provider Follow-Up",
         "### #6 Archive sync Follow-Up",
+        "### #17 MVP Issue Follow-Up",
+        "### #18 MVP Issue Follow-Up",
+        "MVP issue triage update for #18 Operations Console:",
         "Closure gate: keep this issue `needs-info`",
         "Spike packet: evidence/live-spike-packets/feishu-delivery.md",
         "Spike packet: evidence/live-spike-packets/model-provider.md",
@@ -1565,7 +1568,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         require(needle in runbook_text, f"docs/live-spike-evidence-runbook.md missing source-owner external input guidance: {needle}")
     return [
         "readiness action packet helper: blocked-workstream, Delivery Schedule decision, "
-        "live-spike GitHub comments, MVP issue unlock, GitHub update, and per-issue triage packets "
+        "live-spike and per-MVP GitHub comments, MVP issue unlock, GitHub update, and per-issue triage packets "
         "with regression tests present"
     ]
 
