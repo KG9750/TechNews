@@ -160,7 +160,7 @@ Validation rules:
 
 - User request JSON must use `path = internal_app_bot` and `receive_id_type = open_id`.
 - Group request JSON must use `path = internal_app_bot` and `receive_id_type = chat_id`.
-- Request bodies must use `msg_type = interactive`, include a redacted `receive_id`, and preserve parseable card content.
+- Internal app request bodies must use `msg_type = interactive`, include a redacted `receive_id`, and preserve parseable card content as the `content` JSON string.
 - User and group response JSON must have `code = 0`.
 - Each response must include a non-empty `data` object.
 - Each response must include a non-empty `data.message_id` so the send-message result remains verifiable after redaction.
@@ -168,7 +168,7 @@ Validation rules:
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw tokens, Feishu recipient ids, app ids, authorization headers, private local paths, or raw configured secret/env values.
 - The Feishu runner redacts common sensitive response keys and values before writing evidence; still inspect output and run the final gate before sharing.
-- The fallback request shape is included in dry-run evidence. Signed fallback payloads redact `sign` before writing evidence.
+- The fallback request shape is included in dry-run evidence and keeps card content as a `card` object for the custom group bot path. Signed fallback payloads redact `sign` before writing evidence.
 
 Template files:
 

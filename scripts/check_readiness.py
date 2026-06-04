@@ -1091,6 +1091,17 @@ def check_feishu_fixture() -> list[str]:
         require(needle in rendered or needle in card_text, f"Feishu fixture missing {needle}")
     require(request["user_delivery"]["query"]["receive_id_type"] == "open_id", "user delivery must use open_id")
     require(request["group_delivery"]["query"]["receive_id_type"] == "chat_id", "group delivery must use chat_id")
+    for label in ["user_delivery", "group_delivery"]:
+        delivery = request[label]
+        body = delivery["body"]
+        require(delivery["content_format"] == "json_string", f"{label} content_format must be json_string")
+        require(
+            delivery["content_source_file"] == "fixtures/feishu-delivery/push-briefing-card-content.json",
+            f"{label} must cite the card content source fixture",
+        )
+        require(body["msg_type"] == "interactive", f"{label} body msg_type must be interactive")
+        require(body.get("content") == "${JSON_STRINGIFIED_FIXTURE_CARD_CONTENT}", f"{label} body must use serialized card content")
+        require("content_object_file" not in body, f"{label} body must not use content_object_file")
     forbidden = ["FEISHU_APP_SECRET=", "Bearer ey", "ou_", "oc_"]
     request_text = json.dumps(request)
     leaked = [value for value in forbidden if value in request_text]

@@ -62,7 +62,7 @@ The test Push Briefing must include:
 
 ## Current Finding
 
-The message shape is ready for a live internal app bot test. The fixture covers two sections, a source link, a Confidence Notice, and an archive/deep-dive link placeholder. The dry-run also documents the custom group bot fallback request shape, but that fallback does not replace the internal app user and group evidence gate. The spike is not complete until real Feishu credentials, one user recipient id, and one group chat id are available and both internal app sends are proven.
+The message shape is ready for a live internal app bot test. The fixture covers two sections, a source link, a Confidence Notice, and an archive/deep-dive link placeholder. The internal app request shape now treats `content` as a serialized JSON string built from `fixtures/feishu-delivery/push-briefing-card-content.json`; the dry-run separately documents the custom group bot fallback request shape with card content as an object. The fallback does not replace the internal app user and group evidence gate. The spike is not complete until real Feishu credentials, one user recipient id, and one group chat id are available and both internal app sends are proven.
 
 ## Official References
 

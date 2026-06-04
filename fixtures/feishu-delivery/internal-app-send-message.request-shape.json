@@ -1,7 +1,8 @@
 {
   "notes": [
     "Draft request shape for Feishu internal app bot send-message API.",
-    "The final spike must validate whether card content is submitted as a JSON string or provider-specific object for the chosen API/client.",
+    "For /im/v1/messages, body.content is a JSON-serialized string generated from the content_source_file card object.",
+    "Custom group bot fallback uses a card object and is documented separately in dry-run evidence.",
     "Do not replace placeholders with real ids in committed files."
   ],
   "user_delivery": {
@@ -14,10 +15,12 @@
       "Authorization": "Bearer ${FEISHU_TENANT_ACCESS_TOKEN}",
       "Content-Type": "application/json"
     },
+    "content_format": "json_string",
+    "content_source_file": "fixtures/feishu-delivery/push-briefing-card-content.json",
     "body": {
       "receive_id": "${FEISHU_DEFAULT_USER_OPEN_ID}",
       "msg_type": "interactive",
-      "content_object_file": "fixtures/feishu-delivery/push-briefing-card-content.json"
+      "content": "${JSON_STRINGIFIED_FIXTURE_CARD_CONTENT}"
     }
   },
   "group_delivery": {
@@ -30,10 +33,12 @@
       "Authorization": "Bearer ${FEISHU_TENANT_ACCESS_TOKEN}",
       "Content-Type": "application/json"
     },
+    "content_format": "json_string",
+    "content_source_file": "fixtures/feishu-delivery/push-briefing-card-content.json",
     "body": {
       "receive_id": "${FEISHU_DEFAULT_CHAT_ID}",
       "msg_type": "interactive",
-      "content_object_file": "fixtures/feishu-delivery/push-briefing-card-content.json"
+      "content": "${JSON_STRINGIFIED_FIXTURE_CARD_CONTENT}"
     }
   }
 }

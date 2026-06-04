@@ -292,12 +292,20 @@ def test_feishu_dry_run_documents_group_webhook_fallback() -> None:
         assert feishu_spike.run(dry_run=True, evidence_dir=evidence_dir) == 0
         payload = json.loads((evidence_dir / "dry-run-request-shape.redacted.json").read_text(encoding="utf-8"))
 
+    for delivery_key in ["user_delivery", "group_delivery"]:
+        body = payload[delivery_key]["body"]
+        assert body["msg_type"] == "interactive"
+        assert isinstance(body["content"], str)
+        assert json.loads(body["content"])["config"]["wide_screen_mode"] is True
+        assert "card" not in body
+
     fallback = payload["group_webhook_fallback"]
     assert fallback["path"] == "custom_group_bot_fallback"
     assert fallback["attempted_by_default"] is False
     assert fallback["requires_explicit_flag"] == "--attempt-group-webhook-fallback"
     assert fallback["does_not_replace_internal_app_group_evidence"] is True
     assert fallback["body"]["msg_type"] == "interactive"
+    assert isinstance(fallback["body"]["card"], dict)
     assert fallback["body"]["sign"] == "REDACTED"
 
 
