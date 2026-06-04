@@ -1563,7 +1563,11 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Valid decisions that still say `needs_review` do not unlock production auto-ingestion",
     ]:
         require(needle in runbook_text, f"docs/live-spike-evidence-runbook.md missing source-owner external input guidance: {needle}")
-    return ["readiness action packet helper: blocked-workstream, MVP issue unlock, GitHub update, and per-issue triage packets with regression tests present"]
+    return [
+        "readiness action packet helper: blocked-workstream, Delivery Schedule decision, "
+        "live-spike GitHub comments, MVP issue unlock, GitHub update, and per-issue triage packets "
+        "with regression tests present"
+    ]
 
 
 def check_readiness_ci_workflow() -> list[str]:
