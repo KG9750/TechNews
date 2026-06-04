@@ -21,6 +21,7 @@ DEFAULT_EVIDENCE_ROOT = ROOT / "evidence"
 DEFAULT_OUTPUT = DEFAULT_EVIDENCE_ROOT / "readiness-action-packet.md"
 EXTERNAL_INPUT_REQUEST_RELATIVE = "external-input-request.md"
 GITHUB_UPDATE_PACKET_RELATIVE = "github-update-packet.md"
+DELIVERY_SCHEDULE_DECISION_RELATIVE = "delivery-schedule-decision.md"
 SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
@@ -731,6 +732,9 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
                 "Required evidence files:",
                 "- None; this is runtime schedule configuration, not live external evidence.",
                 "",
+                "Decision packet:",
+                f"- {DELIVERY_SCHEDULE_DECISION_RELATIVE}",
+                "",
                 "Commands after values are configured:",
                 "```bash",
                 *request["commands"],
@@ -824,6 +828,73 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
 def write_external_input_request_packet(output_path: Path, evidence_root: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(build_external_input_request_packet(evidence_root) + "\n", encoding="utf-8")
+
+
+def build_delivery_schedule_decision_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
+    live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
+    request = CONFIG_INPUT_REQUESTS[0]
+    env = live_summary["environment"][request["env_group"]]
+    required = live_preflight.ENV_GROUPS[request["env_group"]]
+    blockers = environment_blockers(env)
+    status = "blocked" if blockers else "ready for live environment gate"
+    return "\n".join(
+        [
+            "# Delivery Schedule Decision Packet",
+            "",
+            "This ignored packet is decision support only. It does not choose a daily delivery time, store real values, or replace secure runtime configuration.",
+            "",
+            f"- Generated at: {utc_now()}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            f"- Linked issue: {request['issue']}",
+            f"- Status: {status}",
+            f"- Configure at: {request['configure_at']}",
+            "",
+            "## Required Runtime Values",
+            "",
+            markdown_bullets(required),
+            "",
+            "## Current Gate State",
+            "",
+            "Present variable names:",
+            markdown_bullets(env["present"], empty_label="None present."),
+            "",
+            "Missing variable names:",
+            markdown_bullets(env["missing"], empty_label="None missing."),
+            "",
+            "Invalid environment values:",
+            markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
+            "",
+            "## Owner Decision Questions",
+            "",
+            "- What exact local daily deadline should the MVP use for generating and pushing the briefing?",
+            "- Which IANA timezone should define that deadline in production?",
+            "- Which secure runtime surface should receive the values first: local `.env`, Briefing Host config, or the Operations Console once implemented?",
+            "",
+            "## Format Rules",
+            "",
+            "- `DELIVERY_DEADLINE_LOCAL_TIME` must use `HH:MM` with hour `00`-`23` and minute `00`-`59`.",
+            "- `DELIVERY_TIMEZONE` must be an IANA timezone name.",
+            "- Do not commit real deployment values to tracked files or GitHub comments.",
+            "",
+            "## Commands After Values Are Configured",
+            "",
+            "```bash",
+            *request["commands"],
+            "python3 scripts/check_readiness.py --require-live --require-evidence",
+            "```",
+            "",
+            "## GitHub Update Guardrails",
+            "",
+            "- Post only that the Delivery Schedule blocker is configured or still blocked.",
+            "- Do not post the actual configured time unless the owner explicitly approves sharing it.",
+            "- Keep #1 blocked while any live environment value, live evidence group, or source-owner decision remains unresolved.",
+        ]
+    )
+
+
+def write_delivery_schedule_decision_packet(output_path: Path, evidence_root: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(build_delivery_schedule_decision_packet(evidence_root) + "\n", encoding="utf-8")
 
 
 def workstream_row_by_label(live_summary: dict) -> dict[str, dict[str, object]]:
@@ -1257,6 +1328,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Final redaction review packet: `{display_path(evidence_root / 'final-redaction-review.md')}`",
             f"- External input request packet: `{display_path(evidence_root / EXTERNAL_INPUT_REQUEST_RELATIVE)}`",
             f"- GitHub update packet: `{display_path(evidence_root / GITHUB_UPDATE_PACKET_RELATIVE)}`",
+            f"- Delivery schedule decision packet: `{display_path(evidence_root / DELIVERY_SCHEDULE_DECISION_RELATIVE)}`",
             f"- Source owner review index: `{source_summary['index_path']}`",
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
@@ -1347,6 +1419,9 @@ def main() -> int:
     github_update_path = evidence_root / GITHUB_UPDATE_PACKET_RELATIVE
     write_github_update_packet(github_update_path, evidence_root)
     print(f"GitHub update packet written to {display_path(github_update_path)}")
+    delivery_schedule_path = evidence_root / DELIVERY_SCHEDULE_DECISION_RELATIVE
+    write_delivery_schedule_decision_packet(delivery_schedule_path, evidence_root)
+    print(f"Delivery schedule decision packet written to {display_path(delivery_schedule_path)}")
     if args.write_mvp_issue_packets:
         packet_dir = Path(args.mvp_issue_packet_dir) if args.mvp_issue_packet_dir else evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE
         write_mvp_issue_packets(packet_dir, evidence_root)

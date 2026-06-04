@@ -143,6 +143,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "live-spike-packets" in text
     assert "external-input-request.md" in text
     assert "github-update-packet.md" in text
+    assert "delivery-schedule-decision.md" in text
     assert "final-redaction-review.md" in text
     assert "python3 scripts/spikes/live_readiness_preflight.py --dry-run --write-packet --write-spike-packets" in text
     assert "python3 scripts/spikes/readiness_manifest.py --write-final-review-packet" in text
@@ -256,6 +257,7 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "DELIVERY_DEADLINE_LOCAL_TIME" in text
     assert "DELIVERY_TIMEZONE" in text
     assert "None; this is runtime schedule configuration, not live external evidence." in text
+    assert "delivery-schedule-decision.md" in text
     assert "## Source owner approvals" in text
     assert "Current blocker: 25 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
     assert "source-owner-reviews/request-packet.md" in text
@@ -284,6 +286,7 @@ def test_action_packets_report_invalid_delivery_schedule_values() -> None:
             action_text = packet.build_packet(evidence_root)
             external_text = packet.build_external_input_request_packet(evidence_root)
             github_text = packet.build_github_update_packet(evidence_root)
+            delivery_text = packet.build_delivery_schedule_decision_packet(evidence_root)
 
     assert "Invalid live environment values: 2" in action_text
     assert "Missing/invalid now" in action_text
@@ -294,6 +297,10 @@ def test_action_packets_report_invalid_delivery_schedule_values() -> None:
     assert "Configuration Inputs" in github_text
     assert "Invalid environment values now:" in github_text
     assert "DELIVERY_TIMEZONE must be an IANA timezone name" in github_text
+    assert "Delivery Schedule Decision Packet" in delivery_text
+    assert "Status: blocked" in delivery_text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM" in delivery_text
+    assert "DELIVERY_TIMEZONE must be an IANA timezone name" in delivery_text
 
 
 def test_action_packet_blocks_unlocks_on_partial_final_evidence_group() -> None:
@@ -337,21 +344,52 @@ def test_action_packet_writes_markdown() -> None:
         evidence_root = Path(tmp_name) / "evidence"
         external_input_output = evidence_root / packet.EXTERNAL_INPUT_REQUEST_RELATIVE
         github_update_output = evidence_root / packet.GITHUB_UPDATE_PACKET_RELATIVE
+        delivery_schedule_output = evidence_root / packet.DELIVERY_SCHEDULE_DECISION_RELATIVE
 
         packet.write_packet(output, evidence_root)
         packet.write_external_input_request_packet(external_input_output, evidence_root)
         packet.write_github_update_packet(github_update_output, evidence_root)
+        packet.write_delivery_schedule_decision_packet(delivery_schedule_output, evidence_root)
 
         assert output.exists()
         assert external_input_output.exists()
         assert github_update_output.exists()
+        assert delivery_schedule_output.exists()
         text = output.read_text(encoding="utf-8")
         external_input_text = external_input_output.read_text(encoding="utf-8")
         github_update_text = github_update_output.read_text(encoding="utf-8")
+        delivery_schedule_text = delivery_schedule_output.read_text(encoding="utf-8")
         assert "Blocking Workstreams" in text
         assert "Source owner decisions" in text
         assert "External Input Request Packet" in external_input_text
         assert "GitHub Update Packet" in github_update_text
+        assert "Delivery Schedule Decision Packet" in delivery_schedule_text
+
+
+def test_delivery_schedule_decision_packet_is_config_only() -> None:
+    secret_time = "09:45"
+    with with_env("DELIVERY_DEADLINE_LOCAL_TIME", secret_time), with_env("DELIVERY_TIMEZONE", "Asia/Shanghai"):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+            evidence_root = Path(tmp_name) / "evidence"
+            text = packet.build_delivery_schedule_decision_packet(evidence_root)
+
+    assert "Delivery Schedule Decision Packet" in text
+    assert "decision support only" in text
+    assert "Status: ready for live environment gate" in text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME" in text
+    assert "DELIVERY_TIMEZONE" in text
+    assert "Present variable names:" in text
+    assert "Missing variable names:" in text
+    assert "Invalid environment values:" in text
+    assert "What exact local daily deadline should the MVP use" in text
+    assert "must use `HH:MM`" in text
+    assert "must be an IANA timezone name" in text
+    assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
+    assert "Do not post the actual configured time" in text
+    assert secret_time not in text
+    assert "Asia/Shanghai" not in text
+    assert str(packet.ROOT) not in text
+    assert str(Path.home()) not in text
 
 
 def test_source_owner_packets_can_be_written_from_action_packet() -> None:
@@ -430,6 +468,7 @@ def main() -> int:
     test_action_packets_report_invalid_delivery_schedule_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
+    test_delivery_schedule_decision_packet_is_config_only()
     test_source_owner_packets_can_be_written_from_action_packet()
     test_source_set_narrowing_packet_is_decision_support_only()
     test_mvp_issue_packets_are_written_with_label_guardrails()

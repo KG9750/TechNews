@@ -1396,6 +1396,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "readiness-action-packet.md",
         "external-input-request.md",
         "github-update-packet.md",
+        "delivery-schedule-decision.md",
         "live-readiness-packet.md",
         "live-spike-packets",
         "source-owner-reviews/index.md",
@@ -1424,6 +1425,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "external_input_request_rows",
         "build_external_input_request_packet",
         "write_external_input_request_packet",
+        "build_delivery_schedule_decision_packet",
+        "write_delivery_schedule_decision_packet",
         "build_source_set_narrowing_packet",
         "write_source_set_narrowing_packet",
         "build_github_update_packet",
@@ -1467,6 +1470,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "test_github_update_packet_names_label_guardrails_without_secret_values",
         "test_action_packet_keeps_valid_needs_review_source_decisions_blocked",
         "test_source_set_narrowing_packet_is_decision_support_only",
+        "test_delivery_schedule_decision_packet_is_config_only",
         "test_action_packets_report_invalid_delivery_schedule_values",
         "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
@@ -1499,6 +1503,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "--write-source-owner-packets",
         "mvp-issue-packets",
         "github-update-packet.md",
+        "delivery-schedule-decision.md",
         "final-redaction-review.md",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
         "python3 scripts/spikes/model_provider_spike.py --validate-evidence",
@@ -1522,6 +1527,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     readiness_text = read("docs/readiness-gate-status.md")
     for needle in [
         "### Delivery Schedule",
+        "evidence/delivery-schedule-decision.md",
         "DELIVERY_DEADLINE_LOCAL_TIME",
         "DELIVERY_TIMEZONE",
         "### Source Owner Approvals",
@@ -1536,6 +1542,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     runbook_text = read("docs/live-spike-evidence-runbook.md")
     for needle in [
         "## Delivery Schedule Input",
+        "evidence/delivery-schedule-decision.md",
         "DELIVERY_DEADLINE_LOCAL_TIME",
         "DELIVERY_TIMEZONE",
         "## Source Owner Approval Inputs",
