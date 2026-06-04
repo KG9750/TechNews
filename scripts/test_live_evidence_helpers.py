@@ -492,6 +492,28 @@ def test_model_live_evidence_requires_usage_metadata_consistency() -> None:
     assert any("model_usage.provider must match usage-log provider" in failure for failure in failures)
 
 
+def test_model_live_evidence_requires_meaningful_confidence_notice() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        output_path = evidence_root / "model-provider/outputs/low-confidence-news.json"
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+        payload["briefing_item"]["confidence_notice"] = "Looks fine."
+        write_json(output_path, payload)
+        try:
+            model_spike.validate_evidence(evidence_root / "model-provider")
+        except model_spike.SpikeError as error:
+            assert "confidence_notice must be visibly labeled" in str(error)
+        else:
+            raise AssertionError("expected model validator to reject weak confidence notice")
+        _, missing, failures = readiness.check_model_live_evidence(evidence_root)
+
+    assert not missing
+    assert any("confidence_notice must be visibly labeled" in failure for failure in failures)
+    assert any("confidence_notice must describe uncertainty" in failure for failure in failures)
+    assert any("confidence_notice must reference source evidence" in failure for failure in failures)
+
+
 def test_model_live_evidence_rejects_full_body_keys() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         evidence_root = Path(tmp_name)
@@ -701,7 +723,7 @@ def model_output(profile: str, fixture_id: str, run_id: str, confidence_level: s
                 "signals": ["source_trust", "event_impact"],
             },
             "confidence_level": confidence_level,
-            "confidence_notice": "Synthetic confidence notice." if confidence_level in {"medium", "low"} else None,
+            "confidence_notice": f"置信提示：{anchor['source_name']} evidence remains single-source and partially uncertain." if confidence_level in {"medium", "low"} else None,
             "media_attribution": None,
             "related_history": [],
         },
@@ -1077,6 +1099,7 @@ def main() -> int:
     test_model_request_validation_rejects_full_body_metadata()
     test_model_usage_log_requires_expected_tasks()
     test_model_live_evidence_requires_usage_metadata_consistency()
+    test_model_live_evidence_requires_meaningful_confidence_notice()
     test_model_live_evidence_rejects_full_body_keys()
     test_model_live_evidence_rejects_template_and_leaky_content()
     test_archive_failure_reason_redacts_private_paths()

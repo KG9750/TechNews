@@ -194,6 +194,24 @@ def check_no_full_body_keys(path: Path, payload: dict) -> None:
         raise SpikeError(f"{path}: evidence includes disallowed full-body keys: {', '.join(disallowed)}")
 
 
+def validate_confidence_notice(path: Path, item: dict) -> None:
+    level = item.get("confidence_level")
+    if level not in {"medium", "low"}:
+        return
+    notice = item.get("confidence_notice")
+    if not isinstance(notice, str) or not notice.strip():
+        raise SpikeError(f"{path}: confidence_notice required for {level} confidence")
+    if "置信提示" not in notice:
+        raise SpikeError(f"{path}: confidence_notice must be visibly labeled")
+    uncertainty_terms = ["缺少", "未确认", "低置信", "不确定", "单一", "single", "unconfirmed", "uncertain", "low confidence"]
+    if not any(term.lower() in notice.lower() for term in uncertainty_terms):
+        raise SpikeError(f"{path}: confidence_notice must describe uncertainty")
+    anchor = item.get("original_source_anchor", {})
+    source_name = str(anchor.get("source_name", "")).strip()
+    if source_name and source_name not in notice:
+        raise SpikeError(f"{path}: confidence_notice must reference source evidence")
+
+
 def validate_request_envelope(envelope: dict, fixture: dict) -> None:
     if envelope.get("input_fixture_id") != fixture["fixture_id"]:
         raise SpikeError(f"{envelope.get('profile', 'request')}: input_fixture_id must be {fixture['fixture_id']}")
@@ -296,8 +314,7 @@ def validate_briefing_output(path: Path, fixture: dict, profile_name: str) -> di
     for field in ["source_name", "original_title", "source_url"]:
         if anchor.get(field) != expected_anchor[field]:
             raise SpikeError(f"{path}: original_source_anchor.{field} changed")
-    if item["confidence_level"] in {"medium", "low"} and not item.get("confidence_notice"):
-        raise SpikeError(f"{path}: confidence_notice required for {item['confidence_level']} confidence")
+    validate_confidence_notice(path, item)
     if profile_name == "low-confidence-news" and item["confidence_level"] != "low":
         raise SpikeError(f"{path}: low-confidence fixture must remain low")
     usage = payload.get("model_usage", {})

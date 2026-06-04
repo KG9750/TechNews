@@ -22,7 +22,7 @@
       "signals": ["low_source_count", "manual_url", "synthetic_behavior_exercise"]
     },
     "confidence_level": "low",
-    "confidence_notice": "置信提示：TEMPLATE_REPLACE_WITH_LIVE_CONFIDENCE_NOTICE。",
+    "confidence_notice": "置信提示：Synthetic Manual URL Fixture evidence is single-source and still uncertain. TEMPLATE_REPLACE_WITH_LIVE_CONFIDENCE_NOTICE。",
     "media_attribution": null,
     "related_history": []
   },

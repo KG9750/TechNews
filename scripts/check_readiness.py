@@ -1243,6 +1243,7 @@ def check_spike_runners() -> list[str]:
         "test_model_request_validation_rejects_full_body_metadata",
         "test_model_usage_log_requires_expected_tasks",
         "test_model_live_evidence_requires_usage_metadata_consistency",
+        "test_model_live_evidence_requires_meaningful_confidence_notice",
         "test_model_live_evidence_rejects_full_body_keys",
         "test_model_live_evidence_rejects_template_and_leaky_content",
         "test_archive_failure_reason_redacts_private_paths",
@@ -1278,6 +1279,9 @@ def check_spike_runners() -> list[str]:
         "Model usage log tasks must match expected output fixtures and input fixture ids",
         "briefing_item.run_id must match usage-log run_id",
         "model_usage.provider must match usage-log provider",
+        "confidence_notice must be visibly labeled",
+        "confidence_notice must describe uncertainty",
+        "confidence_notice must reference source evidence",
         "must not include full-body keys",
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",
@@ -1990,8 +1994,20 @@ def check_model_live_evidence(evidence_root: Path) -> tuple[list[str], list[str]
         for field in ["source_name", "original_title", "source_url"]:
             if anchor.get(field) != expected_anchor[field]:
                 failures.append(f"{path}: original_source_anchor.{field} changed")
-        if item.get("confidence_level") in {"medium", "low"} and not item.get("confidence_notice"):
-            failures.append(f"{path}: confidence_notice required for {item.get('confidence_level')} confidence")
+        confidence_level = item.get("confidence_level")
+        if confidence_level in {"medium", "low"}:
+            notice = item.get("confidence_notice")
+            if not isinstance(notice, str) or not notice.strip():
+                failures.append(f"{path}: confidence_notice required for {confidence_level} confidence")
+            else:
+                if "置信提示" not in notice:
+                    failures.append(f"{path}: confidence_notice must be visibly labeled")
+                uncertainty_terms = ["缺少", "未确认", "低置信", "不确定", "单一", "single", "unconfirmed", "uncertain", "low confidence"]
+                if not any(term.lower() in notice.lower() for term in uncertainty_terms):
+                    failures.append(f"{path}: confidence_notice must describe uncertainty")
+                source_name = str(anchor.get("source_name", "")).strip()
+                if source_name and source_name not in notice:
+                    failures.append(f"{path}: confidence_notice must reference source evidence")
         if profile == "low-confidence-news" and item.get("confidence_level") != "low":
             failures.append(f"{path}: low-confidence fixture must remain low")
         usage = payload.get("model_usage", {})

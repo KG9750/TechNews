@@ -23,7 +23,7 @@
       "signals": ["low_source_count", "manual_url", "synthetic_behavior_exercise"]
     },
     "confidence_level": "low",
-    "confidence_notice": "置信提示：该条目是合成行为夹具，模拟单一手动来源，缺少公司公告或多源交叉确认。",
+    "confidence_notice": "置信提示：Synthetic Manual URL Fixture 仅提供单一来源，缺少公司公告或多源交叉确认。",
     "media_attribution": null,
     "related_history": []
   },

@@ -227,7 +227,8 @@ Validation rules:
 - Provider and model must identify a live provider/model, not `fixture` or `not_called`.
 - Each output must preserve the exact Original Source Anchor from its input fixture.
 - Each output must contain three or four Chinese bullets.
-- Low-confidence output must remain `low` and include a Confidence Notice.
+- Medium/low-confidence outputs must include a visibly labeled Confidence Notice that references source evidence and explains uncertainty.
+- Low-confidence output must remain `low`.
 - Each output `briefing_item.run_id` must match `usage-log.json` `run_id`.
 - Each output `model_usage.provider` and `model_usage.model` must match the usage log provider/model.
 - Each output `model_usage.task_type` must be `briefing_item_generation`.
