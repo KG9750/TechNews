@@ -120,6 +120,9 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "evidence/external-input-request.md" in text
     assert "evidence/github-update-packet.md" in text
     assert "evidence/mvp-issue-packets/issue-10.md through issue-20.md" in text
+    assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in text
+    assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in text
+    assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
     assert "python3 scripts/check_readiness.py --require-github" in text
     assert "Do not paste secrets" in text
     assert secret not in text
