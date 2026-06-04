@@ -1,3 +1,6 @@
+briefing.html
 briefing.md
+media/
+media/README.md
 metadata.json
 /Users/example/private/archive/2026-06-01/technology/private-note.txt

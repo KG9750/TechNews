@@ -97,6 +97,12 @@ LIVE_EVIDENCE_TEMPLATE_FILES = [
     "fixtures/live-evidence-templates/archive-storage/local-tree.txt",
     "fixtures/live-evidence-templates/archive-storage/remote-tree.txt",
 ]
+REQUIRED_ARCHIVE_PACKAGE_FILES = (
+    "briefing.html",
+    "briefing.md",
+    "metadata.json",
+    "media/README.md",
+)
 EXPECTED_GITHUB_REPO = "KG9750/TechNews"
 ALLOWED_ORIGIN_URLS = {
     "https://github.com/KG9750/TechNews.git",
@@ -1249,6 +1255,7 @@ def check_spike_runners() -> list[str]:
         "test_archive_failure_reason_redacts_private_paths",
         "test_archive_live_evidence_requires_matching_counts_and_trees",
         "test_archive_live_evidence_requires_counts_match_tree_entries",
+        "test_archive_live_evidence_requires_archive_package_files",
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
         "test_readiness_manifest_tracks_dirty_worktree_guard",
@@ -1286,6 +1293,7 @@ def check_spike_runners() -> list[str]:
         "archive_spike.validate_evidence",
         "local and remote tree listings must match",
         "file_count must match local tree file entries",
+        "missing required Archive Package files",
         "final-redaction-review.md",
         "Validation Basis",
         "does not replace per-spike validators, strict preflight, or the final readiness gate",
@@ -1938,6 +1946,10 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
             failures.append("Archive live evidence remote_sync.file_count must match remote tree file entries")
     if tree_lines.get("local tree") and tree_lines.get("remote tree") and tree_lines["local tree"] != tree_lines["remote tree"]:
         failures.append("Archive live evidence local and remote tree listings must match")
+    for label, lines in tree_lines.items():
+        missing_package_files = [name for name in REQUIRED_ARCHIVE_PACKAGE_FILES if name not in lines]
+        if missing_package_files:
+            failures.append(f"Archive live evidence {label} missing required Archive Package files: {', '.join(missing_package_files)}")
     if not failures and not missing:
         passed.append("Archive live evidence: local write and remote sync success present")
     return passed, missing, failures

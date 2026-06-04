@@ -1,3 +1,6 @@
+briefing.html
 briefing.md
+media/
+media/README.md
 metadata.json
-/private/tmp/synthetic-nas-target/2026-06-01/technology/private-note.txt
+/Users/example/private/archive/2026-06-01/technology/private-note.txt

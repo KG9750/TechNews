@@ -655,6 +655,42 @@ def test_archive_live_evidence_requires_counts_match_tree_entries() -> None:
     assert "Archive live evidence remote_sync.file_count must match remote tree file entries" in failures
 
 
+def test_archive_live_evidence_requires_archive_package_files() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "archive-storage/sync-result.json",
+            {
+                "run_id": "run_synthetic_archive_storage",
+                "local_archive": {
+                    "status": "written",
+                    "package_path": "REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology",
+                    "file_count": 2,
+                },
+                "remote_sync": {
+                    "status": "synced",
+                    "target": "REDACTED_SYNC_TARGET/2026-06-01/technology",
+                    "file_count": 2,
+                    "retryable": False,
+                },
+            },
+        )
+        tree = "briefing.md\nmetadata.json\n"
+        (evidence_root / "archive-storage/local-tree.txt").write_text(tree, encoding="utf-8")
+        (evidence_root / "archive-storage/remote-tree.txt").write_text(tree, encoding="utf-8")
+        try:
+            archive_spike.validate_evidence(evidence_root / "archive-storage")
+        except archive_spike.SpikeError as error:
+            assert "local tree missing required Archive Package files" in str(error)
+        else:
+            raise AssertionError("expected archive validator to reject incomplete archive package tree")
+        _, missing, failures = readiness.check_archive_live_evidence(evidence_root)
+
+    assert not missing
+    assert any("Archive live evidence local tree missing required Archive Package files" in failure for failure in failures)
+    assert any("Archive live evidence remote tree missing required Archive Package files" in failure for failure in failures)
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -1105,6 +1141,7 @@ def main() -> int:
     test_archive_failure_reason_redacts_private_paths()
     test_archive_live_evidence_requires_matching_counts_and_trees()
     test_archive_live_evidence_requires_counts_match_tree_entries()
+    test_archive_live_evidence_requires_archive_package_files()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()

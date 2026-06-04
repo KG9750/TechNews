@@ -20,6 +20,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_PACKAGE = ROOT / "fixtures/archive-storage/local-archive/2026-06-01/technology"
 DEFAULT_EVIDENCE_DIR = ROOT / "evidence/archive-storage"
+REQUIRED_ARCHIVE_PACKAGE_FILES = (
+    "briefing.html",
+    "briefing.md",
+    "metadata.json",
+    "media/README.md",
+)
 
 
 class SpikeError(Exception):
@@ -170,7 +176,7 @@ def run(dry_run: bool, evidence_dir: Path) -> int:
 
 
 def require_fixture() -> None:
-    for name in ["briefing.html", "briefing.md", "metadata.json", "media/README.md"]:
+    for name in REQUIRED_ARCHIVE_PACKAGE_FILES:
         path = FIXTURE_PACKAGE / name
         if not path.exists():
             raise SpikeError(f"missing archive fixture file: {path}")
@@ -205,6 +211,12 @@ def read_tree(path: Path) -> list[str]:
 
 def tree_file_count(lines: list[str]) -> int:
     return len([line for line in lines if not line.endswith("/")])
+
+
+def validate_required_archive_package_files(lines: list[str], label: str) -> None:
+    missing = [name for name in REQUIRED_ARCHIVE_PACKAGE_FILES if name not in lines]
+    if missing:
+        raise SpikeError(f"{label} missing required Archive Package files: {', '.join(missing)}")
 
 
 def positive_int(value: object, label: str) -> int:
@@ -242,6 +254,8 @@ def validate_evidence(evidence_dir: Path) -> int:
         raise SpikeError(f"{result_path}: remote_sync.file_count must match remote tree file entries")
     if local_tree != remote_tree:
         raise SpikeError("archive evidence local and remote tree listings must match")
+    validate_required_archive_package_files(local_tree, "local tree")
+    validate_required_archive_package_files(remote_tree, "remote tree")
     print(f"LIVE archive evidence validates: {evidence_dir}")
     return 0
 

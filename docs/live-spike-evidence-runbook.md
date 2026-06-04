@@ -280,6 +280,7 @@ Validation rules:
 - Local and remote file counts must match.
 - Each `file_count` value must match the number of file entries in its corresponding tree file; directory entries ending in `/` are not counted.
 - Local and remote tree files must exist, be non-empty, and list the same redacted relative package files in the same order.
+- Both tree files must include the required Archive Package files: `briefing.html`, `briefing.md`, `metadata.json`, and `media/README.md`.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain private local paths, private sync target paths, tokens, or raw configured secret/env values.
 - The runner writes redacted path labels such as `REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology` and `REDACTED_SYNC_TARGET/2026-06-01/technology`; do not replace them with real host or NAS paths.

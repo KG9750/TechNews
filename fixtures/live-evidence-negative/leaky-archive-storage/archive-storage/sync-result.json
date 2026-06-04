@@ -3,12 +3,12 @@
   "local_archive": {
     "status": "written",
     "package_path": "/Users/example/private/archive/2026-06-01/technology",
-    "file_count": 4
+    "file_count": 5
   },
   "remote_sync": {
     "status": "synced",
     "target": "/private/tmp/synthetic-nas-target/2026-06-01/technology",
-    "file_count": 4,
+    "file_count": 5,
     "retryable": false
   }
 }
