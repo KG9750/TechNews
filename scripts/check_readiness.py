@@ -1464,6 +1464,16 @@ def check_readiness_action_packet_helper() -> list[str]:
         require("--write-source-owner-packets" in read(path), f"{path} must document source-owner packet generation")
     for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
         require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
+    readiness_text = read("docs/readiness-gate-status.md")
+    for needle in [
+        "### Source Owner Approvals",
+        "Linked issue: #21",
+        "evidence/source-owner-reviews/request-packet.md",
+        "python3 scripts/source_owner_review_decision.py --validate-all",
+        "Keep private permission notes or legal review details out of GitHub",
+        "Issue #21 must remain `needs-info`",
+    ]:
+        require(needle in readiness_text, f"docs/readiness-gate-status.md missing source-owner external input guidance: {needle}")
     return ["readiness action packet helper: blocked-workstream, MVP issue unlock, GitHub update, and per-issue triage packets with regression tests present"]
 
 
