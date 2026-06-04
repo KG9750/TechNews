@@ -538,6 +538,10 @@ def build_spike_packet(summary: dict, evidence_root: Path, spec: dict) -> str:
     )
 
 
+def helper_dry_runs_enabled(dry_run: bool, strict: bool, skip_helper_dry_runs: bool) -> bool:
+    return (dry_run or strict) and not skip_helper_dry_runs
+
+
 def run_dry_runs(evidence_root: Path, run_helpers: bool) -> list[dict]:
     results = []
     if not run_helpers:
@@ -652,7 +656,7 @@ def print_summary(path: Path, summary: dict) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Run local dry-run helpers and write a preflight summary.")
-    parser.add_argument("--skip-helper-dry-runs", action="store_true", help="Only inspect environment and evidence files.")
+    parser.add_argument("--skip-helper-dry-runs", action="store_true", help="Only inspect environment and evidence files, even in strict mode.")
     parser.add_argument("--strict", action="store_true", help="Fail if env vars, dry-runs, final evidence groups, or live evidence validation are incomplete.")
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--summary-path", "--output", dest="summary_path", help="Override summary output path.")
@@ -666,7 +670,11 @@ def main() -> int:
     output_path = Path(args.summary_path) if args.summary_path else evidence_root / "live-readiness-preflight.json"
     packet_path = Path(args.packet_path) if args.packet_path else evidence_root / "live-readiness-packet.md"
     spike_packet_dir = Path(args.spike_packet_dir) if args.spike_packet_dir else evidence_root / "live-spike-packets"
-    run_helpers = args.dry_run and not args.skip_helper_dry_runs
+    run_helpers = helper_dry_runs_enabled(
+        dry_run=args.dry_run,
+        strict=args.strict,
+        skip_helper_dry_runs=args.skip_helper_dry_runs,
+    )
     readiness.load_env_file(ROOT / ".env")
     summary = build_summary(evidence_root, run_helpers=run_helpers, require_clean_worktree=args.strict)
     write_json(output_path, summary)

@@ -95,6 +95,29 @@ def test_readiness_load_env_file_preserves_process_env() -> None:
                 os.environ[name] = value
 
 
+def test_strict_preflight_runs_helper_dry_runs_by_default() -> None:
+    assert preflight.helper_dry_runs_enabled(
+        dry_run=False,
+        strict=True,
+        skip_helper_dry_runs=False,
+    ) is True
+    assert preflight.helper_dry_runs_enabled(
+        dry_run=True,
+        strict=False,
+        skip_helper_dry_runs=False,
+    ) is True
+    assert preflight.helper_dry_runs_enabled(
+        dry_run=False,
+        strict=True,
+        skip_helper_dry_runs=True,
+    ) is False
+    assert preflight.helper_dry_runs_enabled(
+        dry_run=False,
+        strict=False,
+        skip_helper_dry_runs=False,
+    ) is False
+
+
 def test_preflight_redacts_workspace_and_env_values() -> None:
     secret = "test-secret-value-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -980,6 +1003,7 @@ def test_live_evidence_rejects_raw_environment_values() -> None:
 
 def main() -> int:
     test_readiness_load_env_file_preserves_process_env()
+    test_strict_preflight_runs_helper_dry_runs_by_default()
     test_preflight_redacts_workspace_and_env_values()
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_reports_partial_final_evidence_groups()

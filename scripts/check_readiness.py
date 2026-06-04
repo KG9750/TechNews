@@ -1173,6 +1173,8 @@ def check_spike_runners() -> list[str]:
     require("build_markdown_packet" in preflight_text, "live readiness preflight must build Markdown packets")
     require("--write-spike-packets" in preflight_text, "live readiness preflight must support per-spike packet output")
     require("build_spike_packet" in preflight_text, "live readiness preflight must build per-spike packets")
+    require("helper_dry_runs_enabled" in preflight_text, "live readiness preflight must centralize helper dry-run mode selection")
+    require("(dry_run or strict) and not skip_helper_dry_runs" in preflight_text, "strict live readiness preflight must run helper dry-runs by default")
     require("check_live_evidence" in preflight_text, "live readiness preflight must validate live evidence content")
     require("evidence_validation" in preflight_text, "live readiness preflight must summarize live evidence validation")
     require("DRY_RUN_ARTIFACT_FILES" in preflight_text, "live readiness preflight must define dry-run artifact inventory")
@@ -1210,6 +1212,7 @@ def check_spike_runners() -> list[str]:
     test_text = read("scripts/test_live_evidence_helpers.py")
     for needle in [
         "test_readiness_load_env_file_preserves_process_env",
+        "test_strict_preflight_runs_helper_dry_runs_by_default",
         "test_preflight_redacts_workspace_and_env_values",
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_reports_partial_final_evidence_groups",
@@ -1265,6 +1268,7 @@ def check_spike_runners() -> list[str]:
         "Closure gate: blocked",
         "finish this group before closing the issue",
         "preflight.has_missing_required(summary) is True",
+        "helper_dry_runs_enabled",
         "Strict mode requires a clean tracked worktree",
         "complete final evidence groups",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",

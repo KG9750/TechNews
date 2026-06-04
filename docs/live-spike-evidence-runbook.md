@@ -47,6 +47,8 @@ python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --wri
 
 Strict mode fails until all required environment variable names are present, every final evidence group is `complete`, the tracked git worktree is clean, and the live evidence files exist without template markers, sensitive-value leaks, or schema/metadata validation failures. Ignored files under `evidence/` do not need to be committed. It is a convenience check; the authoritative final gate remains `scripts/check_readiness.py`.
 
+Strict mode runs the local helper dry-runs by default. Use `--skip-helper-dry-runs` only when you need an inspect-only pass over existing environment and evidence files.
+
 CI regression coverage:
 
 ```bash
