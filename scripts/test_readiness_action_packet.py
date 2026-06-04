@@ -191,6 +191,7 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "ARCHIVE_SYNC_TARGET" in text
     assert "evidence/readiness-action-packet.md" in text
     assert "evidence/external-input-request.md" in text
+    assert "evidence/delivery-schedule-decision.md" in text
     assert "evidence/github-update-packet.md" in text
     assert "evidence/mvp-issue-packets/issue-10.md through issue-20.md" in text
     assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in text

@@ -1006,6 +1006,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
         f"- MVP issue unlock status: {blocked_mvp_count} blocked, {ready_mvp_count} ready for final triage",
         f"- Action packet: evidence/readiness-action-packet.md",
         f"- External input request packet: evidence/{EXTERNAL_INPUT_REQUEST_RELATIVE}",
+        f"- Delivery schedule decision packet: evidence/{DELIVERY_SCHEDULE_DECISION_RELATIVE}",
         f"- GitHub update packet: evidence/{GITHUB_UPDATE_PACKET_RELATIVE}",
         "",
         "No secret values, recipient ids, local paths, provider responses, or NAS/cloud targets should be posted to GitHub.",
