@@ -138,6 +138,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "source-owner-reviews/worksheet.md" in text
     assert "source-owner-reviews/batch-plan.md" in text
     assert "source-owner-reviews/request-packet.md" in text
+    assert "source-owner-reviews/mvp-source-set-narrowing.md" in text
     assert "mvp-issue-packets" in text
     assert "live-spike-packets" in text
     assert "external-input-request.md" in text
@@ -258,6 +259,7 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "## Source owner approvals" in text
     assert "Current blocker: 25 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
     assert "source-owner-reviews/request-packet.md" in text
+    assert "source-owner-reviews/mvp-source-set-narrowing.md" in text
     assert "python3 scripts/source_owner_review_decision.py --validate-all" in text
     assert "python3 scripts/source_owner_review_decision.py --apply-all --dry-run" in text
     assert "FEISHU_APP_ID" in text
@@ -364,9 +366,32 @@ def test_source_owner_packets_can_be_written_from_action_packet() -> None:
         assert (source_owner_dir / "worksheet.md").exists()
         assert (source_owner_dir / "batch-plan.md").exists()
         assert (source_owner_dir / "request-packet.md").exists()
+        assert (source_owner_dir / "mvp-source-set-narrowing.md").exists()
         assert (source_owner_dir / "src-the-verge.decision.json").exists()
         assert (source_owner_dir / "src-the-verge.packet.md").exists()
         assert "Source Owner Decision Request Packet" in (source_owner_dir / "request-packet.md").read_text(encoding="utf-8")
+        narrowing_text = (source_owner_dir / "mvp-source-set-narrowing.md").read_text(encoding="utf-8")
+        assert "MVP Source Set Narrowing Packet" in narrowing_text
+        assert "Current Production-Enabled Source Set" in narrowing_text
+        assert "Missing MVP source types" in narrowing_text
+        assert "manual_url" in narrowing_text
+        assert "Missing MVP sections" in narrowing_text
+        assert "Hardware" in narrowing_text
+        assert "Technology Industry Progress" in narrowing_text
+
+
+def test_source_set_narrowing_packet_is_decision_support_only() -> None:
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+        text = packet.build_source_set_narrowing_packet(evidence_root)
+
+    assert "decision support only" in text
+    assert "Current production-enabled sources: 7" in text
+    assert "Open unresolved source-owner reviews: 25" in text
+    assert "Do not leave a source as `needs_review` if the goal is to clear issue #21" in text
+    assert "If narrowing to the eligible-only baseline" in text
+    assert "python3 scripts/source_owner_review_decision.py --validate-all" in text
+    assert "does not approve, block, defer, or remove any source" in text
 
 
 def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
@@ -406,6 +431,7 @@ def main() -> int:
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
     test_source_owner_packets_can_be_written_from_action_packet()
+    test_source_set_narrowing_packet_is_decision_support_only()
     test_mvp_issue_packets_are_written_with_label_guardrails()
     print("readiness action packet tests passed")
     return 0

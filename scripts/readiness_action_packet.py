@@ -25,8 +25,18 @@ SOURCE_OWNER_INDEX_RELATIVE = "source-owner-reviews/index.md"
 SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
 SOURCE_OWNER_REQUEST_PACKET_RELATIVE = "source-owner-reviews/request-packet.md"
+SOURCE_OWNER_NARROWING_PACKET_RELATIVE = "source-owner-reviews/mvp-source-set-narrowing.md"
 MVP_ISSUE_PACKET_DIR_RELATIVE = "mvp-issue-packets"
 SOURCE_OWNER_APPROVAL_ISSUE = "https://github.com/KG9750/TechNews/issues/21"
+MVP_REQUIRED_SOURCE_TYPES = ["public_feed", "academic_source", "manual_url"]
+MVP_REQUIRED_SECTIONS = [
+    "AI",
+    "Software",
+    "Hardware",
+    "Embodied Intelligence",
+    "Academic Progress",
+    "Technology Industry Progress",
+]
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
@@ -235,6 +245,7 @@ def source_owner_summary(evidence_root: Path) -> dict:
         "worksheet_path": display_path(evidence_root / SOURCE_OWNER_WORKSHEET_RELATIVE),
         "batch_plan_path": display_path(evidence_root / SOURCE_OWNER_BATCH_PLAN_RELATIVE),
         "request_packet_path": display_path(evidence_root / SOURCE_OWNER_REQUEST_PACKET_RELATIVE),
+        "narrowing_packet_path": display_path(evidence_root / SOURCE_OWNER_NARROWING_PACKET_RELATIVE),
     }
 
 
@@ -362,6 +373,206 @@ def source_owner_blockers(source_summary: dict) -> list[str]:
     if source_summary["open"] and not blockers:
         blockers.append(f"{count_phrase(source_summary['open'], 'open source owner review', 'open source owner reviews')} remain")
     return blockers
+
+
+def registry_row_for_source(source_id: str) -> dict[str, str]:
+    try:
+        return source_owner.markdown_table_row(source_owner.REGISTRY_PATH, source_id)
+    except source_owner.ReviewError:
+        return {
+            "ID": source_id,
+            "Source": source_id,
+            "Type": "",
+            "Primary section": "",
+            "Secondary sections": "",
+            "Trust tier": "",
+            "MVP state": "",
+        }
+
+
+def source_sections(registry_row: dict[str, str]) -> set[str]:
+    sections = {registry_row.get("Primary section", "").strip()}
+    secondary = registry_row.get("Secondary sections", "")
+    sections.update(part.strip() for part in secondary.split(",") if part.strip())
+    return {section for section in sections if section}
+
+
+def production_enabled_source_rows() -> list[dict[str, object]]:
+    policies = source_owner.load_policy_rows()
+    rows = []
+    for source_id, policy in sorted(policies.items()):
+        if not policy.get("production_auto_ingestion"):
+            continue
+        registry = registry_row_for_source(source_id)
+        rows.append({"source_id": source_id, "policy": policy, "registry": registry})
+    return rows
+
+
+def open_source_review_rows() -> list[dict[str, object]]:
+    items = source_owner.load_queue_items()
+    policies = source_owner.load_policy_rows()
+    rows = []
+    for source_id in source_owner.open_source_ids():
+        registry = registry_row_for_source(source_id)
+        rows.append(
+            {
+                "source_id": source_id,
+                "item": items[source_id],
+                "policy": policies.get(source_id, {}),
+                "registry": registry,
+            }
+        )
+    return rows
+
+
+def source_set_coverage(rows: list[dict[str, object]]) -> dict[str, object]:
+    source_types = sorted({str(row["policy"].get("source_type", "")) for row in rows if row["policy"].get("source_type")})
+    sections = sorted({section for row in rows for section in source_sections(row["registry"])})
+    missing_types = [source_type for source_type in MVP_REQUIRED_SOURCE_TYPES if source_type not in source_types]
+    missing_sections = [section for section in MVP_REQUIRED_SECTIONS if section not in sections]
+    return {
+        "source_types": source_types,
+        "sections": sections,
+        "missing_types": missing_types,
+        "missing_sections": missing_sections,
+    }
+
+
+def build_source_set_narrowing_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
+    production_rows = production_enabled_source_rows()
+    open_rows = open_source_review_rows()
+    coverage = source_set_coverage(production_rows)
+    production_table = [
+        "| Source ID | Source | Type | Section coverage | Connector mode | Summary policy | Media policy |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for row in production_rows:
+        policy = row["policy"]
+        registry = row["registry"]
+        production_table.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(row["source_id"]),
+                    markdown_cell(registry.get("Source", "")),
+                    markdown_cell(policy.get("source_type", "")),
+                    markdown_cell(", ".join(sorted(source_sections(registry)))),
+                    markdown_cell(policy.get("connector_mode", "")),
+                    markdown_cell(policy.get("summary_policy", "")),
+                    markdown_cell(policy.get("media_policy", "")),
+                ]
+            )
+            + " |"
+        )
+
+    batch_sections = []
+    for batch in source_owner.SOURCE_REVIEW_BATCHES:
+        batch_rows = [
+            row
+            for row in open_rows
+            if row["item"].get("decision_needed") in batch["decision_needed"]
+        ]
+        if not batch_rows:
+            continue
+        table = [
+            "| Source ID | Source | Decision needed | Default connector | Primary section | Narrowing-safe default |",
+            "| --- | --- | --- | --- | --- | --- |",
+        ]
+        for row in batch_rows:
+            item = row["item"]
+            registry = row["registry"]
+            table.append(
+                "| "
+                + " | ".join(
+                    [
+                        markdown_cell(row["source_id"]),
+                        markdown_cell(registry.get("Source", "")),
+                        markdown_cell(item.get("decision_needed", "")),
+                        markdown_cell(item.get("default_connector_mode", "")),
+                        markdown_cell(registry.get("Primary section", "")),
+                        markdown_cell("deferred if excluded from MVP; blocked if terms disallow use"),
+                    ]
+                )
+                + " |"
+            )
+        batch_sections.extend(
+            [
+                f"### {batch['title']}",
+                "",
+                f"- Goal: {batch['goal']}",
+                f"- Default if unresolved: {batch['default_if_unresolved']}",
+                "",
+                *table,
+                "",
+            ]
+        )
+
+    return "\n".join(
+        [
+            "# MVP Source Set Narrowing Packet",
+            "",
+            "This ignored packet is decision support only. It does not approve, block, defer, or remove any source. Complete the source-owner decision JSON files before applying tracked source policy changes.",
+            "",
+            f"- Generated at: {utc_now()}",
+            f"- Evidence root: `{display_path(evidence_root)}`",
+            f"- Linked source-owner issue: {SOURCE_OWNER_APPROVAL_ISSUE}",
+            f"- Current production-enabled sources: {len(production_rows)}",
+            f"- Open unresolved source-owner reviews: {len(open_rows)}",
+            "",
+            "## Current Production-Enabled Source Set",
+            "",
+            *production_table,
+            "",
+            "## Coverage Check",
+            "",
+            "The current production-enabled set is the conservative eligible-only baseline. It is safe for metadata-only ingestion, but it may not satisfy the MVP source-type and section coverage promises without a scoped product decision.",
+            "",
+            "Covered source types:",
+            markdown_bullets(coverage["source_types"], empty_label="None."),
+            "",
+            "Missing MVP source types:",
+            markdown_bullets(coverage["missing_types"], empty_label="None."),
+            "",
+            "Covered sections:",
+            markdown_bullets(coverage["sections"], empty_label="None."),
+            "",
+            "Missing MVP sections:",
+            markdown_bullets(coverage["missing_sections"], empty_label="None."),
+            "",
+            "## Narrowing Decision Rules",
+            "",
+            "- Use `eligible` only when source-specific metadata-only generated summaries, access method, attribution, rate behavior, and media policy are approved.",
+            "- Use `deferred` when the source remains a useful seed source but is explicitly excluded from MVP production ingestion.",
+            "- Use `blocked` when automated access, summary reuse, or required obligations are disallowed for this product.",
+            "- Do not leave a source as `needs_review` if the goal is to clear issue #21 through MVP source-set narrowing.",
+            "- If narrowing to the eligible-only baseline, update the MVP source-set decision because `manual_url`, `Hardware`, or `Technology Industry Progress` coverage may be missing.",
+            "",
+            "## Open Review Batches",
+            "",
+            *batch_sections,
+            "## Commands After Owner Decisions",
+            "",
+            "```bash",
+            "python3 scripts/source_owner_review_decision.py --status",
+            "python3 scripts/source_owner_review_decision.py --validate-all",
+            "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+            "python3 scripts/source_owner_review_decision.py --apply-all",
+            "python3 scripts/check_readiness.py",
+            "python3 scripts/check_readiness.py --require-github",
+            "```",
+            "",
+            "## Share Guardrails",
+            "",
+            "- Keep private permission notes and legal review details out of GitHub unless explicitly approved for sharing.",
+            "- Post source ids, decision outcomes, and public doc links only.",
+            "- Do not enable production auto-ingestion for unresolved `needs_review` sources.",
+        ]
+    )
+
+
+def write_source_set_narrowing_packet(output_path: Path, evidence_root: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(build_source_set_narrowing_packet(evidence_root) + "\n", encoding="utf-8")
 
 
 def mvp_issue_statuses(live_summary: dict, source_summary: dict) -> list[dict[str, object]]:
@@ -572,6 +783,7 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
                 SOURCE_OWNER_REQUEST_PACKET_RELATIVE,
                 SOURCE_OWNER_WORKSHEET_RELATIVE,
                 SOURCE_OWNER_BATCH_PLAN_RELATIVE,
+                SOURCE_OWNER_NARROWING_PACKET_RELATIVE,
             ]
         ),
         "",
@@ -736,6 +948,7 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
         f"- Decision drafts not generated yet: {source_summary['counts']['missing']}",
         f"- Worksheet: {source_summary['worksheet_path']}",
         f"- Request packet: {source_summary['request_packet_path']}",
+        f"- MVP source-set narrowing packet: {source_summary['narrowing_packet_path']}",
         "",
         source_owner_followup_guardrail(source_summary),
     ]
@@ -888,6 +1101,9 @@ def write_source_owner_packets(evidence_root: Path) -> int:
     source_owner.write_worksheet(evidence_dir)
     source_owner.write_batch_plan(evidence_dir)
     source_owner.write_request_packet(evidence_dir)
+    narrowing_path = evidence_root / SOURCE_OWNER_NARROWING_PACKET_RELATIVE
+    write_source_set_narrowing_packet(narrowing_path, evidence_root)
+    print(f"MVP source-set narrowing packet written to {display_path(narrowing_path)}")
     open_count = len(source_owner.open_source_ids())
     print(f"Source owner packet set written: {open_count} open items -> {display_path(evidence_dir)}")
     return open_count
@@ -1045,6 +1261,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Source owner worksheet: `{source_summary['worksheet_path']}`",
             f"- Source owner batch plan: `{source_summary['batch_plan_path']}`",
             f"- Source owner request packet: `{source_summary['request_packet_path']}`",
+            f"- MVP source-set narrowing packet: `{source_summary['narrowing_packet_path']}`",
             f"- MVP issue triage packets: `{display_path(evidence_root / MVP_ISSUE_PACKET_DIR_RELATIVE)}`",
             "",
             "## GitHub Issue Links",
