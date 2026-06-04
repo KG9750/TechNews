@@ -434,8 +434,18 @@ def decision_file_state(evidence_dir: Path, source_id: str) -> dict[str, str]:
     return {
         "status": "valid",
         "decision": decision,
-        "detail": "ready to apply",
+        "detail": decision_status_detail(decision),
     }
+
+
+def decision_status_detail(decision: str) -> str:
+    if decision == "needs_review":
+        return "valid; remains needs_review and blocks production auto-ingestion"
+    if decision == "eligible":
+        return "valid; eligible decision ready to apply"
+    if decision in {"blocked", "deferred"}:
+        return f"valid; {decision} decision ready to close queue item"
+    return "valid decision ready to apply"
 
 
 def review_packet_index(evidence_dir: Path = DEFAULT_EVIDENCE_DIR) -> str:

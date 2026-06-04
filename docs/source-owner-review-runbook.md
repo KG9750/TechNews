@@ -37,7 +37,7 @@ python3 scripts/source_owner_review_decision.py --list-open
 python3 scripts/source_owner_review_decision.py --status
 ```
 
-This is a read-only report. Use it to see which open decisions are still missing, invalid, or ready to apply.
+This is a read-only report. Use it to see which open decisions are still missing, invalid, ready to apply, or valid but still unresolved because they remain `needs_review`.
 
 3. Generate missing fillable owner decision drafts for all open items:
 

@@ -390,7 +390,7 @@ def test_status_reports_completed_drafts_as_valid() -> None:
             assert review.decision_status(evidence_dir) == 0
 
         text = output.getvalue()
-        assert "src-the-verge\tvalid\tneeds_review\tready to apply" in text
+        assert "src-the-verge\tvalid\tneeds_review\tvalid; remains needs_review and blocks production auto-ingestion" in text
         assert "Source owner decision status: 25 valid, 0 invalid, 0 missing, 25 open items" in text
 
 

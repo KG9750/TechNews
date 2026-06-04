@@ -180,7 +180,7 @@ def source_decision_state(evidence_dir: Path, source_id: str) -> dict[str, str]:
         source_owner.validated_payload(path)
     except (source_owner.ReviewError, json.JSONDecodeError) as error:
         return {"status": "invalid", "decision": decision, "detail": str(error)}
-    return {"status": "valid", "decision": decision, "detail": "ready to apply"}
+    return {"status": "valid", "decision": decision, "detail": source_owner.decision_status_detail(decision)}
 
 
 def source_owner_summary(evidence_root: Path) -> dict:

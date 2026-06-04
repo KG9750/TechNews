@@ -831,6 +831,8 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "review_request_packet",
         "write_request_packet",
         "Source Owner Decision Request Packet",
+        "decision_status_detail",
+        "valid; remains needs_review and blocks production auto-ingestion",
     ]:
         require(needle in text, f"source owner review decision helper missing: {needle}")
     for needle in [
@@ -849,6 +851,7 @@ def check_source_owner_review_decision_helper() -> list[str]:
         "test_refresh_context_all_updates_existing_drafts_without_overwriting_answers",
         "test_status_reports_template_drafts_as_invalid",
         "test_status_reports_completed_drafts_as_valid",
+        "valid; remains needs_review and blocks production auto-ingestion",
         "test_validate_all_fails_for_template_drafts",
         "test_validate_all_passes_completed_open_reviews",
         "test_decision_rejects_placeholder_evidence_note",
@@ -1383,6 +1386,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "build_github_update_packet",
         "write_github_update_packet",
         "source_owner_blockers",
+        "source_owner.decision_status_detail",
         "Required evidence files",
         "Briefing Host secret store or local `.env`; never GitHub.",
         "GitHub Issue Links",
