@@ -1,7 +1,7 @@
 # Pre-Development Plan
 
-Status: Draft
-Last updated: 2026-06-03
+Status: Active - local readiness valid; live external evidence pending
+Last updated: 2026-06-04
 
 This plan replaces the earlier preparation plan. Its main correction is ordering: define the minimum contracts first, then run Feishu, source, model, and archive spikes against those contracts. Implementation work must not start until the readiness gate passes.
 
@@ -14,6 +14,7 @@ Start product implementation only after the project has:
 - Minimum contracts for `CandidateItem`, `BriefingItem`, `ArchiveMetadata`, and `BriefingRun`.
 - Feishu delivery path proven for one real user and one real group.
 - First-Version Sources listed, classified, and checked for source eligibility.
+- Source-owner approvals resolved, blocked, deferred, or narrowed so no unresolved `needs_review` source blocks production auto-ingestion.
 - Technology Domain Template and briefing style guide drafted.
 - Golden samples covering at least 20 real-world items without storing full article bodies.
 - Secrets inventory and `.env.example` in place.
@@ -112,6 +113,7 @@ Verification:
 - Source registry contains at least 30 seed sources.
 - Every source is marked first-version or deferred.
 - Every first-version source has an eligibility note covering access method, summary/storage limits, media use, rate limit, and disallowed behavior.
+- `needs_review` sources remain excluded from production auto-ingestion until source-owner approvals or MVP source-set narrowing resolves issue #21.
 
 Official references:
 
@@ -263,8 +265,9 @@ Formal implementation can begin only when:
 3. Review minimum contracts.
 4. Run the Feishu delivery spike.
 5. Run the source ingestion spike.
-6. Run the model provider spike.
-7. Run the archive/storage spike.
-8. Review taxonomy, style guide, and golden samples.
-9. Write the required ADRs.
-10. Create and label MVP implementation issues.
+6. Resolve source-owner approvals or narrow the MVP source set so issue #21 no longer blocks production auto-ingestion.
+7. Run the model provider spike.
+8. Run the archive/storage spike.
+9. Review taxonomy, style guide, and golden samples.
+10. Write the required ADRs.
+11. Create and label MVP implementation issues.

@@ -1462,6 +1462,14 @@ def check_readiness_action_packet_helper() -> list[str]:
         require("scripts/readiness_action_packet.py" in read(path), f"{path} must document readiness action packet helper")
         require("--write-mvp-issue-packets" in read(path), f"{path} must document MVP issue packet generation")
         require("--write-source-owner-packets" in read(path), f"{path} must document source-owner packet generation")
+    plan_text = read("docs/PRE-DEVELOPMENT-PLAN.md")
+    for needle in [
+        "Status: Active - local readiness valid; live external evidence pending",
+        "Source-owner approvals resolved, blocked, deferred, or narrowed so no unresolved `needs_review` source blocks production auto-ingestion.",
+        "`needs_review` sources remain excluded from production auto-ingestion until source-owner approvals or MVP source-set narrowing resolves issue #21.",
+        "Resolve source-owner approvals or narrow the MVP source set so issue #21 no longer blocks production auto-ingestion.",
+    ]:
+        require(needle in plan_text, f"docs/PRE-DEVELOPMENT-PLAN.md missing source-owner readiness planning guidance: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
         require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
     readiness_text = read("docs/readiness-gate-status.md")
