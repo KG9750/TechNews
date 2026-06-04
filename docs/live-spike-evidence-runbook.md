@@ -280,6 +280,7 @@ Validation rules:
 
 - `local_archive.status` must be `written`.
 - `remote_sync.status` must be `synced`.
+- `remote_sync.retryable` must be `false` for synced evidence.
 - Local and remote file counts must be greater than zero.
 - Local and remote file counts must match.
 - Each `file_count` value must match the number of file entries in its corresponding tree file; directory entries ending in `/` are not counted.

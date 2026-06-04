@@ -1259,6 +1259,7 @@ def check_spike_runners() -> list[str]:
         "test_archive_live_evidence_requires_matching_counts_and_trees",
         "test_archive_live_evidence_requires_counts_match_tree_entries",
         "test_archive_live_evidence_requires_archive_package_files",
+        "test_archive_live_evidence_requires_success_not_retryable",
         "test_readiness_manifest_dry_run_shape",
         "test_readiness_manifest_final_review_packet_shape",
         "test_readiness_manifest_tracks_dirty_worktree_guard",
@@ -1301,6 +1302,7 @@ def check_spike_runners() -> list[str]:
         "local and remote tree listings must match",
         "file_count must match local tree file entries",
         "missing required Archive Package files",
+        "remote_sync.retryable must be false for synced evidence",
         "final-redaction-review.md",
         "Validation Basis",
         "does not replace per-spike validators, strict preflight, or the final readiness gate",
@@ -1927,6 +1929,8 @@ def check_archive_live_evidence(evidence_root: Path) -> tuple[list[str], list[st
         failures.append("Archive live evidence local_archive.status must be written")
     if remote_status != "synced":
         failures.append("Archive live evidence remote_sync.status must be synced")
+    if remote_status == "synced" and payload.get("remote_sync", {}).get("retryable") is not False:
+        failures.append("Archive live evidence remote_sync.retryable must be false for synced evidence")
     local_file_count = int(payload.get("local_archive", {}).get("file_count") or 0)
     remote_file_count = int(payload.get("remote_sync", {}).get("file_count") or 0)
     if local_file_count <= 0:

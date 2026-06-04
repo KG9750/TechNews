@@ -240,6 +240,8 @@ def validate_evidence(evidence_dir: Path) -> int:
         raise SpikeError(f"{result_path}: local_archive.status must be written")
     if payload.get("remote_sync", {}).get("status") != "synced":
         raise SpikeError(f"{result_path}: remote_sync.status must be synced")
+    if payload.get("remote_sync", {}).get("retryable") is not False:
+        raise SpikeError(f"{result_path}: remote_sync.retryable must be false for synced evidence")
 
     local_count = positive_int(payload.get("local_archive", {}).get("file_count"), "local_archive.file_count")
     remote_count = positive_int(payload.get("remote_sync", {}).get("file_count"), "remote_sync.file_count")

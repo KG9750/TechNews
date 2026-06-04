@@ -733,6 +733,41 @@ def test_archive_live_evidence_requires_archive_package_files() -> None:
     assert any("Archive live evidence remote tree missing required Archive Package files" in failure for failure in failures)
 
 
+def test_archive_live_evidence_requires_success_not_retryable() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_json(
+            evidence_root / "archive-storage/sync-result.json",
+            {
+                "run_id": "run_synthetic_archive_storage",
+                "local_archive": {
+                    "status": "written",
+                    "package_path": "REDACTED_LOCAL_ARCHIVE_ROOT/2026-06-01/technology",
+                    "file_count": 4,
+                },
+                "remote_sync": {
+                    "status": "synced",
+                    "target": "REDACTED_SYNC_TARGET/2026-06-01/technology",
+                    "file_count": 4,
+                    "retryable": True,
+                },
+            },
+        )
+        tree = "briefing.html\nbriefing.md\nmedia/\nmedia/README.md\nmetadata.json\n"
+        (evidence_root / "archive-storage/local-tree.txt").write_text(tree, encoding="utf-8")
+        (evidence_root / "archive-storage/remote-tree.txt").write_text(tree, encoding="utf-8")
+        try:
+            archive_spike.validate_evidence(evidence_root / "archive-storage")
+        except archive_spike.SpikeError as error:
+            assert "remote_sync.retryable must be false for synced evidence" in str(error)
+        else:
+            raise AssertionError("expected archive validator to reject retryable synced evidence")
+        _, missing, failures = readiness.check_archive_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Archive live evidence remote_sync.retryable must be false for synced evidence" in failures
+
+
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -1206,6 +1241,7 @@ def main() -> int:
     test_archive_live_evidence_requires_matching_counts_and_trees()
     test_archive_live_evidence_requires_counts_match_tree_entries()
     test_archive_live_evidence_requires_archive_package_files()
+    test_archive_live_evidence_requires_success_not_retryable()
     test_synthetic_live_evidence_package_passes_gate()
     test_live_evidence_manifest_rejects_stale_commit()
     test_live_evidence_manifest_rejects_invalid_timestamps()
