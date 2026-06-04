@@ -1081,6 +1081,26 @@ def test_feishu_live_evidence_requires_message_ids() -> None:
     assert "Feishu group response must include data.message_id" in failures
 
 
+def test_feishu_live_evidence_requires_distinct_message_ids() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        evidence_root = Path(tmp_name)
+        write_synthetic_live_evidence(evidence_root)
+        group_response_path = evidence_root / "feishu-delivery/group-response.redacted.json"
+        group_response = json.loads(group_response_path.read_text(encoding="utf-8"))
+        group_response["data"]["message_id"] = "REDACTED_MESSAGE_ID_USER"
+        write_json(group_response_path, group_response)
+        try:
+            feishu_spike.validate_evidence(evidence_root / "feishu-delivery")
+        except feishu_spike.SpikeError as error:
+            assert "data.message_id values must differ" in str(error)
+        else:
+            raise AssertionError("expected Feishu validator to reject duplicated message_id evidence")
+        _, missing, failures = readiness.check_feishu_live_evidence(evidence_root)
+
+    assert not missing
+    assert "Feishu user and group response data.message_id values must differ" in failures
+
+
 def test_preflight_accepts_synthetic_valid_evidence() -> None:
     feishu_env = {
         "FEISHU_APP_ID": "redacted-test-app",
@@ -1149,6 +1169,7 @@ def main() -> int:
     test_feishu_live_evidence_requires_internal_app_request_types()
     test_feishu_live_evidence_rejects_empty_card_content()
     test_feishu_live_evidence_requires_message_ids()
+    test_feishu_live_evidence_requires_distinct_message_ids()
     test_preflight_accepts_synthetic_valid_evidence()
     test_live_evidence_rejects_raw_environment_values()
     print("live evidence helper tests passed")

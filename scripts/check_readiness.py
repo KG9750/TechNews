@@ -1266,6 +1266,7 @@ def check_spike_runners() -> list[str]:
         "test_feishu_live_evidence_requires_internal_app_request_types",
         "test_feishu_live_evidence_rejects_empty_card_content",
         "test_feishu_live_evidence_requires_message_ids",
+        "test_feishu_live_evidence_requires_distinct_message_ids",
         "test_preflight_accepts_synthetic_valid_evidence",
         "test_live_evidence_rejects_raw_environment_values",
     ]:
@@ -1276,6 +1277,7 @@ def check_spike_runners() -> list[str]:
         "current_git_commit()",
         "must be a valid UTC ISO timestamp ending in Z",
         "data.message_id",
+        "data.message_id values must differ",
         "receive_id_type must be chat_id",
         "request content must include non-empty elements",
         "request content missing Source",
@@ -1855,6 +1857,7 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
                     failures.append(f"Feishu {label} request content missing {needle}")
             if not any(needle in card_text for needle in ["Archive", "Deep-Dive", "Deep Dive", "归档"]):
                 failures.append(f"Feishu {label} request content missing Archive or Deep-Dive link")
+    message_ids: dict[str, str] = {}
     for label, path in [
         ("user", required_files["user response"]),
         ("group", required_files["group response"]),
@@ -1869,6 +1872,10 @@ def check_feishu_live_evidence(evidence_root: Path) -> tuple[list[str], list[str
         message_id = data.get("message_id")
         if not isinstance(message_id, str) or not message_id.strip():
             failures.append(f"Feishu {label} response must include data.message_id")
+        else:
+            message_ids[label] = message_id
+    if message_ids.get("user") and message_ids.get("group") and message_ids["user"] == message_ids["group"]:
+        failures.append("Feishu user and group response data.message_id values must differ")
     rendered = required_files["rendered message"].read_text(encoding="utf-8")
     for needle in ["Source", "置信提示"]:
         if needle not in rendered:

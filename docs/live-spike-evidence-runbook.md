@@ -165,6 +165,7 @@ Validation rules:
 - User and group response JSON must have `code = 0`.
 - Each response must include a non-empty `data` object.
 - Each response must include a non-empty `data.message_id` so the send-message result remains verifiable after redaction.
+- User and group `data.message_id` values must differ; if message ids are redacted, use distinct stable labels such as `REDACTED_MESSAGE_ID_USER` and `REDACTED_MESSAGE_ID_GROUP`.
 - Rendered message must include a source line, a Confidence Notice, and an Archive or Deep-Dive link.
 - Evidence must not contain `TEMPLATE_` placeholders.
 - Evidence must not contain raw tokens, Feishu recipient ids, app ids, authorization headers, private local paths, or raw configured secret/env values.

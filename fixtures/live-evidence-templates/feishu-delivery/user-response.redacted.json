@@ -2,6 +2,6 @@
   "code": 0,
   "msg": "success",
   "data": {
-    "message_id": "TEMPLATE_REPLACE_WITH_REDACTED_OR_NON_SECRET_MESSAGE_ID"
+    "message_id": "TEMPLATE_REPLACE_WITH_REDACTED_OR_NON_SECRET_USER_MESSAGE_ID"
   }
 }

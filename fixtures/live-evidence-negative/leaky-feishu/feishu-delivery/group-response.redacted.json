@@ -2,7 +2,7 @@
   "code": 0,
   "msg": "success",
   "data": {
-    "message_id": "om_synthetic_message",
+    "message_id": "om_synthetic_group_message",
     "Authorization": "Bearer syntheticBearerToken1234567890"
   }
 }

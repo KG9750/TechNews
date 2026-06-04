@@ -231,7 +231,7 @@ def check_evidence_redaction(path: Path) -> None:
             raise SpikeError(f"{path}: evidence contains raw environment value {env_name}")
 
 
-def validate_delivery_response(path: Path, label: str) -> None:
+def validate_delivery_response(path: Path, label: str) -> str:
     if not path.exists():
         raise SpikeError(f"missing Feishu {label} response evidence: {path}")
     check_evidence_redaction(path)
@@ -244,6 +244,7 @@ def validate_delivery_response(path: Path, label: str) -> None:
     message_id = data.get("message_id")
     if not isinstance(message_id, str) or not message_id.strip():
         raise SpikeError(f"{path}: Feishu {label} response must include data.message_id")
+    return message_id
 
 
 def validate_delivery_request(path: Path, label: str, expected_receive_id_type: str) -> None:
@@ -298,8 +299,10 @@ def validate_evidence(evidence_dir: Path) -> int:
     load_env_file(ROOT / ".env")
     validate_delivery_request(evidence_dir / "user-request.redacted.json", "user", "open_id")
     validate_delivery_request(evidence_dir / "group-request.redacted.json", "group", "chat_id")
-    validate_delivery_response(evidence_dir / "user-response.redacted.json", "user")
-    validate_delivery_response(evidence_dir / "group-response.redacted.json", "group")
+    user_message_id = validate_delivery_response(evidence_dir / "user-response.redacted.json", "user")
+    group_message_id = validate_delivery_response(evidence_dir / "group-response.redacted.json", "group")
+    if user_message_id == group_message_id:
+        raise SpikeError("Feishu user and group response data.message_id values must differ")
     validate_rendered_message(evidence_dir / "rendered-message.md")
     print(f"LIVE Feishu evidence validates: {evidence_dir}")
     return 0
