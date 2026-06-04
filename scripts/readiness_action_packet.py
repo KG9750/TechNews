@@ -175,6 +175,18 @@ def count_phrase(count: int, singular: str, plural: str) -> str:
     return f"{count} {singular if count == 1 else plural}"
 
 
+def environment_blockers(env: dict) -> list[str]:
+    return list(env.get("missing", [])) + list(env.get("invalid", []))
+
+
+def environment_missing_count(live_summary: dict) -> int:
+    return sum(len(group["missing"]) for group in live_summary["environment"].values())
+
+
+def environment_invalid_count(live_summary: dict) -> int:
+    return sum(len(group.get("invalid", [])) for group in live_summary["environment"].values())
+
+
 def matches_any_prefix(value: str, prefixes: list[str]) -> bool:
     return any(value.startswith(prefix) for prefix in prefixes)
 
@@ -232,6 +244,7 @@ def live_workstream_rows(live_summary: dict) -> list[dict[str, object]]:
     for spec in LIVE_WORKSTREAMS:
         env_group = spec["env_group"]
         env_missing = live_summary["environment"][env_group]["missing"]
+        env_invalid = live_summary["environment"][env_group].get("invalid", [])
         final_group_status = live_summary["final_evidence_groups"][spec["evidence_group"]]["status"]
         files_missing = [
             path
@@ -251,9 +264,10 @@ def live_workstream_rows(live_summary: dict) -> list[dict[str, object]]:
         rows.append(
             {
                 "workstream": spec["label"],
-                "status": "blocked" if final_group_status != "complete" or env_missing or files_missing or validation_missing or validation_failures else "ready for final gate",
+                "status": "blocked" if final_group_status != "complete" or env_missing or env_invalid or files_missing or validation_missing or validation_failures else "ready for final gate",
                 "final_group_status": final_group_status,
                 "missing_env": len(env_missing),
+                "invalid_env": len(env_invalid),
                 "missing_evidence": len(files_missing),
                 "missing_validation": len(validation_missing),
                 "validation_failures": len(validation_failures),
@@ -271,6 +285,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
             blockers.append(f"final evidence group {row['final_group_status']}")
         if row["missing_env"]:
             blockers.append(count_phrase(int(row["missing_env"]), "env var", "env vars"))
+        if row["invalid_env"]:
+            blockers.append(count_phrase(int(row["invalid_env"]), "invalid env value", "invalid env values"))
         if row["missing_evidence"]:
             blockers.append(count_phrase(int(row["missing_evidence"]), "evidence file", "evidence files"))
         if row["missing_validation"]:
@@ -282,7 +298,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
             "detail": ", ".join(blockers) if blockers else "issue-specific evidence is ready",
         }
 
-    live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
+    live_env_missing = environment_missing_count(live_summary)
+    live_env_invalid = environment_invalid_count(live_summary)
     live_evidence_missing = len(live_summary["evidence"]["missing"])
     incomplete_final_groups = [
         group
@@ -294,6 +311,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
     final_blockers = []
     if live_env_missing:
         final_blockers.append(count_phrase(live_env_missing, "env var", "env vars"))
+    if live_env_invalid:
+        final_blockers.append(count_phrase(live_env_invalid, "invalid env value", "invalid env values"))
     if live_evidence_missing:
         final_blockers.append(count_phrase(live_evidence_missing, "evidence file", "evidence files"))
     if incomplete_final_groups:
@@ -399,7 +418,7 @@ def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]
 
 def external_input_request_rows(live_summary: dict, source_summary: dict) -> list[str]:
     rows = [
-        "| Workstream | Linked issue | Required variable names | Missing now | Configure at | Safe request wording | Evidence after configured |",
+        "| Workstream | Linked issue | Required variable names | Missing/invalid now | Configure at | Safe request wording | Evidence after configured |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
     for request in CONFIG_INPUT_REQUESTS:
@@ -412,7 +431,7 @@ def external_input_request_rows(live_summary: dict, source_summary: dict) -> lis
                     markdown_cell(request["workstream"]),
                     markdown_cell(request["issue"]),
                     markdown_cell(", ".join(required)),
-                    markdown_cell(", ".join(env["missing"]) if env["missing"] else "None."),
+                    markdown_cell("; ".join(environment_blockers(env)) if environment_blockers(env) else "None."),
                     markdown_cell(request["configure_at"]),
                     markdown_cell(request["safe_request"]),
                     markdown_cell(request["after_configured"]),
@@ -430,7 +449,7 @@ def external_input_request_rows(live_summary: dict, source_summary: dict) -> lis
                     markdown_cell(request["workstream"]),
                     markdown_cell(request["issue"]),
                     markdown_cell(", ".join(required)),
-                    markdown_cell(", ".join(env["missing"]) if env["missing"] else "None."),
+                    markdown_cell("; ".join(environment_blockers(env)) if environment_blockers(env) else "None."),
                     markdown_cell(request["configure_at"]),
                     markdown_cell(request["safe_request"]),
                     markdown_cell(request["after_configured"]),
@@ -495,6 +514,9 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
                 "Missing variable names now:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
                 "",
+                "Invalid environment values now:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
+                "",
                 "Required evidence files:",
                 "- None; this is runtime schedule configuration, not live external evidence.",
                 "",
@@ -522,6 +544,9 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
                 "",
                 "Missing variable names now:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Invalid environment values now:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
                 "",
                 "Required evidence files:",
                 markdown_bullets(evidence_files_for_env_group(request["env_group"])),
@@ -621,6 +646,9 @@ def github_workstream_sections(live_summary: dict) -> list[str]:
                 "Missing variable names now:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
                 "",
+                "Invalid environment values now:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
+                "",
                 "Missing final evidence files:",
                 markdown_bullets(evidence_missing, empty_label="None missing."),
                 "",
@@ -638,13 +666,16 @@ def github_config_sections(live_summary: dict) -> list[str]:
                 f"### {request['workstream']}",
                 "",
                 f"- Linked issue: {request['issue']}",
-                "- Workstream status: " + ("blocked" if env["missing"] else "ready for final gate"),
+                "- Workstream status: " + ("blocked" if environment_blockers(env) else "ready for final gate"),
                 "",
                 "Required variable names:",
                 markdown_bullets(live_preflight.ENV_GROUPS[request["env_group"]]),
                 "",
                 "Missing variable names now:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Invalid environment values now:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
                 "",
             ]
         )
@@ -865,7 +896,8 @@ def write_source_owner_packets(evidence_root: Path) -> int:
 def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
     source_summary = source_owner_summary(evidence_root)
-    live_env_missing = sum(len(group["missing"]) for group in live_summary["environment"].values())
+    live_env_missing = environment_missing_count(live_summary)
+    live_env_invalid = environment_invalid_count(live_summary)
     live_evidence_missing = len(live_summary["evidence"]["missing"])
     incomplete_final_groups = [
         group
@@ -898,12 +930,15 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                 "Missing variable names:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
                 "",
+                "Invalid environment values:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
+                "",
             ]
         )
 
     table_rows = [
-        "| Workstream | Status | Final evidence group | Missing env vars | Missing evidence files | Missing validation inputs | Validation failures |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Workstream | Status | Final evidence group | Missing env vars | Invalid env values | Missing evidence files | Missing validation inputs | Validation failures |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for row in workstream_rows:
         table_rows.append(
@@ -914,6 +949,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                     markdown_cell(row["status"]),
                     markdown_cell(row["final_group_status"]),
                     markdown_cell(row["missing_env"]),
+                    markdown_cell(row["invalid_env"]),
                     markdown_cell(row["missing_evidence"]),
                     markdown_cell(row["missing_validation"]),
                     markdown_cell(row["validation_failures"]),
@@ -939,6 +975,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                 "blocked" if live_summary["final_evidence_groups"]["readiness_manifest"]["status"] != "complete" or "readiness-manifest.json" in live_summary["evidence"]["missing"] or manifest_validation_missing or manifest_validation_failures else "ready for final gate",
                 live_summary["final_evidence_groups"]["readiness_manifest"]["status"],
                 "0",
+                "0",
                 "1" if "readiness-manifest.json" in live_summary["evidence"]["missing"] else "0",
                 str(len(manifest_validation_missing)),
                 str(len(manifest_validation_failures)),
@@ -953,6 +990,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
                 "Source owner decisions",
                 prerequisite_states(live_summary, source_summary)["source_owner_decisions"]["status"],
                 "not applicable",
+                "0",
                 "0",
                 (
                     f"{source_summary['counts']['invalid']} invalid, "
@@ -984,6 +1022,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "## Current Snapshot",
             "",
             f"- Missing live environment variables: {live_env_missing}",
+            f"- Invalid live environment values: {live_env_invalid}",
             f"- Missing live evidence files: {live_evidence_missing}",
             f"- Incomplete final evidence groups: {len(incomplete_final_groups)}",
             f"- Missing live evidence validation inputs: {live_validation_missing}",

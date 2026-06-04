@@ -17,6 +17,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,6 +52,7 @@ LIVE_EVIDENCE_SECRET_PATTERNS = [
     ("private tmp path", re.compile(r"(?<![A-Za-z0-9_./-])/private/")),
     ("iCloud workspace path", re.compile(r"Mobile Documents/com~apple~CloudDocs")),
 ]
+DELIVERY_DEADLINE_LOCAL_TIME_PATTERN = re.compile(r"^(?:[01][0-9]|2[0-3]):[0-5][0-9]$")
 EXPECTED_ENV_EXAMPLE_VARS = [
     "FEISHU_APP_ID",
     "FEISHU_APP_SECRET",
@@ -1270,6 +1272,7 @@ def check_spike_runners() -> list[str]:
         "test_preflight_dry_runs_write_to_temp_evidence",
         "test_preflight_reports_partial_final_evidence_groups",
         "test_preflight_packet_lists_status_without_secret_values",
+        "test_delivery_schedule_env_validation_reports_invalid_values",
         "test_preflight_writes_issue_facing_spike_packets",
         "test_spike_packet_status_blocks_partial_final_evidence_group",
         "test_feishu_dry_run_documents_group_webhook_fallback",
@@ -1345,6 +1348,9 @@ def check_spike_runners() -> list[str]:
         "helper_dry_runs_enabled",
         "Strict mode requires a clean tracked worktree",
         "complete final evidence groups",
+        "Invalid environment values:",
+        "DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM",
+        "DELIVERY_TIMEZONE must be an IANA timezone name",
         "live_readiness_preflight.py --dry-run --write-packet --write-spike-packets",
         "live_readiness_preflight.py --strict --write-packet --write-spike-packets",
         "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence",
@@ -1457,6 +1463,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "test_action_packet_summarizes_blockers_without_secret_values",
         "test_github_update_packet_names_label_guardrails_without_secret_values",
         "test_action_packet_keeps_valid_needs_review_source_decisions_blocked",
+        "test_action_packets_report_invalid_delivery_schedule_values",
         "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
         "test_source_owner_packets_can_be_written_from_action_packet",
@@ -1469,6 +1476,8 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Delivery schedule",
         "DELIVERY_DEADLINE_LOCAL_TIME",
         "DELIVERY_TIMEZONE",
+        "Invalid environment values now:",
+        "Invalid live environment values:",
         "Source owner approvals",
         "source_owner_review_decision.py --validate-all",
         "Keep private permission notes or legal review details out of GitHub",
@@ -1816,6 +1825,20 @@ def check_github_tracker() -> list[str]:
     ]
 
 
+def invalid_delivery_schedule_environment() -> list[str]:
+    invalid: list[str] = []
+    deadline = os.environ.get("DELIVERY_DEADLINE_LOCAL_TIME")
+    if deadline and not DELIVERY_DEADLINE_LOCAL_TIME_PATTERN.match(deadline):
+        invalid.append("Delivery Schedule: DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM with hour 00-23 and minute 00-59")
+    timezone_name = os.environ.get("DELIVERY_TIMEZONE")
+    if timezone_name:
+        try:
+            ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError:
+            invalid.append("Delivery Schedule: DELIVERY_TIMEZONE must be an IANA timezone name")
+    return invalid
+
+
 def check_external_environment() -> tuple[list[str], list[str]]:
     groups = {
         "Delivery Schedule": [
@@ -1842,9 +1865,12 @@ def check_external_environment() -> tuple[list[str], list[str]]:
     missing_messages: list[str] = []
     for group, names in groups.items():
         missing = [name for name in names if not os.environ.get(name)]
+        invalid = invalid_delivery_schedule_environment() if group == "Delivery Schedule" else []
         if missing:
             missing_messages.append(f"{group}: missing {', '.join(missing)}")
-        else:
+        if invalid:
+            missing_messages.extend(invalid)
+        if not missing and not invalid:
             ok.append(f"{group}: required environment variables present")
     return ok, missing_messages
 

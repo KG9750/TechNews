@@ -161,9 +161,11 @@ def env_summary() -> dict[str, dict[str, list[str]]]:
     for group, names in ENV_GROUPS.items():
         present = [name for name in names if os.environ.get(name)]
         missing = [name for name in names if not os.environ.get(name)]
+        invalid = readiness.invalid_delivery_schedule_environment() if group == "delivery_schedule" else []
         summary[group] = {
             "present": present,
             "missing": missing,
+            "invalid": invalid,
         }
     return summary
 
@@ -314,6 +316,9 @@ def build_markdown_packet(summary: dict, evidence_root: Path, summary_path: Path
                 "",
                 "Missing variable names:",
                 markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Invalid environment values:",
+                markdown_bullets(env.get("invalid", []), empty_label="None invalid."),
                 "",
             ]
         )
@@ -625,6 +630,7 @@ def write_spike_packets(packet_dir: Path, summary: dict, evidence_root: Path) ->
 
 def has_missing_required(summary: dict) -> bool:
     env_missing = any(group["missing"] for group in summary["environment"].values())
+    env_invalid = any(group.get("invalid", []) for group in summary["environment"].values())
     evidence_missing = bool(summary["evidence"]["missing"])
     incomplete_final_groups = any(
         group["status"] != "complete"
@@ -633,11 +639,12 @@ def has_missing_required(summary: dict) -> bool:
     validation_missing = bool(summary["evidence_validation"]["missing"])
     validation_failed = bool(summary["evidence_validation"]["failures"])
     command_failed = any(result["returncode"] != 0 for result in summary["dry_run_commands"])
-    return env_missing or evidence_missing or incomplete_final_groups or validation_missing or validation_failed or command_failed
+    return env_missing or env_invalid or evidence_missing or incomplete_final_groups or validation_missing or validation_failed or command_failed
 
 
 def print_summary(path: Path, summary: dict) -> None:
     missing_env_count = sum(len(group["missing"]) for group in summary["environment"].values())
+    invalid_env_count = sum(len(group.get("invalid", [])) for group in summary["environment"].values())
     missing_evidence_count = len(summary["evidence"]["missing"])
     validation_failure_count = len(summary["evidence_validation"]["failures"])
     partial_groups = [
@@ -648,6 +655,7 @@ def print_summary(path: Path, summary: dict) -> None:
     failed_commands = [result for result in summary["dry_run_commands"] if result["returncode"] != 0]
     print(f"Preflight summary written to {display_path(path)}")
     print(f"Missing environment variables: {missing_env_count}")
+    print(f"Invalid environment values: {invalid_env_count}")
     print(f"Missing live evidence files: {missing_evidence_count}")
     print(f"Partial final evidence groups: {len(partial_groups)}")
     print(f"Live evidence validation failures: {validation_failure_count}")
@@ -661,7 +669,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="Run local dry-run helpers and write a preflight summary.")
     parser.add_argument("--skip-helper-dry-runs", action="store_true", help="Only inspect environment and evidence files, even in strict mode.")
-    parser.add_argument("--strict", action="store_true", help="Fail if env vars, dry-runs, final evidence groups, or live evidence validation are incomplete.")
+    parser.add_argument("--strict", action="store_true", help="Fail if env vars, env value formats, dry-runs, final evidence groups, or live evidence validation are incomplete.")
     parser.add_argument("--evidence-root", default=str(DEFAULT_EVIDENCE_ROOT))
     parser.add_argument("--summary-path", "--output", dest="summary_path", help="Override summary output path.")
     parser.add_argument("--write-packet", action="store_true", help="Also write a Markdown execution packet under evidence/.")
@@ -690,7 +698,7 @@ def main() -> int:
             print(f"Live spike packet written to {display_path(path)}")
     print_summary(output_path, summary)
     if args.strict and has_missing_required(summary):
-        print("STRICT preflight failed: environment variables, final evidence groups, failed helper dry-runs, or live evidence validation are incomplete")
+        print("STRICT preflight failed: environment variables, environment value formats, final evidence groups, failed helper dry-runs, or live evidence validation are incomplete")
         return 2
     return 0
 

@@ -99,7 +99,7 @@ The MVP needs an exact daily Delivery Deadline before formal implementation. Con
 - `DELIVERY_DEADLINE_LOCAL_TIME`
 - `DELIVERY_TIMEZONE`
 
-Use `HH:MM` for `DELIVERY_DEADLINE_LOCAL_TIME` and an IANA timezone such as `Asia/Shanghai` for `DELIVERY_TIMEZONE`. Do not commit real deployment values. No evidence file is required for this input; it is checked by:
+Use `HH:MM` for `DELIVERY_DEADLINE_LOCAL_TIME` with hour `00`-`23` and minute `00`-`59`, and use an IANA timezone such as `Asia/Shanghai` for `DELIVERY_TIMEZONE`. Do not commit real deployment values. No evidence file is required for this input; the gate validates both formats through:
 
 ```bash
 python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets

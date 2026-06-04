@@ -108,6 +108,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
 
     assert "# Pre-development Readiness Action Packet" in text
     assert "Missing live environment variables:" in text
+    assert "Invalid live environment values: 0" in text
     assert "Incomplete final evidence groups:" in text
     assert "Missing live evidence validation inputs:" in text
     assert "Open source owner decisions: 25" in text
@@ -115,7 +116,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "Valid needs_review source owner decisions: 0" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
     assert "Final evidence group | Missing env vars" in text
-    assert "Readiness manifest | blocked | missing | 0 | 1" in text
+    assert "Readiness manifest | blocked | missing | 0 | 0 | 1" in text
     assert "Missing validation inputs | Validation failures" in text
     assert "## External Input Request Checklist" in text
     assert "Use this checklist to request missing live-spike inputs without collecting real values" in text
@@ -228,7 +229,7 @@ def test_action_packet_keeps_valid_needs_review_source_decisions_blocked() -> No
     assert summary["by_decision"]["needs_review"] == 25
     assert "Valid needs_review source owner decisions: 25" in text
     assert "needs_review: 25" in text
-    assert "Source owner decisions | blocked | not applicable | 0 | 0 invalid, 0 missing, 25 unresolved" in text
+    assert "Source owner decisions | blocked | not applicable | 0 | 0 | 0 invalid, 0 missing, 25 unresolved" in text
     assert "| #12 | Taxonomy and source registry | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
     assert "| #13 | Source connectors | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
     assert "Source owner decisions: blocked (25 valid needs_review decisions still need source permission or eligibility approval)" in github_text
@@ -272,6 +273,25 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text
+
+
+def test_action_packets_report_invalid_delivery_schedule_values() -> None:
+    with with_env("DELIVERY_DEADLINE_LOCAL_TIME", "24:01"), with_env("DELIVERY_TIMEZONE", "Not/AZone"):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+            evidence_root = Path(tmp_name) / "evidence"
+            action_text = packet.build_packet(evidence_root)
+            external_text = packet.build_external_input_request_packet(evidence_root)
+            github_text = packet.build_github_update_packet(evidence_root)
+
+    assert "Invalid live environment values: 2" in action_text
+    assert "Missing/invalid now" in action_text
+    assert "Delivery Schedule: DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM with hour 00-23 and minute 00-59" in action_text
+    assert "Delivery Schedule: DELIVERY_TIMEZONE must be an IANA timezone name" in action_text
+    assert "Invalid environment values now:" in external_text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM" in external_text
+    assert "Configuration Inputs" in github_text
+    assert "Invalid environment values now:" in github_text
+    assert "DELIVERY_TIMEZONE must be an IANA timezone name" in github_text
 
 
 def test_action_packet_blocks_unlocks_on_partial_final_evidence_group() -> None:
@@ -382,6 +402,7 @@ def main() -> int:
     test_github_update_packet_names_label_guardrails_without_secret_values()
     test_action_packet_keeps_valid_needs_review_source_decisions_blocked()
     test_external_input_request_packet_names_inputs_without_secret_values()
+    test_action_packets_report_invalid_delivery_schedule_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
     test_source_owner_packets_can_be_written_from_action_packet()

@@ -126,7 +126,7 @@ python3 scripts/spikes/readiness_manifest.py --write-final-review-packet
 - `DELIVERY_DEADLINE_LOCAL_TIME`
 - `DELIVERY_TIMEZONE`
 
-This input is runtime configuration rather than external live evidence. Use `HH:MM` for the local deadline and an IANA timezone such as `Asia/Shanghai`. Do not commit a real deployment value; configure it through `.env`, the Briefing Host secret/config store, or the Operations Console once implemented.
+This input is runtime configuration rather than external live evidence. Use `HH:MM` for the local deadline with hour `00`-`23` and minute `00`-`59`, and use an IANA timezone such as `Asia/Shanghai`. The readiness gate validates both formats. Do not commit a real deployment value; configure it through `.env`, the Briefing Host secret/config store, or the Operations Console once implemented.
 
 ### Feishu
 

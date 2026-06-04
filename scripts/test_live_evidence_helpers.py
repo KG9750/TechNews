@@ -221,6 +221,35 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
     assert preflight.display_path(Path("evidence/packet.md")) == "evidence/packet.md"
 
 
+def test_delivery_schedule_env_validation_reports_invalid_values() -> None:
+    values = {
+        "DELIVERY_DEADLINE_LOCAL_TIME": "25:99",
+        "DELIVERY_TIMEZONE": "Mars/Base",
+    }
+    with with_env_values(values):
+        ok, blocked = readiness.check_external_environment()
+        with tempfile.TemporaryDirectory() as tmp_name:
+            evidence_root = Path(tmp_name)
+            summary = preflight.build_summary(evidence_root, run_helpers=False)
+            packet = preflight.build_markdown_packet(
+                summary,
+                evidence_root,
+                evidence_root / "summary.json",
+                evidence_root / "packet.md",
+            )
+
+    assert not any("Delivery Schedule: required environment variables present" in item for item in ok)
+    delivery_blocks = [item for item in blocked if item.startswith("Delivery Schedule: DELIVERY_")]
+    assert "Delivery Schedule: DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM with hour 00-23 and minute 00-59" in delivery_blocks
+    assert "Delivery Schedule: DELIVERY_TIMEZONE must be an IANA timezone name" in delivery_blocks
+    assert summary["environment"]["delivery_schedule"]["missing"] == []
+    assert summary["environment"]["delivery_schedule"]["invalid"] == delivery_blocks
+    assert preflight.has_missing_required(summary) is True
+    assert "Invalid environment values:" in packet
+    assert "DELIVERY_DEADLINE_LOCAL_TIME must use HH:MM" in packet
+    assert "DELIVERY_TIMEZONE must be an IANA timezone name" in packet
+
+
 def test_preflight_writes_issue_facing_spike_packets() -> None:
     with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
         evidence_root = Path(tmp_name) / "evidence"
@@ -1223,6 +1252,7 @@ def main() -> int:
     test_preflight_dry_runs_write_to_temp_evidence()
     test_preflight_reports_partial_final_evidence_groups()
     test_preflight_packet_lists_status_without_secret_values()
+    test_delivery_schedule_env_validation_reports_invalid_values()
     test_preflight_writes_issue_facing_spike_packets()
     test_spike_packet_status_blocks_partial_final_evidence_group()
     test_feishu_dry_run_documents_group_webhook_fallback()
