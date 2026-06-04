@@ -187,10 +187,14 @@ def source_owner_summary(evidence_root: Path) -> dict:
     items = source_owner.load_queue_items()
     counts = {"valid": 0, "invalid": 0, "missing": 0}
     by_decision_needed: dict[str, int] = {}
+    by_decision: dict[str, int] = {}
     for source_id in source_owner.open_source_ids():
         item = items[source_id]
         state = source_decision_state(evidence_dir, source_id)
         counts[state["status"]] += 1
+        if state["status"] == "valid":
+            decision = state["decision"]
+            by_decision[decision] = by_decision.get(decision, 0) + 1
         decision_needed = item["decision_needed"]
         by_decision_needed[decision_needed] = by_decision_needed.get(decision_needed, 0) + 1
 
@@ -198,6 +202,7 @@ def source_owner_summary(evidence_root: Path) -> dict:
         "open": sum(counts.values()),
         "counts": counts,
         "by_decision_needed": by_decision_needed,
+        "by_decision": by_decision,
         "index_path": display_path(evidence_root / SOURCE_OWNER_INDEX_RELATIVE),
         "worksheet_path": display_path(evidence_root / SOURCE_OWNER_WORKSHEET_RELATIVE),
         "batch_plan_path": display_path(evidence_root / SOURCE_OWNER_BATCH_PLAN_RELATIVE),
@@ -286,20 +291,42 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
         "detail": ", ".join(final_blockers) if final_blockers else "live readiness evidence is ready",
     }
 
-    source_blockers = []
-    if source_summary["counts"]["missing"]:
-        source_blockers.append(count_phrase(source_summary["counts"]["missing"], "missing decision", "missing decisions"))
-    if source_summary["counts"]["invalid"]:
-        source_blockers.append(count_phrase(source_summary["counts"]["invalid"], "invalid decision", "invalid decisions"))
+    source_blockers = source_owner_blockers(source_summary)
     states["source_owner_decisions"] = {
         "status": "blocked" if source_blockers else "ready",
-        "detail": ", ".join(source_blockers) if source_blockers else "owner decisions are valid or no longer open",
+        "detail": ", ".join(source_blockers) if source_blockers else "no open source owner reviews remain",
     }
     states["core_mvp_issues"] = {
         "status": "blocked",
         "detail": "core MVP issues #10-#19 must complete before E2E acceptance",
     }
     return states
+
+
+def source_owner_blockers(source_summary: dict) -> list[str]:
+    counts = source_summary["counts"]
+    by_decision = source_summary.get("by_decision", {})
+    blockers = []
+    if counts["missing"]:
+        blockers.append(f"{count_phrase(counts['missing'], 'decision draft', 'decision drafts')} not generated yet")
+    if counts["invalid"]:
+        blockers.append(f"{count_phrase(counts['invalid'], 'decision draft', 'decision drafts')} need owner input or validation fixes")
+    needs_review_count = by_decision.get("needs_review", 0)
+    if needs_review_count:
+        blockers.append(
+            f"{count_phrase(needs_review_count, 'valid needs_review decision', 'valid needs_review decisions')} "
+            "still need source permission or eligibility approval"
+        )
+    pending_apply_count = sum(
+        count
+        for decision, count in by_decision.items()
+        if decision and decision != "needs_review"
+    )
+    if pending_apply_count:
+        blockers.append(f"{count_phrase(pending_apply_count, 'completed decision', 'completed decisions')} must be applied to tracked artifacts")
+    if source_summary["open"] and not blockers:
+        blockers.append(f"{count_phrase(source_summary['open'], 'open source owner review', 'open source owner reviews')} remain")
+    return blockers
 
 
 def mvp_issue_statuses(live_summary: dict, source_summary: dict) -> list[dict[str, object]]:
@@ -495,24 +522,26 @@ def github_workstream_sections(live_summary: dict) -> list[str]:
 
 
 def github_source_owner_status(source_summary: dict) -> str:
-    counts = source_summary["counts"]
-    blockers = []
-    if counts["invalid"]:
-        blockers.append(f"{count_phrase(counts['invalid'], 'decision draft', 'decision drafts')} need owner input or validation fixes")
-    if counts["missing"]:
-        blockers.append(f"{count_phrase(counts['missing'], 'decision draft', 'decision drafts')} not generated yet")
+    blockers = source_owner_blockers(source_summary)
     if blockers:
         return "blocked (" + ", ".join(blockers) + ")"
-    return "ready (all open source owner decisions validate)"
+    return "ready (no open source owner reviews remain)"
 
 
 def source_owner_followup_guardrail(source_summary: dict) -> str:
     counts = source_summary["counts"]
     if counts["invalid"] or counts["missing"]:
         return "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied."
+    needs_review_count = source_summary.get("by_decision", {}).get("needs_review", 0)
+    if needs_review_count:
+        return (
+            f"{count_phrase(needs_review_count, 'valid decision', 'valid decisions')} still keep sources `needs_review`; "
+            "keep production auto-ingestion blocked until explicit source permission or eligibility approval is documented."
+        )
+    if source_summary["open"]:
+        return "Apply completed source owner decisions to tracked artifacts before changing production connector policy."
     return (
-        "All open owner decisions validate; keep production auto-ingestion blocked for `needs_review` "
-        "sources until explicit source permission or eligibility approval is documented."
+        "No open source owner reviews remain; verify source access policy before enabling production connectors."
     )
 
 
@@ -718,6 +747,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         f"{decision_needed}: {count}"
         for decision_needed, count in sorted(source_summary["by_decision_needed"].items())
     ]
+    source_outcome_rows = [
+        f"{decision}: {count}"
+        for decision, count in sorted(source_summary["by_decision"].items())
+    ]
     env_sections = []
     for group, env in live_summary["environment"].items():
         env_sections.extend(
@@ -783,10 +816,14 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
         + " | ".join(
             [
                 "Source owner decisions",
-                "blocked" if source_summary["counts"]["invalid"] or source_summary["counts"]["missing"] else "ready to apply",
+                prerequisite_states(live_summary, source_summary)["source_owner_decisions"]["status"],
                 "not applicable",
                 "0",
-                f"{source_summary['counts']['invalid']} invalid, {source_summary['counts']['missing']} missing",
+                (
+                    f"{source_summary['counts']['invalid']} invalid, "
+                    f"{source_summary['counts']['missing']} missing, "
+                    f"{source_summary['by_decision'].get('needs_review', 0)} unresolved"
+                ),
                 "0",
                 "0",
             ]
@@ -820,6 +857,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             f"- Valid source owner decisions: {source_summary['counts']['valid']}",
             f"- Invalid source owner decisions: {source_summary['counts']['invalid']}",
             f"- Missing source owner decisions: {source_summary['counts']['missing']}",
+            f"- Valid needs_review source owner decisions: {source_summary['by_decision'].get('needs_review', 0)}",
             "",
             "## Linked Packets",
             "",
@@ -859,6 +897,10 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
             "## Source Owner Decision Types",
             "",
             markdown_bullets(source_decision_rows, empty_label="No open source owner decisions."),
+            "",
+            "## Source Owner Decision Outcomes",
+            "",
+            markdown_bullets(source_outcome_rows, empty_label="No valid open source owner decision outcomes."),
             "",
             "## Execution Order",
             "",

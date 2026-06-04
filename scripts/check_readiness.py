@@ -1381,6 +1381,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "write_external_input_request_packet",
         "build_github_update_packet",
         "write_github_update_packet",
+        "source_owner_blockers",
         "Required evidence files",
         "Briefing Host secret store or local `.env`; never GitHub.",
         "GitHub Issue Links",
@@ -1414,6 +1415,7 @@ def check_readiness_action_packet_helper() -> list[str]:
     for needle in [
         "test_action_packet_summarizes_blockers_without_secret_values",
         "test_github_update_packet_names_label_guardrails_without_secret_values",
+        "test_action_packet_keeps_valid_needs_review_source_decisions_blocked",
         "test_action_packet_blocks_unlocks_on_partial_final_evidence_group",
         "test_action_packet_writes_markdown",
         "test_source_owner_packets_can_be_written_from_action_packet",

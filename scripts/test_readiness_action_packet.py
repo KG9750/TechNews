@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -39,6 +40,65 @@ def with_env(name: str, value: str):
     return EnvGuard()
 
 
+def source_owner_decision_payload_for_source(source_id: str, decision: str) -> dict:
+    queue_item = packet.source_owner.load_queue_items()[source_id]
+    production_enabled = decision == "eligible"
+    return {
+        "source_id": source_id,
+        "reviewed_at": "2026-06-03",
+        "reviewed_by": "Briefing Administrator",
+        "decision": decision,
+        "evidence_checked": [
+            {
+                "required_evidence": evidence,
+                "url_or_note": f"Owner note: reviewed {evidence} against source terms and recorded metadata-only constraints.",
+                "checked_at": "2026-06-03",
+            }
+            for evidence in queue_item["evidence_required"]
+        ],
+        "owner_question_answers": [
+            {
+                "question": question,
+                "answer": "Metadata-only use remains needs_review until explicit permission and text-only media handling are approved.",
+            }
+            for question in queue_item["owner_questions"]
+        ],
+        "policy_after_decision": {
+            "eligibility_state": decision,
+            "connector_mode": "rss_metadata_only" if production_enabled else queue_item["default_connector_mode"],
+            "production_auto_ingestion": production_enabled,
+            "full_text_storage": "not_stored",
+            "summary_policy": "generated_summary_from_metadata_only" if production_enabled else "generated_summary_disallowed",
+            "media_policy": "none_until_approved",
+            "rate_policy": "conservative_default" if production_enabled else "no_production_fetch",
+        },
+        "implementation_guardrail": "Regression test guardrail.",
+        "artifact_updates": {
+            "review_matrix": {
+                "terms_evidence": f"Owner decision reviewed 2026-06-03; test decision {decision}.",
+                "summary_storage": "Generated summaries follow the owner decision.",
+                "media_use": "No media reuse.",
+                "rate_limit": "Conservative default for test." if production_enabled else "No production fetch.",
+                "next_action": f"Apply test decision {decision}.",
+            },
+            "source_registry": {
+                "eligibility_notes": f"Regression test applied decision {decision}.",
+            },
+        },
+    }
+
+
+def write_completed_source_owner_decisions(evidence_root: Path, decision: str) -> None:
+    evidence_dir = evidence_root / "source-owner-reviews"
+    for source_id in packet.source_owner.open_source_ids():
+        output = packet.source_owner.decision_path(evidence_dir, source_id)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(source_owner_decision_payload_for_source(source_id, decision), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
 def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     secret = "action-packet-secret-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -52,6 +112,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "Missing live evidence validation inputs:" in text
     assert "Open source owner decisions: 25" in text
     assert "Missing source owner decisions: 25" in text
+    assert "Valid needs_review source owner decisions: 0" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
     assert "Final evidence group | Missing env vars" in text
     assert "Readiness manifest | blocked | missing | 0 | 1" in text
@@ -139,10 +200,32 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Invalid decisions:" not in draft_text
     assert "25 invalid decisions" not in draft_text
 
-    ready_summary = {"counts": {"valid": 25, "invalid": 0, "missing": 0}}
+    ready_summary = {"open": 0, "counts": {"valid": 0, "invalid": 0, "missing": 0}, "by_decision": {}}
     assert packet.source_owner_followup_guardrail(ready_summary) == (
-        "All open owner decisions validate; keep production auto-ingestion blocked for `needs_review` "
-        "sources until explicit source permission or eligibility approval is documented."
+        "No open source owner reviews remain; verify source access policy before enabling production connectors."
+    )
+
+
+def test_action_packet_keeps_valid_needs_review_source_decisions_blocked() -> None:
+    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
+        evidence_root = Path(tmp_name) / "evidence"
+        write_completed_source_owner_decisions(evidence_root, "needs_review")
+
+        summary = packet.source_owner_summary(evidence_root)
+        text = packet.build_packet(evidence_root)
+        github_text = packet.build_github_update_packet(evidence_root)
+
+    assert summary["counts"] == {"valid": 25, "invalid": 0, "missing": 0}
+    assert summary["by_decision"]["needs_review"] == 25
+    assert "Valid needs_review source owner decisions: 25" in text
+    assert "needs_review: 25" in text
+    assert "Source owner decisions | blocked | not applicable | 0 | 0 invalid, 0 missing, 25 unresolved" in text
+    assert "| #12 | Taxonomy and source registry | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
+    assert "| #13 | Source connectors | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
+    assert "Source owner decisions: blocked (25 valid needs_review decisions still need source permission or eligibility approval)" in github_text
+    assert (
+        "25 valid decisions still keep sources `needs_review`; keep production auto-ingestion blocked until explicit source permission or eligibility approval is documented."
+        in github_text
     )
 
 
@@ -189,7 +272,10 @@ def test_action_packet_blocks_unlocks_on_partial_final_evidence_group() -> None:
         "evidence_validation": {"passed": [], "missing": [], "failures": []},
     }
     source_summary = {
+        "open": 0,
         "counts": {"valid": 0, "invalid": 0, "missing": 0},
+        "by_decision": {},
+        "by_decision_needed": {},
     }
 
     states = packet.prerequisite_states(live_summary, source_summary)
@@ -275,6 +361,7 @@ def test_mvp_issue_packets_are_written_with_label_guardrails() -> None:
 def main() -> int:
     test_action_packet_summarizes_blockers_without_secret_values()
     test_github_update_packet_names_label_guardrails_without_secret_values()
+    test_action_packet_keeps_valid_needs_review_source_decisions_blocked()
     test_external_input_request_packet_names_inputs_without_secret_values()
     test_action_packet_blocks_unlocks_on_partial_final_evidence_group()
     test_action_packet_writes_markdown()
