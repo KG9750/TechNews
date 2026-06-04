@@ -9,6 +9,7 @@ This file is the current audit trail for the readiness gate in `docs/PRE-DEVELOP
 
 The repository is ready for live external validation, but not ready for product implementation. The remaining blockers are:
 
+- Delivery schedule: needs exact daily Delivery Deadline local time and timezone.
 - Feishu delivery spike: needs real internal app bot delivery to one user and one group.
 - Model Provider spike: needs one real provider/model call set with usage metadata.
 - Archive/storage spike: needs real `ARCHIVE_SYNC_TARGET` success evidence.
@@ -76,6 +77,7 @@ The checker may also print `REVIEW` notes. These are not local fixture failures,
 | GitHub repo access, labels, milestones, and tracking issue exist | Passed | `--require-github` verifies `gh auth status`, origin remote identity, default branch `main`, push-capable repo permission, labels, milestones, tracking issue #1, live-spike blockers #3/#5/#6, and source-owner approval blocker #21 | None |
 | Pre-development readiness CI exists | Passed | `.github/workflows/pre-development-readiness.yml`; `scripts/check_readiness.py` verifies Node 24-native action versions, workflow coverage, secrets inventory alignment, live evidence helper coverage, and local fixtures | None |
 | Minimum contracts exist | Passed | `docs/schemas/minimal-contracts.md`; readiness verifies required contract sections, core fields, guardrail rules, and spike references; issue #2 closed | None |
+| Exact daily Delivery Deadline is configured | Blocked | `docs/MVP-SCOPE.md`; `.env.example`; `docs/secrets.md`; live preflight and action packets list `DELIVERY_DEADLINE_LOCAL_TIME` and `DELIVERY_TIMEZONE` | Need exact daily local time and IANA timezone configured in the secure runtime environment |
 | Feishu delivery spike passes for one user and one group | Blocked | Fixtures in `fixtures/feishu-delivery/`; live evidence template in `fixtures/live-evidence-templates/feishu-delivery/`; readiness validates source line, Confidence Notice, and Archive/Deep-Dive link in rendered evidence; issue #3 open `needs-info` | Need Feishu app credentials, user open_id, group chat_id, live send evidence under `evidence/feishu-delivery/` |
 | Source ingestion spike normalizes every First-Version Source type | Passed | `docs/spikes/source-ingestion.md`; `fixtures/source-ingestion/candidate-items.json`; issue #4 closed | None |
 | Archive/storage spike passes | Blocked | Local archive fixture in `fixtures/archive-storage/`; live evidence template in `fixtures/live-evidence-templates/archive-storage/`; issue #6 open `needs-info` | Need real NAS/cloud sync target success evidence under `evidence/archive-storage/` |
@@ -118,6 +120,13 @@ Generate it after all live evidence files are present:
 ```bash
 python3 scripts/spikes/readiness_manifest.py --write-final-review-packet
 ```
+
+### Delivery Schedule
+
+- `DELIVERY_DEADLINE_LOCAL_TIME`
+- `DELIVERY_TIMEZONE`
+
+This input is runtime configuration rather than external live evidence. Use `HH:MM` for the local deadline and an IANA timezone such as `Asia/Shanghai`. Do not commit a real deployment value; configure it through `.env`, the Briefing Host secret/config store, or the Operations Console once implemented.
 
 ### Feishu
 

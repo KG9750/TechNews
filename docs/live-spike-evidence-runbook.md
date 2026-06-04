@@ -39,6 +39,8 @@ The preflight runs the local helper dry-runs, reports required environment varia
 
 The live packet also includes a dry-run artifact inventory. Files such as `readiness-manifest.dry-run.json`, `dry-run-request-shape.redacted.json`, model request envelopes, and `dry-run-sync-result.json` are helper outputs only; they do not count as final live evidence and must not be used to close #3, #5, #6, or the readiness gate.
 
+The packet also names non-secret runtime configuration required by the MVP scope, including the daily Delivery Deadline. That schedule input is not a live spike and does not create evidence files, but strict preflight and the final live environment gate remain blocked until it is configured.
+
 After credentials and redacted evidence are configured, use strict mode as a quick final check before the readiness gate:
 
 ```bash
@@ -89,6 +91,20 @@ python3 scripts/check_readiness.py --require-github
 ```
 
 Valid decisions that still say `needs_review` do not unlock production auto-ingestion. The source-owner blocker clears only when the tracked artifacts show approved, blocked, deferred, or narrowed source behavior that no longer leaves open `needs_review` production decisions.
+
+## Delivery Schedule Input
+
+The MVP needs an exact daily Delivery Deadline before formal implementation. Configure these runtime values through the Briefing Host environment, secure config store, or the Operations Console once implemented:
+
+- `DELIVERY_DEADLINE_LOCAL_TIME`
+- `DELIVERY_TIMEZONE`
+
+Use `HH:MM` for `DELIVERY_DEADLINE_LOCAL_TIME` and an IANA timezone such as `Asia/Shanghai` for `DELIVERY_TIMEZONE`. Do not commit real deployment values. No evidence file is required for this input; it is checked by:
+
+```bash
+python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets
+python3 scripts/check_readiness.py --require-live
+```
 
 ## Final Gate Command
 

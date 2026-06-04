@@ -1,9 +1,9 @@
-# Secrets Inventory
+# Runtime Environment Inventory
 
 Status: Draft
 Last updated: 2026-06-04
 
-Do not store real secrets in this repo. Use `.env.example` for variable names only and configure real values on the Briefing Host.
+Do not store real secrets in this repo. Use `.env.example` for variable names only and configure real values on the Briefing Host. Some variables below are non-secret runtime configuration, but they still belong outside tracked files until the Operations Console owns them.
 
 | Variable | Purpose | Required for | Owner | Setup note |
 | --- | --- | --- | --- | --- |
@@ -12,6 +12,8 @@ Do not store real secrets in this repo. Use `.env.example` for variable names on
 | `FEISHU_TENANT_KEY` | Tenant identifier when required by Feishu app setup | Feishu delivery spike | Briefing Administrator | Confirm during Feishu spike. |
 | `FEISHU_DEFAULT_USER_OPEN_ID` | Test recipient user identifier | Feishu user delivery verification | Briefing Administrator | Use a test user approved for MVP validation. |
 | `FEISHU_DEFAULT_CHAT_ID` | Test group identifier | Feishu group delivery verification | Briefing Administrator | Use a test group containing the app bot. |
+| `DELIVERY_DEADLINE_LOCAL_TIME` | Daily Push Briefing delivery deadline local time | Pre-development readiness gate, MVP scheduler | Briefing Administrator | Use `HH:MM` in the configured timezone. |
+| `DELIVERY_TIMEZONE` | IANA timezone for the daily delivery deadline | Pre-development readiness gate, MVP scheduler | Briefing Administrator | Example format: `Asia/Shanghai`; do not commit a real deployment value. |
 | `FEISHU_GROUP_WEBHOOK_URL` | Optional custom group bot webhook | Group fallback only | Briefing Administrator | Leave empty unless fallback is chosen. |
 | `FEISHU_GROUP_WEBHOOK_SECRET` | Optional group bot signing secret | Group fallback only | Briefing Administrator | Leave empty unless fallback is chosen. |
 | `MODEL_PROVIDER` | First Model Provider name | Model provider spike | Briefing Administrator | Example values are intentionally omitted until selected. |

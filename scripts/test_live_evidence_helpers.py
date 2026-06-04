@@ -197,6 +197,9 @@ def test_preflight_packet_lists_status_without_secret_values() -> None:
             assert packet_path.exists()
 
     assert "# Live Readiness Execution Packet" in packet
+    assert "delivery_schedule" in packet
+    assert "DELIVERY_DEADLINE_LOCAL_TIME" in packet
+    assert "DELIVERY_TIMEZONE" in packet
     assert "MODEL_API_KEY" in packet
     assert "readiness-manifest.json" in packet
     assert "Final Evidence Group Status" in packet

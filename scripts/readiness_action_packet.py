@@ -60,6 +60,20 @@ EXTERNAL_INPUT_REQUESTS = [
         "after_configured": "Run archive storage spike and keep redacted sync result plus local/remote tree evidence.",
     },
 ]
+CONFIG_INPUT_REQUESTS = [
+    {
+        "workstream": "Delivery schedule",
+        "env_group": "delivery_schedule",
+        "issue": "https://github.com/KG9750/TechNews/issues/1",
+        "configure_at": "Briefing Host runtime configuration or local `.env`; later the Operations Console.",
+        "safe_request": "Request `DELIVERY_DEADLINE_LOCAL_TIME` as local `HH:MM` plus `DELIVERY_TIMEZONE` as an IANA timezone.",
+        "after_configured": "Rerun preflight and the live environment gate; no external evidence file is required for this input.",
+        "commands": [
+            "python3 scripts/spikes/live_readiness_preflight.py --strict --write-packet --write-spike-packets",
+            "python3 scripts/check_readiness.py --require-live",
+        ],
+    },
+]
 LIVE_WORKSTREAMS = [
     {
         "key": "feishu_delivery",
@@ -388,6 +402,24 @@ def external_input_request_rows(live_summary: dict, source_summary: dict) -> lis
         "| Workstream | Linked issue | Required variable names | Missing now | Configure at | Safe request wording | Evidence after configured |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
+    for request in CONFIG_INPUT_REQUESTS:
+        env = live_summary["environment"][request["env_group"]]
+        required = live_preflight.ENV_GROUPS[request["env_group"]]
+        rows.append(
+            "| "
+            + " | ".join(
+                [
+                    markdown_cell(request["workstream"]),
+                    markdown_cell(request["issue"]),
+                    markdown_cell(", ".join(required)),
+                    markdown_cell(", ".join(env["missing"]) if env["missing"] else "None."),
+                    markdown_cell(request["configure_at"]),
+                    markdown_cell(request["safe_request"]),
+                    markdown_cell(request["after_configured"]),
+                ]
+            )
+            + " |"
+        )
     for request in EXTERNAL_INPUT_REQUESTS:
         env = live_summary["environment"][request["env_group"]]
         required = live_preflight.ENV_GROUPS[request["env_group"]]
@@ -445,6 +477,34 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
     source_summary = source_owner_summary(evidence_root)
     commands_by_env_group = spike_commands_by_env_group()
     sections = []
+    for request in CONFIG_INPUT_REQUESTS:
+        env = live_summary["environment"][request["env_group"]]
+        required = live_preflight.ENV_GROUPS[request["env_group"]]
+        sections.extend(
+            [
+                f"## {request['workstream']}",
+                "",
+                f"- Linked issue: {request['issue']}",
+                f"- Configure at: {request['configure_at']}",
+                f"- Safe request wording: {request['safe_request']}",
+                f"- After configured: {request['after_configured']}",
+                "",
+                "Required variable names:",
+                markdown_bullets(required),
+                "",
+                "Missing variable names now:",
+                markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+                "Required evidence files:",
+                "- None; this is runtime schedule configuration, not live external evidence.",
+                "",
+                "Commands after values are configured:",
+                "```bash",
+                *request["commands"],
+                "```",
+                "",
+            ]
+        )
     for request in EXTERNAL_INPUT_REQUESTS:
         env = live_summary["environment"][request["env_group"]]
         required = live_preflight.ENV_GROUPS[request["env_group"]]
@@ -569,6 +629,28 @@ def github_workstream_sections(live_summary: dict) -> list[str]:
     return sections
 
 
+def github_config_sections(live_summary: dict) -> list[str]:
+    sections = []
+    for request in CONFIG_INPUT_REQUESTS:
+        env = live_summary["environment"][request["env_group"]]
+        sections.extend(
+            [
+                f"### {request['workstream']}",
+                "",
+                f"- Linked issue: {request['issue']}",
+                "- Workstream status: " + ("blocked" if env["missing"] else "ready for final gate"),
+                "",
+                "Required variable names:",
+                markdown_bullets(live_preflight.ENV_GROUPS[request["env_group"]]),
+                "",
+                "Missing variable names now:",
+                markdown_bullets(env["missing"], empty_label="None missing."),
+                "",
+            ]
+        )
+    return sections
+
+
 def github_source_owner_status(source_summary: dict) -> str:
     blockers = source_owner_blockers(source_summary)
     if blockers:
@@ -661,6 +743,9 @@ def build_github_update_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> s
             "- Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass.",
             "- Move an issue to `ready-for-agent` only when the generated packet shows no remaining product or evidence decision.",
             "",
+            "## Configuration Inputs",
+            "",
+            *github_config_sections(live_summary),
             "## Live Spike Issue Inputs",
             "",
             *github_workstream_sections(live_summary),

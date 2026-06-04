@@ -57,6 +57,8 @@ EXPECTED_ENV_EXAMPLE_VARS = [
     "FEISHU_TENANT_KEY",
     "FEISHU_DEFAULT_USER_OPEN_ID",
     "FEISHU_DEFAULT_CHAT_ID",
+    "DELIVERY_DEADLINE_LOCAL_TIME",
+    "DELIVERY_TIMEZONE",
     "FEISHU_GROUP_WEBHOOK_URL",
     "FEISHU_GROUP_WEBHOOK_SECRET",
     "MODEL_PROVIDER",
@@ -1002,6 +1004,7 @@ def check_mvp_scope() -> list[str]:
     for needle in [
         "Status: Active scope - readiness inputs pending",
         "## Readiness Inputs Still Needed Before Build",
+        "Exact daily Delivery Deadline.",
         "Approved Feishu user and group recipients, app credentials, and live internal-app delivery evidence.",
         "First Model Provider selection, API credentials, and live structured-output usage evidence.",
         "Local archive path, NAS/cloud sync target, and live sync success evidence.",
@@ -1397,6 +1400,11 @@ def check_readiness_action_packet_helper() -> list[str]:
         "readiness-manifest.json",
         "final-redaction-review.md",
         "EXTERNAL_INPUT_REQUESTS",
+        "CONFIG_INPUT_REQUESTS",
+        "DELIVERY_DEADLINE_LOCAL_TIME",
+        "DELIVERY_TIMEZONE",
+        "Delivery schedule",
+        "Configuration Inputs",
         "External Input Request Checklist",
         "External Input Request Packet",
         "SOURCE_OWNER_APPROVAL_ISSUE",
@@ -1458,6 +1466,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         "Feishu delivery spike: final evidence group partial",
         "Global readiness gate: blocked",
         "External Input Request Packet",
+        "Delivery schedule",
+        "DELIVERY_DEADLINE_LOCAL_TIME",
+        "DELIVERY_TIMEZONE",
         "Source owner approvals",
         "source_owner_review_decision.py --validate-all",
         "Keep private permission notes or legal review details out of GitHub",
@@ -1496,6 +1507,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         require("--write-spike-packets" in read(path), f"{path} must document per-spike packet generation")
     readiness_text = read("docs/readiness-gate-status.md")
     for needle in [
+        "### Delivery Schedule",
+        "DELIVERY_DEADLINE_LOCAL_TIME",
+        "DELIVERY_TIMEZONE",
         "### Source Owner Approvals",
         "Linked issue: #21",
         "evidence/source-owner-reviews/request-packet.md",
@@ -1506,6 +1520,9 @@ def check_readiness_action_packet_helper() -> list[str]:
         require(needle in readiness_text, f"docs/readiness-gate-status.md missing source-owner external input guidance: {needle}")
     runbook_text = read("docs/live-spike-evidence-runbook.md")
     for needle in [
+        "## Delivery Schedule Input",
+        "DELIVERY_DEADLINE_LOCAL_TIME",
+        "DELIVERY_TIMEZONE",
         "## Source Owner Approval Inputs",
         "GitHub issue #21 must remain `needs-info`",
         "evidence/source-owner-reviews/request-packet.md",
@@ -1801,6 +1818,10 @@ def check_github_tracker() -> list[str]:
 
 def check_external_environment() -> tuple[list[str], list[str]]:
     groups = {
+        "Delivery Schedule": [
+            "DELIVERY_DEADLINE_LOCAL_TIME",
+            "DELIVERY_TIMEZONE",
+        ],
         "Feishu": [
             "FEISHU_APP_ID",
             "FEISHU_APP_SECRET",

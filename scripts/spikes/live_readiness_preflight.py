@@ -34,6 +34,10 @@ def load_module(name: str, path: Path):
 readiness = load_module("check_readiness", ROOT / "scripts/check_readiness.py")
 
 ENV_GROUPS = {
+    "delivery_schedule": [
+        "DELIVERY_DEADLINE_LOCAL_TIME",
+        "DELIVERY_TIMEZONE",
+    ],
     "feishu": [
         "FEISHU_APP_ID",
         "FEISHU_APP_SECRET",

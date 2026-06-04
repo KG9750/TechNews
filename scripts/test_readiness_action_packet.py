@@ -120,6 +120,8 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "## External Input Request Checklist" in text
     assert "Use this checklist to request missing live-spike inputs without collecting real values" in text
     assert "| Feishu delivery | https://github.com/KG9750/TechNews/issues/3 |" in text
+    assert "| Delivery schedule | https://github.com/KG9750/TechNews/issues/1 |" in text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME, DELIVERY_TIMEZONE" in text
     assert "| Source owner approvals | https://github.com/KG9750/TechNews/issues/21 | None. | 25 open source owner approvals |" in text
     assert "FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_DEFAULT_USER_OPEN_ID, FEISHU_DEFAULT_CHAT_ID" in text
     assert "MODEL_PROVIDER, MODEL_DEFAULT_MODEL, MODEL_API_KEY" in text
@@ -167,6 +169,9 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Keep #21 `needs-info` while source owner approvals or source-set narrowing remain unresolved." in text
     assert "Keep #10 through #20 `needs-triage` until final readiness and GitHub tracker gates pass." in text
     assert "Copy-Safe Issue Comments" in text
+    assert "Configuration Inputs" in text
+    assert "### Delivery schedule" in text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME" in text
     assert "### #1 Pre-development Tracking" in text
     assert "### #21 Source Owner Review Follow-Up" in text
     assert "### #10-#20 MVP Issue Triage" in text
@@ -245,6 +250,10 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "Missing variable names now:" in text
     assert "Required evidence files:" in text
     assert "Commands after values are configured:" in text
+    assert "## Delivery schedule" in text
+    assert "DELIVERY_DEADLINE_LOCAL_TIME" in text
+    assert "DELIVERY_TIMEZONE" in text
+    assert "None; this is runtime schedule configuration, not live external evidence." in text
     assert "## Source owner approvals" in text
     assert "Current blocker: 25 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
     assert "source-owner-reviews/request-packet.md" in text
