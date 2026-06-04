@@ -120,6 +120,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "## External Input Request Checklist" in text
     assert "Use this checklist to request missing live-spike inputs without collecting real values" in text
     assert "| Feishu delivery | https://github.com/KG9750/TechNews/issues/3 |" in text
+    assert "| Source owner approvals | https://github.com/KG9750/TechNews/issues/21 | None. | 25 open source owner approvals |" in text
     assert "FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_DEFAULT_USER_OPEN_ID, FEISHU_DEFAULT_CHAT_ID" in text
     assert "MODEL_PROVIDER, MODEL_DEFAULT_MODEL, MODEL_API_KEY" in text
     assert "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET" in text
@@ -244,6 +245,11 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "Missing variable names now:" in text
     assert "Required evidence files:" in text
     assert "Commands after values are configured:" in text
+    assert "## Source owner approvals" in text
+    assert "Current blocker: 25 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
+    assert "source-owner-reviews/request-packet.md" in text
+    assert "python3 scripts/source_owner_review_decision.py --validate-all" in text
+    assert "python3 scripts/source_owner_review_decision.py --apply-all --dry-run" in text
     assert "FEISHU_APP_ID" in text
     assert "FEISHU_APP_SECRET" in text
     assert "feishu-delivery/user-request.redacted.json" in text
@@ -252,7 +258,8 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "python3 scripts/spikes/feishu_delivery_spike.py --validate-evidence" in text
     assert "python3 scripts/spikes/model_provider_spike.py --validate-evidence" in text
     assert "python3 scripts/spikes/archive_storage_spike.py --validate-evidence" in text
-    assert "Share variable names and setup instructions only." in text
+    assert "Share variable names, approval questions, and setup instructions only." in text
+    assert "Keep private permission notes or legal review details out of GitHub unless explicitly approved for sharing." in text
     assert secret not in text
     assert str(packet.ROOT) not in text
     assert str(Path.home()) not in text

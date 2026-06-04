@@ -26,12 +26,13 @@ SOURCE_OWNER_WORKSHEET_RELATIVE = "source-owner-reviews/worksheet.md"
 SOURCE_OWNER_BATCH_PLAN_RELATIVE = "source-owner-reviews/batch-plan.md"
 SOURCE_OWNER_REQUEST_PACKET_RELATIVE = "source-owner-reviews/request-packet.md"
 MVP_ISSUE_PACKET_DIR_RELATIVE = "mvp-issue-packets"
+SOURCE_OWNER_APPROVAL_ISSUE = "https://github.com/KG9750/TechNews/issues/21"
 GITHUB_ISSUES = [
     ("Pre-development tracking", "https://github.com/KG9750/TechNews/issues/1"),
     ("Feishu delivery spike", "https://github.com/KG9750/TechNews/issues/3"),
     ("Model provider spike", "https://github.com/KG9750/TechNews/issues/5"),
     ("Archive/storage spike", "https://github.com/KG9750/TechNews/issues/6"),
-    ("Source owner approvals", "https://github.com/KG9750/TechNews/issues/21"),
+    ("Source owner approvals", SOURCE_OWNER_APPROVAL_ISSUE),
 ]
 EXTERNAL_INPUT_REQUESTS = [
     {
@@ -382,7 +383,7 @@ def mvp_issue_unlock_rows(live_summary: dict, source_summary: dict) -> list[str]
     return rows
 
 
-def external_input_request_rows(live_summary: dict) -> list[str]:
+def external_input_request_rows(live_summary: dict, source_summary: dict) -> list[str]:
     rows = [
         "| Workstream | Linked issue | Required variable names | Missing now | Configure at | Safe request wording | Evidence after configured |",
         "| --- | --- | --- | --- | --- | --- | --- |",
@@ -405,6 +406,21 @@ def external_input_request_rows(live_summary: dict) -> list[str]:
             )
             + " |"
         )
+    rows.append(
+        "| "
+        + " | ".join(
+            [
+                "Source owner approvals",
+                SOURCE_OWNER_APPROVAL_ISSUE,
+                "None.",
+                f"{source_summary['open']} open source owner approvals",
+                "Source owner/legal review workflow; never GitHub for private evidence.",
+                "Request approval, blocking, deferral, or MVP source-set narrowing through a secure owner review path.",
+                "Apply source-owner decisions to tracked artifacts and rerun readiness plus GitHub gates.",
+            ]
+        )
+        + " |"
+    )
     return rows
 
 
@@ -426,6 +442,7 @@ def evidence_files_for_env_group(env_group: str) -> list[str]:
 
 def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_summary = live_preflight.build_summary(evidence_root, run_helpers=False)
+    source_summary = source_owner_summary(evidence_root)
     commands_by_env_group = spike_commands_by_env_group()
     sections = []
     for request in EXTERNAL_INPUT_REQUESTS:
@@ -456,6 +473,34 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
                 "",
             ]
         )
+    source_owner_section = [
+        "## Source owner approvals",
+        "",
+        f"- Linked issue: {SOURCE_OWNER_APPROVAL_ISSUE}",
+        "- Configure at: Source owner/legal review workflow; never GitHub for private evidence.",
+        "- Safe request wording: Request approval, blocking, deferral, or MVP source-set narrowing through a secure owner review path.",
+        f"- Current blocker: {source_summary['open']} open source owner approvals; {source_summary.get('by_decision', {}).get('needs_review', 0)} valid `needs_review` decisions still block production auto-ingestion.",
+        "",
+        "Required review packets:",
+        markdown_bullets(
+            [
+                SOURCE_OWNER_REQUEST_PACKET_RELATIVE,
+                SOURCE_OWNER_WORKSHEET_RELATIVE,
+                SOURCE_OWNER_BATCH_PLAN_RELATIVE,
+            ]
+        ),
+        "",
+        "Commands after decisions are recorded:",
+        "```bash",
+        "python3 scripts/source_owner_review_decision.py --status",
+        "python3 scripts/source_owner_review_decision.py --validate-all",
+        "python3 scripts/source_owner_review_decision.py --apply-all --dry-run",
+        "python3 scripts/source_owner_review_decision.py --apply-all",
+        "python3 scripts/check_readiness.py",
+        "python3 scripts/check_readiness.py --require-github",
+        "```",
+        "",
+    ]
 
     return "\n".join(
         [
@@ -468,10 +513,12 @@ def build_external_input_request_packet(evidence_root: Path = DEFAULT_EVIDENCE_R
             "- Final gate after evidence is complete: `python3 scripts/check_readiness.py --require-live --require-evidence`",
             "",
             *sections,
+            *source_owner_section,
             "## Share Guardrails",
             "",
-            "- Share variable names and setup instructions only.",
+            "- Share variable names, approval questions, and setup instructions only.",
             "- Keep real credentials, Feishu recipient ids, provider responses, local paths, and NAS/cloud targets in the secure environment.",
+            "- Keep private permission notes or legal review details out of GitHub unless explicitly approved for sharing.",
             "- Commit tracked docs/scripts before generating the final readiness manifest.",
         ]
     )
@@ -744,7 +791,7 @@ def build_packet(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> str:
     live_validation_failures = len(live_summary["evidence_validation"]["failures"])
     workstream_rows = live_workstream_rows(live_summary)
     issue_unlock_rows = mvp_issue_unlock_rows(live_summary, source_summary)
-    external_input_rows = external_input_request_rows(live_summary)
+    external_input_rows = external_input_request_rows(live_summary, source_summary)
 
     source_decision_rows = [
         f"{decision_needed}: {count}"
