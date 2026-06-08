@@ -25,7 +25,7 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 `python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, post-readiness labels, and the acceptance coverage map.
 Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
-Issues #10, #11, #12, #13, #14, and #15 are implemented and closed by PRs #24, #26, #28, #30, #32, and #34. Issues #16 through #19 remain `ready-for-agent`; issue #20 remains `needs-triage` until core MVP implementation completes.
+Issues #10, #11, #12, #13, #14, #15, and #16 are implemented and closed by PRs #24, #26, #28, #30, #32, #34, and #36. Issues #17 through #19 remain `ready-for-agent`; issue #20 remains `needs-triage` until core MVP implementation completes.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
