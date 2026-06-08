@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+from tempfile import TemporaryDirectory
 from pathlib import Path
 
 
@@ -16,6 +17,11 @@ from technews_briefing.contracts import (  # noqa: E402
     BriefingItem,
     CandidateItem,
     ContractError,
+)
+from technews_briefing.archive_package import (  # noqa: E402
+    ArchivePackageError,
+    archive_package_path,
+    write_archive_package,
 )
 from technews_briefing.briefing_generation import generate_briefing  # noqa: E402
 from technews_briefing.ranking import RankingInput, rank_candidates  # noqa: E402
@@ -115,10 +121,30 @@ GOLDEN_EVENT_IMPACT = {
     "sample-020-single-source-leak": 5,
     "sample-021-duplicate-apple-ai-coverage": 4,
 }
+ARCHIVE_TEST_CONNECTOR_STATUS = {
+    "src-openai-news": {"status": "completed", "item_count": 1},
+    "src-manual-url": {"status": "completed", "item_count": 1},
+}
+ARCHIVE_TEST_DELIVERY_STATUS = {
+    "feishu_group_demo": {"status": "skipped", "reason": "product module test does not call Feishu"},
+}
+ARCHIVE_TEST_MODEL_USAGE_SUMMARY = {
+    "provider": "fixture",
+    "model": "not_called",
+    "task_count": 0,
+    "request_count": 0,
+    "failure_count": 0,
+    "notes": "Product module test uses deterministic fixtures.",
+}
 
 
 def load_json(path: str):
     with (ROOT / path).open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def load_json_from_path(path: Path):
+    with path.open(encoding="utf-8") as handle:
         return json.load(handle)
 
 
@@ -719,6 +745,130 @@ def test_briefing_generator_uses_structured_no_media_fallback_for_academic_items
     assert "AI 聊天" in detail.summary_zh
 
 
+def archive_test_briefing():
+    result = rank_candidates(
+        (
+            ranking_input_from_golden("sample-001-openai-gpt-4o"),
+            ranking_input_from_golden("sample-020-single-source-leak"),
+            ranking_input_from_golden("sample-011-kubernetes-130"),
+        ),
+        subscribed_sections={"AI", "Hardware", "Software"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=2,
+    )
+    return generate_briefing(result.selected), result.excluded
+
+
+def test_archive_package_path_uses_date_domain_segments() -> None:
+    path = archive_package_path(
+        Path("archives"),
+        generated_at="2026-06-01T07:30:00Z",
+        domain_template="technology",
+    )
+
+    assert path == Path("archives/2026-06-01/technology")
+    assert_raises(
+        ArchivePackageError,
+        lambda: archive_package_path(
+            Path("archives"),
+            generated_at="2026-06-01T07:30:00Z",
+            domain_template="../technology",
+        ),
+        "single path segment",
+    )
+
+
+def test_archive_package_writes_local_files_and_failed_sync_metadata() -> None:
+    briefing, excluded = archive_test_briefing()
+    with TemporaryDirectory() as tmpdir:
+        result = write_archive_package(
+            briefing,
+            local_root=Path(tmpdir) / "archives",
+            generated_at="2026-06-01T07:30:00Z",
+            excluded_candidates=excluded,
+            connector_status=ARCHIVE_TEST_CONNECTOR_STATUS,
+            delivery_status=ARCHIVE_TEST_DELIVERY_STATUS,
+            model_usage_summary=ARCHIVE_TEST_MODEL_USAGE_SUMMARY,
+        )
+
+        assert (result.local_package_path / "briefing.html").exists()
+        assert (result.local_package_path / "briefing.md").exists()
+        assert (result.local_package_path / "metadata.json").exists()
+        assert (result.local_package_path / "media/README.md").exists()
+        assert (result.local_package_path / f"deep-dive/{briefing.items[0].id}.html").exists()
+        assert result.metadata.sync_status["local_archive"].status == "local_written"
+        assert result.metadata.sync_status["remote_sync"].status == "failed"
+        assert result.metadata.sync_status["remote_sync"].retryable is True
+        assert result.metadata.excluded_candidates
+        assert "Remote sync failed" in result.metadata.warnings[-1]
+
+        metadata = ArchiveMetadata.from_mapping(load_json_from_path(result.local_package_path / "metadata.json"))
+        selected = metadata.selected_items[0]
+        assert selected["deep_dive_href"].startswith("deep-dive/")
+        assert selected["original_source_anchor"]["source_url"]
+        assert "briefing.md" in result.files_written
+
+
+def test_archive_package_syncs_to_configured_target() -> None:
+    briefing, excluded = archive_test_briefing()
+    with TemporaryDirectory() as tmpdir:
+        local_root = Path(tmpdir) / "archives"
+        sync_target = Path(tmpdir) / "synced"
+        result = write_archive_package(
+            briefing,
+            local_root=local_root,
+            sync_target=sync_target,
+            generated_at="2026-06-01T07:30:00Z",
+            excluded_candidates=excluded,
+            connector_status=ARCHIVE_TEST_CONNECTOR_STATUS,
+            delivery_status=ARCHIVE_TEST_DELIVERY_STATUS,
+            model_usage_summary=ARCHIVE_TEST_MODEL_USAGE_SUMMARY,
+        )
+
+        assert result.remote_package_path == sync_target / "2026-06-01/technology"
+        assert result.metadata.sync_status["remote_sync"].status == "synced"
+        assert result.metadata.sync_status["remote_sync"].retryable is False
+        assert (result.remote_package_path / "briefing.html").exists()
+        remote_metadata = ArchiveMetadata.from_mapping(
+            load_json_from_path(result.remote_package_path / "metadata.json")
+        )
+        assert remote_metadata.sync_status["remote_sync"].status == "synced"
+
+
+def test_archive_package_keeps_local_output_when_sync_target_is_unavailable() -> None:
+    briefing, excluded = archive_test_briefing()
+    with TemporaryDirectory() as tmpdir:
+        sync_target = Path(tmpdir) / "sync-target-file"
+        sync_target.write_text("not a directory", encoding="utf-8")
+        result = write_archive_package(
+            briefing,
+            local_root=Path(tmpdir) / "archives",
+            sync_target=sync_target,
+            generated_at="2026-06-01T07:30:00Z",
+            excluded_candidates=excluded,
+            connector_status=ARCHIVE_TEST_CONNECTOR_STATUS,
+            delivery_status=ARCHIVE_TEST_DELIVERY_STATUS,
+            model_usage_summary=ARCHIVE_TEST_MODEL_USAGE_SUMMARY,
+        )
+
+        assert result.metadata.sync_status["remote_sync"].status == "failed"
+        assert result.metadata.sync_status["remote_sync"].failure_reason
+        assert result.metadata.sync_status["remote_sync"].metadata["retry_state"] == "pending_retry"
+        assert (result.local_package_path / "briefing.html").exists()
+        assert (result.local_package_path / "metadata.json").exists()
+
+
+def test_archive_storage_fixture_contains_complete_package_shape() -> None:
+    package = ROOT / "fixtures/archive-storage/local-archive/2026-06-01/technology"
+    assert (package / "briefing.html").exists()
+    assert (package / "briefing.md").exists()
+    assert (package / "metadata.json").exists()
+    assert (package / "media/README.md").exists()
+    metadata = ArchiveMetadata.from_mapping(load_json_from_path(package / "metadata.json"))
+    assert metadata.sync_status["local_archive"].status == "local_written"
+    assert metadata.sync_status["remote_sync"].status == "failed"
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -782,6 +932,11 @@ def main() -> int:
         test_briefing_generator_creates_contract_items_and_section_groups,
         test_briefing_generator_preserves_deep_dive_detail_links_and_sources,
         test_briefing_generator_uses_structured_no_media_fallback_for_academic_items,
+        test_archive_package_path_uses_date_domain_segments,
+        test_archive_package_writes_local_files_and_failed_sync_metadata,
+        test_archive_package_syncs_to_configured_target,
+        test_archive_package_keeps_local_output_when_sync_target_is_unavailable,
+        test_archive_storage_fixture_contains_complete_package_shape,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
