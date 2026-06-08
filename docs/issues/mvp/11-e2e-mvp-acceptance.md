@@ -43,6 +43,7 @@ The MVP is only done when the whole daily briefing loop works from source collec
 - `docs/PRE-DEVELOPMENT-PLAN.md`
 - `docs/ARCHITECTURE-NOTES.md`
 - `docs/schemas/minimal-contracts.md`
+- `docs/e2e-acceptance.md`
 
 ## Dependencies
 
