@@ -1,42 +1,42 @@
 # GitHub Issue Breakdown
 
-Status: Ready as issue-body drafts; live MVP issues must stay `needs-triage` until the readiness gate passes
-Last updated: 2026-06-04
+Status: Readiness gate passed; MVP issues ready for post-readiness triage
+Last updated: 2026-06-08
 
-Use this breakdown to create GitHub issues after the remaining external spike evidence is available, or earlier as `needs-triage` placeholders if the maintainer wants the MVP backlog visible. Do not mark implementation issues `ready-for-agent` until the relevant blockers in each issue are cleared.
+Use this breakdown to keep GitHub issue labels aligned after the readiness gate. The external spike blockers are complete, source-owner narrowing is applied, and decision-complete implementation issues can move to `ready-for-agent`.
 
 ## Pre-Development Issues
 
 | GitHub issue | Status | Relevant docs |
 | --- | --- | --- |
 | #2 Prepare minimum contracts | Closed | `docs/schemas/minimal-contracts.md` |
-| #3 Run Feishu delivery spike | Open, `needs-info` | `docs/spikes/feishu-delivery.md`, `docs/secrets.md` |
+| #3 Run Feishu delivery spike | Ready to close after copy-safe update | `docs/spikes/feishu-delivery.md`, `docs/secrets.md` |
 | #4 Run source ingestion spike | Closed | `docs/spikes/source-ingestion.md`, `docs/source-registry.md` |
-| #5 Run model provider spike | Open, `needs-info` | `docs/spikes/model-provider.md`, `fixtures/model-provider/` |
-| #6 Run archive and storage spike | Open, `needs-info` | `docs/spikes/archive-storage.md`, `fixtures/archive-storage/` |
+| #5 Run model provider spike | Ready to close after copy-safe update | `docs/spikes/model-provider.md`, `fixtures/model-provider/` |
+| #6 Run archive and storage spike | Ready to close after copy-safe update | `docs/spikes/archive-storage.md`, `fixtures/archive-storage/` |
 | #7 Review technology taxonomy and briefing style guide | Closed | `docs/taxonomy/technology-domain-template.md`, `docs/briefing-style-guide.md` |
 | #8 Review golden samples | Closed | `fixtures/golden-samples/` |
 | #9 Record required ADRs before MVP issue execution | Closed | `docs/adr/` |
-| #21 Resolve source owner eligibility approvals | Open, `needs-info` | `docs/source-owner-review-runbook.md`, `fixtures/source-ingestion/source-owner-review-queue.json` |
+| #21 Resolve source owner eligibility approvals | Ready to close after copy-safe update | `docs/source-owner-review-runbook.md`, `fixtures/source-ingestion/source-owner-review-queue.json` |
 
 ## MVP Issue Drafts
 
 Every draft below contains the required sections: Problem, Scope, Out of scope, Acceptance criteria, Test expectations, Relevant docs, Dependencies, and Triage label.
-`python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, `needs-triage` labels, and the acceptance coverage map.
+`python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, post-readiness labels, and the acceptance coverage map.
 Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
-| Repo and CI | #10 | `docs/issues/mvp/01-repo-ci-foundation.md` | `needs-triage` | Readiness gate |
-| Contracts | #11 | `docs/issues/mvp/02-contract-schemas.md` | `needs-triage` | Live model/archive/Feishu spike feedback |
-| Taxonomy and source registry | #12 | `docs/issues/mvp/03-taxonomy-source-registry.md` | `needs-triage` | Source owner approvals (#21) and source access policy updates |
-| Source connectors | #13 | `docs/issues/mvp/04-source-connectors.md` | `needs-triage` | Source owner approvals (#21), readiness gate, and source access policy enforcement |
-| Ranking and Selection Rationale | #14 | `docs/issues/mvp/05-ranking-selection-rationale.md` | `needs-triage` | Model provider spike |
-| Briefing generation and Confidence Notices | #15 | `docs/issues/mvp/06-briefing-generation-confidence.md` | `needs-triage` | Model provider spike and Feishu card verification |
-| Archive Package | #16 | `docs/issues/mvp/07-archive-package.md` | `needs-triage` | Archive sync target |
-| Feishu delivery | #17 | `docs/issues/mvp/08-feishu-delivery.md` | `needs-triage` | Live Feishu delivery spike |
-| Operations Console | #18 | `docs/issues/mvp/09-operations-console.md` | `needs-triage` | Storage and auth defaults confirmed |
-| Deployment and secrets | #19 | `docs/issues/mvp/10-deployment-secrets.md` | `needs-triage` | Briefing Host paths and secrets |
+| Repo and CI | #10 | `docs/issues/mvp/01-repo-ci-foundation.md` | `ready-for-agent` | None after readiness gate |
+| Contracts | #11 | `docs/issues/mvp/02-contract-schemas.md` | `ready-for-agent` | Live model/archive/Feishu spike feedback incorporated |
+| Taxonomy and source registry | #12 | `docs/issues/mvp/03-taxonomy-source-registry.md` | `ready-for-agent` | Source owner approvals (#21) resolved by narrowing |
+| Source connectors | #13 | `docs/issues/mvp/04-source-connectors.md` | `ready-for-agent` | Source owner approvals (#21), source-owner narrowing, and source access policy applied |
+| Ranking and Selection Rationale | #14 | `docs/issues/mvp/05-ranking-selection-rationale.md` | `ready-for-agent` | Model provider spike complete |
+| Briefing generation and Confidence Notices | #15 | `docs/issues/mvp/06-briefing-generation-confidence.md` | `ready-for-agent` | Model provider and Feishu evidence complete |
+| Archive Package | #16 | `docs/issues/mvp/07-archive-package.md` | `ready-for-agent` | Archive sync evidence complete |
+| Feishu delivery | #17 | `docs/issues/mvp/08-feishu-delivery.md` | `ready-for-agent` | Live Feishu delivery spike complete |
+| Operations Console | #18 | `docs/issues/mvp/09-operations-console.md` | `ready-for-agent` | Storage and auth defaults confirmed |
+| Deployment and secrets | #19 | `docs/issues/mvp/10-deployment-secrets.md` | `ready-for-agent` | Runtime input names and secret surfaces confirmed |
 | End-to-end MVP acceptance | #20 | `docs/issues/mvp/11-e2e-mvp-acceptance.md` | `needs-triage` | All core implementation issues |
 
 ## Acceptance Coverage Map
@@ -57,5 +57,5 @@ Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to ge
 
 ## Creation Rule
 
-If these drafts are created as GitHub issues before the readiness gate passes, add milestone `mvp` and label `needs-triage`. After #3, #5, and #6 have live evidence and #21 no longer blocks source-owner approvals or source-set narrowing, each issue can be reviewed individually and only decision-complete issues should move to `ready-for-agent`.
+After the readiness gate passes, #10 through #19 can move to `ready-for-agent`. Keep #20 as `needs-triage` until the core MVP implementation issues are complete.
 The ignored MVP issue triage packets are comment-ready context only; they do not replace `python3 scripts/check_readiness.py --require-live --require-evidence` or `python3 scripts/check_readiness.py --require-github`.

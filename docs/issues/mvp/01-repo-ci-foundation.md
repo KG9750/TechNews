@@ -38,8 +38,8 @@ The MVP needs a predictable Python project foundation before product modules are
 
 ## Dependencies
 
-- Readiness gate should pass before this becomes `ready-for-agent`.
+- Readiness gate has passed; this issue is ready to implement.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

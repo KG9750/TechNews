@@ -45,4 +45,4 @@ The MVP needs a repeatable deployment path on the Briefing Host with secrets out
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

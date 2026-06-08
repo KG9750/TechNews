@@ -130,6 +130,9 @@ REQUIRED_GITHUB_MILESTONES = {
 SOURCE_OWNER_REVIEW_ISSUE = 21
 PREDEVELOPMENT_ISSUES = set(range(1, 10)) | {SOURCE_OWNER_REVIEW_ISSUE}
 MVP_ISSUES = set(range(10, 21))
+COMPLETED_READINESS_BLOCKER_ISSUES = {3, 5, 6, SOURCE_OWNER_REVIEW_ISSUE}
+POST_READINESS_READY_MVP_ISSUES = set(range(10, 20))
+POST_READINESS_NEEDS_TRIAGE_MVP_ISSUES = {20}
 MVP_ISSUE_DRAFTS = {
     10: "docs/issues/mvp/01-repo-ci-foundation.md",
     11: "docs/issues/mvp/02-contract-schemas.md",
@@ -1004,24 +1007,26 @@ def check_golden_samples() -> list[str]:
 def check_mvp_scope() -> list[str]:
     text = read("docs/MVP-SCOPE.md")
     for needle in [
-        "Status: Active scope - readiness inputs pending",
-        "## Readiness Inputs Still Needed Before Build",
-        "Exact daily Delivery Deadline.",
-        "Approved Feishu user and group recipients, app credentials, and live internal-app delivery evidence.",
-        "First Model Provider selection, API credentials, and live structured-output usage evidence.",
-        "Local archive path, NAS/cloud sync target, and live sync success evidence.",
-        "Source-owner approvals, blocking, deferral, or MVP source-set narrowing for the `needs_review` sources tracked by issue #21.",
-        "Final MVP source set confirmation after source-owner approvals are applied.",
+        "Status: Active scope - readiness gate passed",
+        "## Readiness Gate Completed Before Build",
+        "Exact daily Delivery Deadline is configured in the secure runtime.",
+        "Feishu user and group delivery evidence is complete for the internal-app bot path.",
+        "Model Provider live structured-output evidence and usage metadata are complete.",
+        "Archive/storage live sync success evidence is complete.",
+        "Source-owner blocking is resolved by MVP source-set narrowing: 7 eligible metadata-only sources are enabled and 25 sources are deferred.",
+        "Final MVP source set is confirmed for implementation start.",
     ]:
         require(needle in text, f"docs/MVP-SCOPE.md missing current readiness input: {needle}")
     for stale in [
         "Status: Draft",
         "## Decisions Still Needed Before Build",
+        "Status: Active scope - readiness inputs pending",
+        "## Readiness Inputs Still Needed Before Build",
         "Initial technology Domain Template taxonomy.",
         "Administrator access method for the Operations Console.",
     ]:
         require(stale not in text, f"docs/MVP-SCOPE.md still contains stale readiness wording: {stale}")
-    return ["MVP scope: active scope and current readiness inputs verified"]
+    return ["MVP scope: active scope and completed readiness gate verified"]
 
 
 def check_json_fixtures() -> list[str]:
@@ -1528,10 +1533,10 @@ def check_readiness_action_packet_helper() -> list[str]:
         require("--write-source-owner-packets" in read(path), f"{path} must document source-owner packet generation")
     plan_text = read("docs/PRE-DEVELOPMENT-PLAN.md")
     for needle in [
-        "Status: Active - local readiness valid; live external evidence pending",
+        "Status: Passed - readiness gate complete",
         "Source-owner approvals resolved, blocked, deferred, or narrowed so no unresolved `needs_review` source blocks production auto-ingestion.",
         "`needs_review` sources remain excluded from production auto-ingestion until source-owner approvals or MVP source-set narrowing resolves issue #21.",
-        "Resolve source-owner approvals or narrow the MVP source set so issue #21 no longer blocks production auto-ingestion.",
+        "Post-readiness tracker migration can close #3, #5, #6, and #21 after copy-safe comments are posted.",
     ]:
         require(needle in plan_text, f"docs/PRE-DEVELOPMENT-PLAN.md missing source-owner readiness planning guidance: {needle}")
     for path in ["docs/readiness-gate-status.md", "docs/live-spike-evidence-runbook.md"]:
@@ -1548,7 +1553,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "evidence/source-owner-reviews/mvp-source-set-narrowing.md",
         "python3 scripts/source_owner_review_decision.py --validate-all",
         "Keep private permission notes or legal review details out of GitHub",
-        "Issue #21 must remain `needs-info`",
+        "Issue #21 may be closed after the final gate passes and copy-safe status is posted",
     ]:
         require(needle in readiness_text, f"docs/readiness-gate-status.md missing source-owner external input guidance: {needle}")
     runbook_text = read("docs/live-spike-evidence-runbook.md")
@@ -1558,7 +1563,7 @@ def check_readiness_action_packet_helper() -> list[str]:
         "DELIVERY_DEADLINE_LOCAL_TIME",
         "DELIVERY_TIMEZONE",
         "## Source Owner Approval Inputs",
-        "GitHub issue #21 must remain `needs-info`",
+        "GitHub issue #21 may be closed after source-set narrowing is applied and the final gate passes",
         "evidence/source-owner-reviews/request-packet.md",
         "evidence/source-owner-reviews/mvp-source-set-narrowing.md",
         "python3 scripts/source_owner_review_decision.py --validate-all",
@@ -1698,8 +1703,12 @@ def check_mvp_issue_drafts() -> list[str]:
         require(markdown_bullet_count(sections["Relevant docs"]) >= 1, f"{path_label} Relevant docs must list repo paths")
         require(markdown_bullet_count(sections["Dependencies"]) >= 1, f"{path_label} Dependencies must name blockers or prerequisites")
         check_issue_relevant_docs(path_label, sections["Relevant docs"])
-        require("`needs-triage`" in sections["Triage label"], f"{path_label} must stay needs-triage")
-        require("ready-for-agent" not in sections["Triage label"], f"{path_label} must not be ready-for-agent yet")
+        expected_label = "ready-for-agent" if number in POST_READINESS_READY_MVP_ISSUES else "needs-triage"
+        require(f"`{expected_label}`" in sections["Triage label"], f"{path_label} must use {expected_label}")
+        if expected_label == "ready-for-agent":
+            require("needs-triage" not in sections["Triage label"], f"{path_label} must not stay needs-triage after readiness passes")
+        else:
+            require("ready-for-agent" not in sections["Triage label"], f"{path_label} must not be ready-for-agent yet")
         if number in {12, 13}:
             dependencies = sections["Dependencies"]
             require("#21" in dependencies, f"{path_label} Dependencies must name source owner issue #21")
@@ -1712,8 +1721,12 @@ def check_mvp_issue_drafts() -> list[str]:
         matching_rows = [row for row in issue_rows if f"#{number}" in row and f"`{draft_path}`" in row]
         require(matching_rows, f"issue breakdown missing #{number} mapped to {draft_path}")
         row_text = " | ".join(matching_rows[0])
-        require("`needs-triage`" in row_text, f"issue breakdown #{number} must stay needs-triage")
-        require("ready-for-agent" not in row_text, f"issue breakdown #{number} must not be ready-for-agent yet")
+        expected_label = "ready-for-agent" if number in POST_READINESS_READY_MVP_ISSUES else "needs-triage"
+        require(f"`{expected_label}`" in row_text, f"issue breakdown #{number} must use {expected_label}")
+        if expected_label == "ready-for-agent":
+            require("needs-triage" not in row_text, f"issue breakdown #{number} must not stay needs-triage after readiness passes")
+        else:
+            require("ready-for-agent" not in row_text, f"issue breakdown #{number} must not be ready-for-agent yet")
 
     coverage_section = markdown_section(breakdown, "Acceptance Coverage Map", "docs/github-issue-breakdown.md")
     coverage_rows = parse_issue_markdown_table(coverage_section)
@@ -1742,7 +1755,7 @@ def check_mvp_issue_drafts() -> list[str]:
     for needle in [
         "#21 Resolve source owner eligibility approvals",
         "Source owner approvals (#21)",
-        "After #3, #5, and #6 have live evidence and #21 no longer blocks source-owner approvals or source-set narrowing",
+        "After the readiness gate passes, #10 through #19 can move to `ready-for-agent`.",
     ]:
         require(needle in breakdown, f"issue breakdown missing source-owner readiness gate wording: {needle}")
 
@@ -1752,7 +1765,15 @@ def check_mvp_issue_drafts() -> list[str]:
     ]
 
 
-def check_github_tracker() -> list[str]:
+def final_readiness_gate_passed(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> bool:
+    _, external_missing = check_external_environment()
+    if external_missing:
+        return False
+    _, evidence_missing, evidence_failures = check_live_evidence(evidence_root, require_clean_worktree=False)
+    return not evidence_missing and not evidence_failures
+
+
+def check_github_tracker(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> list[str]:
     run_command(["gh", "auth", "status", "--hostname", "github.com"], "gh auth status must succeed for github.com")
     origin_url = run_command(["git", "remote", "get-url", "origin"], "git origin remote must exist").stdout.strip()
     require(
@@ -1810,48 +1831,77 @@ def check_github_tracker() -> list[str]:
         milestone = issue.get("milestone") or {}
         require(milestone.get("title") == "pre-development", f"GitHub issue #{number} must use pre-development milestone")
 
+    readiness_passed = final_readiness_gate_passed(evidence_root)
+
     for number in MVP_ISSUES:
         issue = issues[number]
         labels = {label["name"] for label in issue.get("labels", [])}
         milestone = issue.get("milestone") or {}
         require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open before MVP work starts")
         require(milestone.get("title") == "mvp", f"GitHub issue #{number} must use mvp milestone")
-        require("needs-triage" in labels, f"GitHub issue #{number} must keep needs-triage before readiness passes")
-        require("ready-for-agent" not in labels, f"GitHub issue #{number} must not be ready-for-agent before readiness passes")
+        if readiness_passed and number in POST_READINESS_READY_MVP_ISSUES:
+            require("ready-for-agent" in labels, f"GitHub issue #{number} must be ready-for-agent after readiness passes")
+            require("needs-triage" not in labels, f"GitHub issue #{number} must not keep needs-triage after readiness passes")
+        else:
+            require("needs-triage" in labels, f"GitHub issue #{number} must keep needs-triage until its gate passes")
+            require("ready-for-agent" not in labels, f"GitHub issue #{number} must not be ready-for-agent yet")
         require("ready-for-human" not in labels, f"GitHub issue #{number} must not be ready-for-human before readiness passes")
 
     for number in [3, 5, 6]:
         issue = issues[number]
         labels = {label["name"] for label in issue.get("labels", [])}
-        require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open until live evidence is attached")
-        require("needs-info" in labels, f"GitHub issue #{number} must keep needs-info while external evidence is blocked")
+        if readiness_passed:
+            require(issue["state"] == "CLOSED", f"GitHub issue #{number} must be closed after live evidence passes")
+            require("needs-info" not in labels, f"GitHub issue #{number} must not keep needs-info after live evidence passes")
+        else:
+            require(issue["state"] == "OPEN", f"GitHub issue #{number} must remain open until live evidence is attached")
+            require("needs-info" in labels, f"GitHub issue #{number} must keep needs-info while external evidence is blocked")
 
     source_owner_issue = issues[SOURCE_OWNER_REVIEW_ISSUE]
     source_owner_labels = {label["name"] for label in source_owner_issue.get("labels", [])}
-    require(
-        source_owner_issue["state"] == "OPEN",
-        f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must remain open until source owner approvals are resolved",
-    )
-    require(
-        "needs-info" in source_owner_labels,
-        f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must keep needs-info while source approvals are blocked",
-    )
+    if readiness_passed:
+        require(
+            source_owner_issue["state"] == "CLOSED",
+            f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must be closed after source-set narrowing resolves approvals",
+        )
+        require(
+            "needs-info" not in source_owner_labels,
+            f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must not keep needs-info after source-set narrowing resolves approvals",
+        )
+    else:
+        require(
+            source_owner_issue["state"] == "OPEN",
+            f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must remain open until source owner approvals are resolved",
+        )
+        require(
+            "needs-info" in source_owner_labels,
+            f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must keep needs-info while source approvals are blocked",
+        )
     require(
         "ready-for-agent" not in source_owner_labels,
         f"GitHub issue #{SOURCE_OWNER_REVIEW_ISSUE} must not be ready-for-agent before source approvals resolve",
     )
 
     issue_1_labels = {label["name"] for label in issues[1].get("labels", [])}
-    require(issues[1]["state"] == "OPEN", "GitHub issue #1 must remain open until the readiness gate passes")
-    require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
+    require(issues[1]["state"] == "OPEN", "GitHub issue #1 remains the pre-development tracking issue until PR merge")
+    if not readiness_passed:
+        require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
 
     return [
         f"GitHub tracker: origin targets {EXPECTED_GITHUB_REPO} and default branch is main",
         f"GitHub tracker: viewer permission is {repo['viewerPermission']}",
         f"GitHub tracker: {len(REQUIRED_GITHUB_LABELS)} triage labels present",
         f"GitHub tracker: {len(REQUIRED_GITHUB_MILESTONES)} milestones open",
-        f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage",
-        "GitHub tracker: Feishu, model, archive, and source owner blocker issues remain needs-info",
+        (
+            "GitHub tracker: readiness passed; #10-#19 are ready-for-agent and #20 remains needs-triage"
+            if readiness_passed
+            else f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage"
+        ),
+        (
+            "GitHub tracker: Feishu, model, archive, and source owner blockers are closed"
+            if readiness_passed
+            else "GitHub tracker: Feishu, model, archive, and source owner blocker issues remain needs-info"
+        ),
     ]
 
 
@@ -2469,7 +2519,7 @@ def run(require_live: bool, require_evidence: bool, require_github: bool, eviden
         check_mvp_issue_drafts,
     ]
     if require_github:
-        checks.append(check_github_tracker)
+        checks.append(lambda: check_github_tracker(evidence_root))
     passed: list[str] = []
     failures: list[str] = []
     review_notes: list[str] = []

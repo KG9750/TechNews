@@ -44,8 +44,8 @@ The MVP needs Feishu-friendly Chinese Push Briefings and archived Deep-Dive Deta
 
 ## Dependencies
 
-- Live model-provider spike (#5) and Feishu card rendering evidence (#3).
+- Live model-provider spike (#5) and Feishu card rendering evidence (#3) are complete.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

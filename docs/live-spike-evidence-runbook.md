@@ -63,7 +63,7 @@ This test verifies preflight redaction, helper dry-runs in a temporary evidence 
 
 ## Source Owner Approval Inputs
 
-Source owner approvals are not live spike credentials, but they are still required external inputs for the final readiness gate. GitHub issue #21 must remain `needs-info` while the source-owner queue still blocks production auto-ingestion.
+Source owner approvals are not live spike credentials, but they are still required external inputs for the final readiness gate. GitHub issue #21 may be closed after source-set narrowing is applied and the final gate passes; keep any private permission notes out of GitHub.
 
 Generate the ignored owner-review packets:
 

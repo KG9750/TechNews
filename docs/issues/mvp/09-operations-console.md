@@ -46,4 +46,4 @@ The Briefing Administrator needs a lightweight private console to configure and 
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

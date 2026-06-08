@@ -39,8 +39,8 @@ The current minimum contracts are documented in markdown, but implementation nee
 
 ## Dependencies
 
-- Live spike feedback from #3, #5, and #6 may require schema adjustments before implementation starts.
+- Live spike feedback from #3, #5, and #6 has been captured; keep schema adjustments scoped to implementation findings.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`
