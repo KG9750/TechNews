@@ -25,7 +25,7 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 `python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, post-readiness labels, and the acceptance coverage map.
 Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
-Issues #10, #11, #12, #13, #14, #15, #16, #17, and #18 are implemented and closed by PRs #24, #26, #28, #30, #32, #34, #36, #38, and #40. Issue #19 remains `ready-for-agent`; issue #20 remains `needs-triage` until core MVP implementation completes.
+Issues #10, #11, #12, #13, #14, #15, #16, #17, #18, and #19 are implemented and closed by PRs #24, #26, #28, #30, #32, #34, #36, #38, #40, and #42. Issue #20 is now `ready-for-agent` for the final end-to-end MVP acceptance run.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
@@ -39,7 +39,7 @@ Issues #10, #11, #12, #13, #14, #15, #16, #17, and #18 are implemented and close
 | Feishu delivery | #17 | `docs/issues/mvp/08-feishu-delivery.md` | `ready-for-agent` | Live Feishu delivery spike complete |
 | Operations Console | #18 | `docs/issues/mvp/09-operations-console.md` | `ready-for-agent` | Storage and auth defaults confirmed |
 | Deployment and secrets | #19 | `docs/issues/mvp/10-deployment-secrets.md` | `ready-for-agent` | Runtime input names and secret surfaces confirmed |
-| End-to-end MVP acceptance | #20 | `docs/issues/mvp/11-e2e-mvp-acceptance.md` | `needs-triage` | All core implementation issues |
+| End-to-end MVP acceptance | #20 | `docs/issues/mvp/11-e2e-mvp-acceptance.md` | `ready-for-agent` | All core implementation issues |
 
 ## Acceptance Coverage Map
 
@@ -59,5 +59,5 @@ Issues #10, #11, #12, #13, #14, #15, #16, #17, and #18 are implemented and close
 
 ## Creation Rule
 
-After the readiness gate passes, #10 through #19 can move to `ready-for-agent`. Issues #10 through #18 are complete; #19 remains `ready-for-agent`. Keep #20 as `needs-triage` until the core MVP implementation issues are complete.
+After the readiness gate passes, #10 through #19 can move to `ready-for-agent`. Issues #10 through #19 are complete; #20 is now `ready-for-agent` for final E2E acceptance.
 The ignored MVP issue triage packets are comment-ready context only; they do not replace `python3 scripts/check_readiness.py --require-live --require-evidence` or `python3 scripts/check_readiness.py --require-github`.
