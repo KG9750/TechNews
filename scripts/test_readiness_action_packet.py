@@ -73,7 +73,7 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "| #12 | Taxonomy and source registry | ready for final triage | None." in text
     assert "| #13 | Source connectors | ready for final triage | None." in text
     assert "| #18 | Operations Console | ready for final triage | None." in text
-    assert "Core MVP issues: core MVP issues #10-#19 must complete before E2E acceptance" in text
+    assert "Core MVP issues: core MVP issues #10-#19 must complete before E2E acceptance" not in text
     assert "Keep `needs-triage` until final readiness and GitHub tracker gates pass." in text
     assert "https://github.com/KG9750/TechNews/issues/3" in text
     assert "source-owner-reviews/index.md" in text
