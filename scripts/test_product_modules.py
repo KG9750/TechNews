@@ -17,6 +17,7 @@ from technews_briefing.contracts import (  # noqa: E402
     CandidateItem,
     ContractError,
 )
+from technews_briefing.ranking import RankingInput, rank_candidates  # noqa: E402
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
 from technews_briefing.source_connectors import (  # noqa: E402
     SourceMetadataInput,
@@ -95,6 +96,24 @@ REQUIRED_EMBODIED_SUBCATEGORIES = {
     "Recent papers",
     "Financing",
 }
+GOLDEN_EVENT_KEYS = {
+    "sample-002-apple-intelligence": "event-apple-intelligence-2024-06",
+    "sample-021-duplicate-apple-ai-coverage": "event-apple-intelligence-2024-06",
+}
+GOLDEN_TRUST_BY_SOURCE_TYPE = {
+    "academic_source": "academic",
+    "manual_url": "administrator",
+    "public_feed": "official",
+}
+GOLDEN_EVENT_IMPACT = {
+    "sample-001-openai-gpt-4o": 5,
+    "sample-002-apple-intelligence": 5,
+    "sample-010-github-copilot-workspace": 4,
+    "sample-011-kubernetes-130": 2,
+    "sample-016-attention-is-all-you-need": 4,
+    "sample-020-single-source-leak": 5,
+    "sample-021-duplicate-apple-ai-coverage": 4,
+}
 
 
 def load_json(path: str):
@@ -104,6 +123,75 @@ def load_json(path: str):
 
 def load_text(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
+
+
+def golden_sample(fixture_id: str) -> dict[str, object]:
+    for item in load_json("fixtures/golden-samples/items.json"):
+        if item["fixture_id"] == fixture_id:
+            return item
+    raise AssertionError(f"missing golden sample: {fixture_id}")
+
+
+def ranking_input_from_golden(
+    fixture_id: str,
+    *,
+    related_history: tuple[dict[str, object], ...] = (),
+) -> RankingInput:
+    item = golden_sample(fixture_id)
+    metadata = item["raw_source_metadata"]
+    expected_candidate = item["expected_candidate_item"]
+    expected_classification = item["expected_classification"]
+    expected_selection = item["expected_selection"]
+    source_url = metadata["source_url"]
+    source_media = None
+    if "source_media" in item["scenario_tags"]:
+        source_media = {
+            "url": f"{source_url}#source-media",
+            "kind": "open_graph_image",
+            "attribution": metadata["source_name"],
+            "eligibility_note": "Golden sample metadata-only source media fixture.",
+        }
+
+    candidate = CandidateItem.from_mapping(
+        {
+            "id": f"cand_{fixture_id.replace('-', '_')}",
+            "run_id": "run_2026-06-01_golden_ranking",
+            "source_id": f"src_{fixture_id.replace('-', '_')}",
+            "source_type": expected_candidate["source_type"],
+            "source_name": metadata["source_name"],
+            "original_title": metadata["original_title"],
+            "source_url": source_url,
+            "original_source_anchor": {
+                "source_name": metadata["source_name"],
+                "original_title": metadata["original_title"],
+                "source_url": source_url,
+            },
+            "dedupe_key": f"{metadata['source_name']}|{source_url}",
+            "event_key": GOLDEN_EVENT_KEYS.get(fixture_id),
+            "published_at": metadata["published_at"],
+            "discovered_at": "2024-07-25T08:00:00Z",
+            "language": "en",
+            "section_hints": [expected_classification["section"]],
+            "source_media": source_media,
+            "eligibility_state": expected_candidate["eligibility_state"],
+            "eligibility_notes": "Golden sample ranking fixture.",
+            "raw_metadata": {
+                "fixture_id": fixture_id,
+                "scenario_tags": item["scenario_tags"],
+            },
+        }
+    )
+    return RankingInput(
+        candidate=candidate,
+        section=expected_classification["section"],
+        subcategory=expected_classification.get("subcategory"),
+        source_trust=GOLDEN_TRUST_BY_SOURCE_TYPE[expected_candidate["source_type"]],
+        event_impact=GOLDEN_EVENT_IMPACT[fixture_id],
+        confidence_level=expected_selection["confidence_level"],
+        confidence_notice=expected_selection.get("confidence_notice"),
+        original_material_available=True,
+        related_history=related_history,
+    )
 
 
 def assert_raises(expected_error: type[Exception], fn, expected_text: str) -> None:
@@ -455,6 +543,97 @@ def test_source_connector_output_matches_recorded_candidate_fixture_anchor() -> 
     assert generated.raw_metadata["summary_excerpt"] == expected["raw_metadata"]["summary_excerpt"]
 
 
+def test_ranker_selects_and_excludes_golden_samples_with_structured_rationales() -> None:
+    result = rank_candidates(
+        (
+            ranking_input_from_golden("sample-001-openai-gpt-4o"),
+            ranking_input_from_golden("sample-002-apple-intelligence"),
+            ranking_input_from_golden("sample-010-github-copilot-workspace"),
+            ranking_input_from_golden("sample-011-kubernetes-130"),
+            ranking_input_from_golden("sample-016-attention-is-all-you-need"),
+            ranking_input_from_golden("sample-020-single-source-leak"),
+            ranking_input_from_golden("sample-021-duplicate-apple-ai-coverage"),
+        ),
+        subscribed_sections={"AI", "Software", "Academic Progress", "Hardware"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=5,
+    )
+    selected_ids = {item.candidate.raw_metadata["fixture_id"] for item in result.selected}
+    excluded_ids = {item.candidate.raw_metadata["fixture_id"] for item in result.excluded}
+    selected_by_id = {item.candidate.raw_metadata["fixture_id"]: item for item in result.selected}
+    excluded_by_id = {item.candidate.raw_metadata["fixture_id"]: item for item in result.excluded}
+
+    assert "sample-001-openai-gpt-4o" in selected_ids
+    assert "sample-010-github-copilot-workspace" in selected_ids
+    assert "sample-016-attention-is-all-you-need" in selected_ids
+    assert "sample-020-single-source-leak" in selected_ids
+    assert "sample-011-kubernetes-130" in excluded_ids
+    assert "sample-021-duplicate-apple-ai-coverage" in excluded_ids
+    assert selected_by_id["sample-001-openai-gpt-4o"].candidate.source_media is not None
+    assert selected_by_id["sample-016-attention-is-all-you-need"].candidate.source_type == "academic_source"
+    assert excluded_by_id["sample-011-kubernetes-130"].candidate.source_media is None
+
+    for selected in result.selected:
+        rationale = selected.selection_rationale.as_mapping()
+        assert rationale["summary"]
+        assert selected.candidate.original_source_anchor.source_url
+        assert any(signal.startswith("score:") for signal in rationale["signals"])
+        assert any(signal.startswith("confidence:") for signal in rationale["signals"])
+
+    archive_exclusions = result.archive_excluded_candidates()
+    assert all(record["candidate_id"] and record["selection_rationale"] for record in archive_exclusions)
+
+
+def test_ranker_merges_duplicate_apple_intelligence_coverage() -> None:
+    result = rank_candidates(
+        (
+            ranking_input_from_golden("sample-002-apple-intelligence"),
+            ranking_input_from_golden("sample-021-duplicate-apple-ai-coverage"),
+        ),
+        subscribed_sections={"AI", "Technology Industry Progress"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=3,
+    )
+
+    assert len(result.selected) == 1
+    selected = result.selected[0]
+    assert selected.candidate.raw_metadata["fixture_id"] == "sample-002-apple-intelligence"
+    assert len(selected.corroborating_sources) == 1
+    assert selected.corroborating_sources[0].source_name == "TechCrunch"
+
+    duplicate = result.excluded[0]
+    assert duplicate.reason == "duplicate_coverage"
+    assert duplicate.duplicate_of == selected.candidate.id
+    assert duplicate.archive_record()["duplicate_of"] == selected.candidate.id
+
+
+def test_ranker_preserves_low_confidence_notice_and_related_history_hooks() -> None:
+    result = rank_candidates(
+        (
+            ranking_input_from_golden(
+                "sample-020-single-source-leak",
+                related_history=(
+                    {
+                        "archive_date": "2024-07-24",
+                        "candidate_id": "cand_previous_ai_hardware_rumor",
+                        "relationship": "follow_up",
+                    },
+                ),
+            ),
+        ),
+        subscribed_sections={"Hardware"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=1,
+    )
+
+    selected = result.selected[0]
+    assert selected.confidence_level == "low"
+    assert selected.confidence_notice
+    assert selected.related_history[0]["relationship"] == "follow_up"
+    assert "confidence:low" in selected.selection_rationale.signals
+    assert "related_history:1" in selected.selection_rationale.signals
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -512,6 +691,9 @@ def main() -> int:
         test_source_connectors_record_failures_and_policy_skips_without_aborting_run,
         test_source_connector_late_results_are_cut_off_at_delivery_deadline,
         test_source_connector_output_matches_recorded_candidate_fixture_anchor,
+        test_ranker_selects_and_excludes_golden_samples_with_structured_rationales,
+        test_ranker_merges_duplicate_apple_intelligence_coverage,
+        test_ranker_preserves_low_confidence_notice_and_related_history_hooks,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
