@@ -16,6 +16,7 @@ COMMANDS = [
     ["scripts/test_readiness_action_packet.py"],
     ["scripts/test_source_owner_review_decision.py"],
     ["scripts/test_product_modules.py"],
+    ["scripts/test_deployment.py"],
     ["scripts/generate_architecture_review_ui.py"],
 ]
 

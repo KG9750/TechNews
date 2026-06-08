@@ -1,0 +1,47 @@
+name: technews-briefing
+
+services:
+  technews-briefing:
+    build:
+      context: .
+    image: technews-briefing:local
+    restart: unless-stopped
+    environment:
+      FEISHU_APP_ID: ${FEISHU_APP_ID:?Set FEISHU_APP_ID in .env}
+      FEISHU_APP_SECRET: ${FEISHU_APP_SECRET:?Set FEISHU_APP_SECRET in .env}
+      FEISHU_TENANT_KEY: ${FEISHU_TENANT_KEY:-}
+      FEISHU_DEFAULT_USER_OPEN_ID: ${FEISHU_DEFAULT_USER_OPEN_ID:?Set FEISHU_DEFAULT_USER_OPEN_ID in .env}
+      FEISHU_DEFAULT_CHAT_ID: ${FEISHU_DEFAULT_CHAT_ID:?Set FEISHU_DEFAULT_CHAT_ID in .env}
+      DELIVERY_DEADLINE_LOCAL_TIME: ${DELIVERY_DEADLINE_LOCAL_TIME:?Set DELIVERY_DEADLINE_LOCAL_TIME in .env}
+      DELIVERY_TIMEZONE: ${DELIVERY_TIMEZONE:?Set DELIVERY_TIMEZONE in .env}
+      FEISHU_GROUP_WEBHOOK_URL: ${FEISHU_GROUP_WEBHOOK_URL:-}
+      FEISHU_GROUP_WEBHOOK_SECRET: ${FEISHU_GROUP_WEBHOOK_SECRET:-}
+      MODEL_PROVIDER: ${MODEL_PROVIDER:?Set MODEL_PROVIDER in .env}
+      MODEL_API_KEY: ${MODEL_API_KEY:?Set MODEL_API_KEY in .env}
+      MODEL_DEFAULT_MODEL: ${MODEL_DEFAULT_MODEL:?Set MODEL_DEFAULT_MODEL in .env}
+      ARCHIVE_LOCAL_ROOT: ${ARCHIVE_LOCAL_ROOT:?Set ARCHIVE_LOCAL_ROOT in .env}
+      ARCHIVE_SYNC_TARGET: ${ARCHIVE_SYNC_TARGET:?Set ARCHIVE_SYNC_TARGET in .env}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Set ADMIN_USERNAME in .env}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - technews-data:/var/lib/technews/data
+      - type: bind
+        source: ${ARCHIVE_LOCAL_ROOT:?Set ARCHIVE_LOCAL_ROOT in .env}
+        target: ${ARCHIVE_LOCAL_ROOT:?Set ARCHIVE_LOCAL_ROOT in .env}
+      - type: bind
+        source: ${ARCHIVE_SYNC_TARGET:?Set ARCHIVE_SYNC_TARGET in .env}
+        target: ${ARCHIVE_SYNC_TARGET:?Set ARCHIVE_SYNC_TARGET in .env}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -m technews_briefing.deployment health --require-configured
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  technews-data:

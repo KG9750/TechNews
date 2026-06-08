@@ -28,6 +28,8 @@ Do not store real secrets in this repo. Use `.env.example` for variable names on
 ## Handling Rules
 
 - Commit `.env.example`, never `.env`.
+- Docker Compose reads real values from the Briefing Host environment or `.env`; `docker-compose.yml` must not contain credentials or host-specific paths.
+- Keep `ARCHIVE_LOCAL_ROOT` and `ARCHIVE_SYNC_TARGET` as writable Briefing Host paths and mount them into the container through Compose.
 - Live spike runners, preflight, action packets, and the final readiness gate load root `.env` when present; process environment values take precedence.
 - Redact secrets from Feishu, model, and storage spike logs.
 - If a secret is accidentally committed, rotate it immediately and treat the commit as compromised.

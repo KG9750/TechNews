@@ -15,6 +15,7 @@ TOOLING_PATHS = [
     "scripts/validate_fixtures.py",
     "scripts/run_tests.py",
     "scripts/test_product_modules.py",
+    "scripts/test_deployment.py",
 ]
 COMMANDS = [
     ("format", [sys.executable, "-m", "ruff", "format", "--check", *TOOLING_PATHS]),
