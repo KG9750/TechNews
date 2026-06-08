@@ -17,6 +17,7 @@ from technews_briefing.contracts import (  # noqa: E402
     CandidateItem,
     ContractError,
 )
+from technews_briefing.briefing_generation import generate_briefing  # noqa: E402
 from technews_briefing.ranking import RankingInput, rank_candidates  # noqa: E402
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
 from technews_briefing.source_connectors import (  # noqa: E402
@@ -634,6 +635,90 @@ def test_ranker_preserves_low_confidence_notice_and_related_history_hooks() -> N
     assert "related_history:1" in selected.selection_rationale.signals
 
 
+def test_briefing_generator_creates_contract_items_and_section_groups() -> None:
+    result = rank_candidates(
+        (
+            ranking_input_from_golden("sample-001-openai-gpt-4o"),
+            ranking_input_from_golden("sample-010-github-copilot-workspace"),
+            ranking_input_from_golden("sample-020-single-source-leak"),
+        ),
+        subscribed_sections={"AI", "Software", "Hardware"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=3,
+    )
+
+    briefing = generate_briefing(result.selected)
+    items_by_candidate_id = {item.candidate_id: item for item in briefing.items}
+    openai = items_by_candidate_id["cand_sample_001_openai_gpt_4o"]
+    low_confidence = items_by_candidate_id["cand_sample_020_single_source_leak"]
+
+    assert len(briefing.items) == 3
+    assert {group.section for group in briefing.groups} == {"AI", "Software", "Hardware"}
+    assert openai.source_media is not None
+    assert openai.media_attribution is not None
+    assert openai.media_attribution["source_url"] == openai.source_media.url
+    assert openai.id not in briefing.media_fallbacks
+    assert openai.original_source_anchor.source_url == "https://openai.com/index/hello-gpt-4o/"
+    assert 3 <= len(openai.bullets_zh) <= 4
+
+    assert low_confidence.confidence_level == "low"
+    assert low_confidence.confidence_notice is not None
+    assert low_confidence.confidence_notice.display_text_zh.startswith("置信提示：")
+    assert low_confidence.confidence_notice.supporting_sources[0].source_url == (
+        "https://example.invalid/manual-low-confidence-fixture"
+    )
+    assert low_confidence.source_media is None
+    assert "不使用 AI 生成新闻图" in briefing.media_fallbacks[low_confidence.id].display_text_zh
+
+
+def test_briefing_generator_preserves_deep_dive_detail_links_and_sources() -> None:
+    result = rank_candidates(
+        (
+            ranking_input_from_golden("sample-002-apple-intelligence"),
+            ranking_input_from_golden("sample-021-duplicate-apple-ai-coverage"),
+        ),
+        subscribed_sections={"AI", "Technology Industry Progress"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=3,
+    )
+
+    briefing = generate_briefing(result.selected, deep_dive_base_path="archive/deep-dive")
+    item = briefing.items[0]
+    detail = briefing.deep_dive_for_item(item.id)
+
+    assert item.candidate_id == "cand_sample_002_apple_intelligence"
+    assert detail.href == f"archive/deep-dive/{item.id}.html"
+    assert detail.briefing_item_id == item.id
+    assert [source.source_name for source in detail.source_list] == ["Apple Newsroom", "TechCrunch"]
+    assert detail.selection_rationale["summary"]
+    assert detail.candidate_metadata["candidate_id"] == item.candidate_id
+    assert detail.media_attribution is not None
+    assert detail.media_fallback is None
+
+
+def test_briefing_generator_uses_structured_no_media_fallback_for_academic_items() -> None:
+    result = rank_candidates(
+        (ranking_input_from_golden("sample-016-attention-is-all-you-need"),),
+        subscribed_sections={"Academic Progress"},
+        run_started_at="2024-07-25T08:00:00Z",
+        max_selected=1,
+    )
+
+    briefing = generate_briefing(result.selected)
+    item = briefing.items[0]
+    detail = briefing.deep_dive_for_item(item.id)
+
+    assert item.section == "Academic Progress"
+    assert item.source_media is None
+    assert item.media_attribution is None
+    assert item.confidence_notice is None
+    assert item.id in briefing.media_fallbacks
+    assert detail.media_fallback is not None
+    assert detail.media_fallback.reason == "no_source_media"
+    assert detail.source_list[0].source_url == "https://arxiv.org/abs/1706.03762"
+    assert "AI 聊天" in detail.summary_zh
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -694,6 +779,9 @@ def main() -> int:
         test_ranker_selects_and_excludes_golden_samples_with_structured_rationales,
         test_ranker_merges_duplicate_apple_intelligence_coverage,
         test_ranker_preserves_low_confidence_notice_and_related_history_hooks,
+        test_briefing_generator_creates_contract_items_and_section_groups,
+        test_briefing_generator_preserves_deep_dive_detail_links_and_sources,
+        test_briefing_generator_uses_structured_no_media_fallback_for_academic_items,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
