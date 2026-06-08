@@ -1883,9 +1883,11 @@ def check_github_tracker(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> list[st
     )
 
     issue_1_labels = {label["name"] for label in issues[1].get("labels", [])}
-    require(issues[1]["state"] == "OPEN", "GitHub issue #1 remains the pre-development tracking issue until PR merge")
     if not readiness_passed:
+        require(issues[1]["state"] == "OPEN", "GitHub issue #1 remains the pre-development tracking issue until PR merge")
         require("needs-triage" in issue_1_labels, "GitHub issue #1 must keep needs-triage while gate is not passed")
+    elif issues[1]["state"] == "CLOSED":
+        require("needs-triage" not in issue_1_labels, "GitHub issue #1 must not keep needs-triage after it closes")
 
     return [
         f"GitHub tracker: origin targets {EXPECTED_GITHUB_REPO} and default branch is main",

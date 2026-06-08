@@ -33,4 +33,4 @@ Before moving MVP issues from `needs-triage` to an implementation-ready label, r
 python3 scripts/check_readiness.py --require-github
 ```
 
-This verifies GitHub auth, origin remote identity, default branch, push-capable repo permission, canonical triage labels, `pre-development`/`mvp`/`post-mvp` milestones, pre-development tracking issues, that source-owner approval issue #21 remains `needs-info` while unresolved, and that MVP issues #10-#20 remain `needs-triage` while the readiness gate is not passed.
+This verifies GitHub auth, origin remote identity, default branch, push-capable repo permission, canonical triage labels, `pre-development`/`mvp`/`post-mvp` milestones, pre-development tracking issue state, that source-owner approval issue #21 remains `needs-info` while unresolved, and that MVP issues #10-#20 remain `needs-triage` while the readiness gate is not passed. After the readiness gate passes, #1 may close after the readiness PR is merged.
