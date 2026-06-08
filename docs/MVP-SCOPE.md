@@ -1,7 +1,7 @@
 # MVP Scope
 
-Status: Active scope - readiness inputs pending
-Last updated: 2026-06-04
+Status: Active scope - readiness gate passed
+Last updated: 2026-06-08
 
 ## MVP Goal
 
@@ -65,11 +65,11 @@ Ship a fully automatic daily technology briefing loop that collects from control
 - Show Related History for a repeated or follow-up item.
 - Show run status and delivery status in the Operations Console.
 
-## Readiness Inputs Still Needed Before Build
+## Readiness Gate Completed Before Build
 
-- Exact daily Delivery Deadline.
-- Approved Feishu user and group recipients, app credentials, and live internal-app delivery evidence.
-- First Model Provider selection, API credentials, and live structured-output usage evidence.
-- Local archive path, NAS/cloud sync target, and live sync success evidence.
-- Source-owner approvals, blocking, deferral, or MVP source-set narrowing for the `needs_review` sources tracked by issue #21.
-- Final MVP source set confirmation after source-owner approvals are applied.
+- Exact daily Delivery Deadline is configured in the secure runtime.
+- Feishu user and group delivery evidence is complete for the internal-app bot path.
+- Model Provider live structured-output evidence and usage metadata are complete.
+- Archive/storage live sync success evidence is complete.
+- Source-owner blocking is resolved by MVP source-set narrowing: 7 eligible metadata-only sources are enabled and 25 sources are deferred.
+- Final MVP source set is confirmed for implementation start.

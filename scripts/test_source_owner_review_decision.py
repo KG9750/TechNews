@@ -21,6 +21,96 @@ ARTIFACTS = [
     "docs/source-eligibility-reviews.md",
     "docs/source-registry.md",
 ]
+TEST_QUEUE_ITEMS = [
+    {
+        "source_id": "src-the-verge",
+        "review_owner": "Briefing Administrator",
+        "decision_needed": "summary_permission",
+        "default_connector_mode": "rss_metadata_probe",
+        "production_auto_ingestion_until_resolved": False,
+        "media_use_until_resolved": "none_until_approved",
+        "evidence_required": [
+            "Vox Media/The Verge terms or permission path",
+            "generated-summary permission",
+            "media reuse decision",
+        ],
+        "owner_questions": [
+            "Can RSS metadata be used for internal generated summaries?",
+            "Are source images allowed, or should this remain text-only?",
+        ],
+        "next_action": "Confirm generated-summary and media scope before enabling production ingestion.",
+        "review_status": "open",
+    },
+    {
+        "source_id": "src-techcrunch",
+        "review_owner": "Briefing Administrator",
+        "decision_needed": "feed_reuse_scope",
+        "default_connector_mode": "rss_metadata_probe",
+        "production_auto_ingestion_until_resolved": False,
+        "media_use_until_resolved": "none_until_approved",
+        "evidence_required": [
+            "TechCrunch RSS Terms",
+            "owner/legal interpretation of no-modification rule",
+            "media exclusion decision",
+        ],
+        "owner_questions": [
+            "Does generated summarization count as feed content modification?",
+            "Should the connector be limited to title/link metadata only?",
+        ],
+        "next_action": "Record owner decision on RSS no-modification constraints.",
+        "review_status": "open",
+    },
+    {
+        "source_id": "src-manual-url",
+        "review_owner": "Briefing Administrator",
+        "decision_needed": "manual_per_item_review",
+        "default_connector_mode": "manual_url_metadata_per_item_review",
+        "production_auto_ingestion_until_resolved": False,
+        "media_use_until_resolved": "none_until_approved",
+        "evidence_required": [
+            "submitted URL terms",
+            "per-item source policy",
+            "media and summary decision for that URL",
+        ],
+        "owner_questions": [
+            "Has the administrator approved this submitted URL for metadata summarization?",
+            "Should this item remain text-only?",
+        ],
+        "next_action": "Implement and enforce per-URL eligibility state during ingestion.",
+        "review_status": "open",
+    },
+]
+TEST_OPEN_COUNT = len(TEST_QUEUE_ITEMS)
+
+
+def seed_open_review_queue(tmp: Path) -> None:
+    queue_path = tmp / "fixtures/source-ingestion/source-owner-review-queue.json"
+    queue = json.loads(queue_path.read_text(encoding="utf-8"))
+    queue["items"] = TEST_QUEUE_ITEMS
+    queue_path.write_text(json.dumps(queue, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    policy_path = tmp / "fixtures/source-ingestion/source-access-policy.json"
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    default_modes = {item["source_id"]: item["default_connector_mode"] for item in TEST_QUEUE_ITEMS}
+    for source in policy["sources"]:
+        if source["source_id"] not in default_modes:
+            continue
+        source["eligibility_state"] = "needs_review"
+        source["connector_mode"] = default_modes[source["source_id"]]
+        source["production_auto_ingestion"] = False
+        source["requires_owner_review"] = True
+        source["summary_policy"] = "permission_required_before_generated_summary"
+        source["rate_policy"] = "no_production_fetch"
+    policy_path.write_text(json.dumps(policy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    review_path = tmp / "docs/source-eligibility-reviews.md"
+    review_text = review_path.read_text(encoding="utf-8")
+    for item in TEST_QUEUE_ITEMS:
+        review_text = review_text.replace(
+            f"| {item['source_id']} | deferred |",
+            f"| {item['source_id']} | needs_review |",
+        )
+    review_path.write_text(review_text, encoding="utf-8")
 
 
 @contextmanager
@@ -38,6 +128,7 @@ def isolated_artifacts():
             target = tmp / rel_path
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / rel_path, target)
+        seed_open_review_queue(tmp)
 
         review.ROOT = tmp
         review.QUEUE_PATH = tmp / "fixtures/source-ingestion/source-owner-review-queue.json"
@@ -143,19 +234,21 @@ def assert_review_error(path: Path, expected: str) -> None:
 
 
 def test_draft_requires_owner_input() -> None:
-    draft = review.draft_payload("src-the-verge")
-    assert "artifact_updates" in draft
-    assert review.contains_template_marker(draft)
+    with isolated_artifacts():
+        draft = review.draft_payload("src-the-verge")
+        assert "artifact_updates" in draft
+        assert review.contains_template_marker(draft)
 
 
 def test_draft_includes_current_artifact_context() -> None:
-    draft = review.draft_payload("src-the-verge")
-    context = draft["current_artifact_context"]
+    with isolated_artifacts():
+        draft = review.draft_payload("src-the-verge")
+        context = draft["current_artifact_context"]
 
-    assert context["review_matrix_row"]["Eligibility state"] == "needs_review"
-    assert context["source_registry_row"]["Source"] == "The Verge"
-    assert context["source_access_policy"]["source_id"] == "src-the-verge"
-    assert context["owner_review_queue_item"]["source_id"] == "src-the-verge"
+        assert context["review_matrix_row"]["Eligibility state"] == "needs_review"
+        assert context["source_registry_row"]["Source"] == "The Verge"
+        assert context["source_access_policy"]["source_id"] == "src-the-verge"
+        assert context["owner_review_queue_item"]["source_id"] == "src-the-verge"
 
 
 def test_draft_all_writes_every_open_review_without_overwriting_existing() -> None:
@@ -181,15 +274,16 @@ def test_draft_all_writes_every_open_review_without_overwriting_existing() -> No
 
 
 def test_packet_includes_review_context_and_commands() -> None:
-    packet = review.review_packet("src-the-verge")
+    with isolated_artifacts() as tmp:
+        packet = review.review_packet("src-the-verge", tmp / "evidence/source-owner-reviews")
 
-    assert "# Source Owner Review Packet: src-the-verge" in packet
-    assert "This packet is context only. Complete the JSON decision file" in packet
-    assert "The Verge" in packet
-    assert "Vox Media/The Verge terms or permission path" in packet
-    assert "Can RSS metadata be used for internal generated summaries?" in packet
-    assert "python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json" in packet
-    assert "python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run" in packet
+        assert "# Source Owner Review Packet: src-the-verge" in packet
+        assert "This packet is context only. Complete the JSON decision file" in packet
+        assert "The Verge" in packet
+        assert "Vox Media/The Verge terms or permission path" in packet
+        assert "Can RSS metadata be used for internal generated summaries?" in packet
+        assert "python3 scripts/source_owner_review_decision.py --validate evidence/source-owner-reviews/src-the-verge.decision.json" in packet
+        assert "python3 scripts/source_owner_review_decision.py --apply evidence/source-owner-reviews/src-the-verge.decision.json --dry-run" in packet
 
 
 def test_packet_all_writes_every_open_packet() -> None:
@@ -219,8 +313,8 @@ def test_packet_index_groups_status_and_paths() -> None:
         index = review.review_packet_index(evidence_dir)
 
         assert "# Source Owner Review Index" in index
-        assert "- Open decisions: 25" in index
-        assert "- Invalid decision files: 25" in index
+        assert f"- Open decisions: {TEST_OPEN_COUNT}" in index
+        assert f"- Invalid decision files: {TEST_OPEN_COUNT}" in index
         assert "### summary_permission" in index
         assert "src-the-verge.decision.json" in index
         assert "src-the-verge.packet.md" in index
@@ -250,7 +344,7 @@ def test_review_worksheet_includes_decision_fields_and_prompts() -> None:
         worksheet = review.review_worksheet(evidence_dir)
 
         assert "# Source Owner Review Worksheet" in worksheet
-        assert "- Open decisions: 25" in worksheet
+        assert f"- Open decisions: {TEST_OPEN_COUNT}" in worksheet
         assert "## Decision Fields To Complete" in worksheet
         assert "`policy_after_decision` with full text storage still `not_stored`" in worksheet
         assert "| src-the-verge | The Verge | invalid | summary_permission |" in worksheet
@@ -286,15 +380,13 @@ def test_batch_plan_groups_open_items_and_paths() -> None:
         assert "Batch 2 - RSS Feed Reuse Scope" in plan
         assert "Batch 3 - Generated Summary And Media Permission" in plan
         assert "Batch 4 - License Obligations" in plan
-        assert "| Batch 1 - Access Path Blockers | 3 | 0 | 3 | 0 | automated_access_permission, manual_per_item_review |" in plan
-        assert "| Batch 2 - RSS Feed Reuse Scope | 7 | 0 | 7 | 0 | feed_reuse_scope |" in plan
-        assert "| Batch 3 - Generated Summary And Media Permission | 11 | 0 | 11 | 0 | summary_permission |" in plan
-        assert "| Batch 4 - License Obligations | 4 | 0 | 4 | 0 | license_obligation |" in plan
-        assert "| src-anthropic-news | Anthropic News | AI | official | automated_access_permission |" in plan
+        assert "| Batch 1 - Access Path Blockers | 1 | 0 | 1 | 0 | automated_access_permission, manual_per_item_review |" in plan
+        assert "| Batch 2 - RSS Feed Reuse Scope | 1 | 0 | 1 | 0 | feed_reuse_scope |" in plan
+        assert "| Batch 3 - Generated Summary And Media Permission | 1 | 0 | 1 | 0 | summary_permission |" in plan
+        assert "| Batch 4 - License Obligations | 0 | 0 | 0 | 0 | license_obligation |" in plan
         assert "| src-manual-url | Manual URL Inbox | Technology Industry Progress | administrator | manual_per_item_review |" in plan
         assert "| src-techcrunch | TechCrunch | Technology Industry Progress | mainstream | feed_reuse_scope |" in plan
         assert "| src-the-verge | The Verge | Technology Industry Progress | mainstream | summary_permission |" in plan
-        assert "| src-nvidia-blog | NVIDIA Blog | Hardware | official | license_obligation |" in plan
         assert "evidence/source-owner-reviews/src-the-verge.decision.json" in plan
         assert "evidence/source-owner-reviews/src-the-verge.packet.md" in plan
         assert "python3 scripts/source_owner_review_decision.py --batch-plan" in plan
@@ -320,7 +412,7 @@ def test_request_packet_groups_batches_and_owner_prompts() -> None:
         packet = review.review_request_packet(evidence_dir)
 
         assert "# Source Owner Decision Request Packet" in packet
-        assert "- Open decisions: 25" in packet
+        assert f"- Open decisions: {TEST_OPEN_COUNT}" in packet
         assert "Do not enable production auto-ingestion while a source remains `needs_review`." in packet
         assert "Batch 1 - Access Path Blockers" in packet
         assert "Batch 2 - RSS Feed Reuse Scope" in packet
@@ -377,7 +469,7 @@ def test_status_reports_template_drafts_as_invalid() -> None:
 
         text = output.getvalue()
         assert "src-the-verge\tinvalid\tTEMPLATE_DECISION" in text
-        assert "Source owner decision status: 0 valid, 25 invalid, 0 missing, 25 open items" in text
+        assert f"Source owner decision status: 0 valid, {TEST_OPEN_COUNT} invalid, 0 missing, {TEST_OPEN_COUNT} open items" in text
 
 
 def test_status_reports_completed_drafts_as_valid() -> None:
@@ -391,7 +483,7 @@ def test_status_reports_completed_drafts_as_valid() -> None:
 
         text = output.getvalue()
         assert "src-the-verge\tvalid\tneeds_review\tvalid; remains needs_review and blocks production auto-ingestion" in text
-        assert "Source owner decision status: 25 valid, 0 invalid, 0 missing, 25 open items" in text
+        assert f"Source owner decision status: {TEST_OPEN_COUNT} valid, 0 invalid, 0 missing, {TEST_OPEN_COUNT} open items" in text
 
 
 def test_validate_all_fails_for_template_drafts() -> None:

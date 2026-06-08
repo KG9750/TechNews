@@ -1,9 +1,11 @@
 # Pre-Development Plan
 
-Status: Active - local readiness valid; live external evidence pending
-Last updated: 2026-06-04
+Status: Passed - readiness gate complete
+Last updated: 2026-06-08
 
 This plan replaces the earlier preparation plan. Its main correction is ordering: define the minimum contracts first, then run Feishu, source, model, and archive spikes against those contracts. Implementation work must not start until the readiness gate passes.
+
+Readiness gate result: final live evidence, final manifest, strict preflight, local readiness, and GitHub tracker checks passed on 2026-06-08. Post-readiness tracker migration can close #3, #5, #6, and #21 after copy-safe comments are posted.
 
 ## Readiness Goal
 
@@ -238,7 +240,7 @@ Verification:
 - `python3 scripts/check_readiness.py` verifies the 11 MVP issue-body drafts, required sections, relevant doc paths, dependency sections, `needs-triage` labels, and acceptance coverage map.
 - Issues with unresolved ADR dependencies stay `needs-triage`.
 - Only decision-complete issues receive `ready-for-agent`.
-- `python3 scripts/check_readiness.py --require-github` confirms source-owner approval issue #21 remains `needs-info` while source approvals are unresolved, and MVP issues #10-#20 remain `needs-triage` until the readiness gate passes.
+- `python3 scripts/check_readiness.py --require-github` confirms pre-readiness issues remain guarded before the final gate passes, and after the gate passes it verifies #3/#5/#6/#21 are closed, #10-#19 are `ready-for-agent`, and #20 remains `needs-triage` until core MVP implementation completes.
 
 ## Development Readiness Gate
 

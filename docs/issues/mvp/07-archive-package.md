@@ -30,7 +30,7 @@ Each daily run must produce a durable local archive and record sync status witho
 - Unit tests for archive path construction and metadata serialization.
 - Fixture test using `fixtures/archive-storage/local-archive/2026-06-01/technology/`.
 - Failure-path test for unavailable sync target.
-- Integration test against the real sync target before readiness completion.
+- Integration test against the configured sync target before MVP acceptance.
 
 ## Relevant docs
 
@@ -41,8 +41,8 @@ Each daily run must produce a durable local archive and record sync status witho
 
 ## Dependencies
 
-- Archive/storage spike (#6) still needs real `ARCHIVE_SYNC_TARGET` success evidence.
+- Archive/storage spike (#6) has real sync success evidence recorded in ignored local evidence.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

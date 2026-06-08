@@ -42,8 +42,8 @@ The MVP requires scheduled Push Briefing delivery to both Feishu users and Feish
 
 ## Dependencies
 
-- Feishu delivery spike (#3) needs real app credentials, user id, group id, scopes, and live delivery evidence.
+- Feishu delivery spike (#3) has live user/group delivery evidence recorded in ignored local evidence.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

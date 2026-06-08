@@ -39,9 +39,9 @@ The MVP needs editable but controlled configuration for the technology Domain Te
 
 ## Dependencies
 
-- Source owner approvals (#21) or MVP source-set narrowing must resolve any registry entries that would otherwise stay `needs_review`.
-- Source registry owner review remains useful before marking this `ready-for-agent`.
+- Source owner approvals (#21) are resolved for MVP by source-set narrowing.
+- Deferred sources must stay excluded unless reopened through owner review.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`

@@ -47,7 +47,7 @@ The MVP is only done when the whole daily briefing loop works from source collec
 ## Dependencies
 
 - All core MVP implementation issues.
-- Live completion of Feishu, model-provider, and archive/storage spikes.
+- Readiness live evidence is complete; core MVP implementation issues must finish before E2E acceptance starts.
 
 ## Triage label
 

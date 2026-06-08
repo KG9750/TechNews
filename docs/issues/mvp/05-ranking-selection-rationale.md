@@ -40,8 +40,8 @@ The system must choose important items automatically while preserving auditable 
 
 ## Dependencies
 
-- Live model-provider spike (#5) must prove the model can preserve rationale and confidence constraints before this becomes `ready-for-agent`.
+- Live model-provider spike (#5) proved the model can preserve rationale and confidence constraints for implementation start.
 
 ## Triage label
 
-`needs-triage`
+`ready-for-agent`
