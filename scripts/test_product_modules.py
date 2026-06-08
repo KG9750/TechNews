@@ -24,6 +24,17 @@ from technews_briefing.archive_package import (  # noqa: E402
     write_archive_package,
 )
 from technews_briefing.briefing_generation import generate_briefing  # noqa: E402
+from technews_briefing.feishu_delivery import (  # noqa: E402
+    FeishuDeliveryError,
+    FeishuRecipient,
+    build_delivery_status_map,
+    build_feishu_card,
+    build_internal_app_message_request,
+    delivery_status_from_response,
+    pending_delivery_status,
+    redact_feishu_payload,
+    render_feishu_message_text,
+)
 from technews_briefing.ranking import RankingInput, rank_candidates  # noqa: E402
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
 from technews_briefing.source_connectors import (  # noqa: E402
@@ -869,6 +880,153 @@ def test_archive_storage_fixture_contains_complete_package_shape() -> None:
     assert metadata.sync_status["remote_sync"].status == "failed"
 
 
+def feishu_test_briefing():
+    briefing, _ = archive_test_briefing()
+    return briefing
+
+
+def test_feishu_card_preserves_sections_sources_notices_and_archive_links() -> None:
+    briefing = feishu_test_briefing()
+    card = build_feishu_card(briefing, archive_url="https://archive.example.invalid/2026-06-01/technology/")
+    card_text = json.dumps(card, ensure_ascii=False)
+
+    assert card["header"]["title"]["content"].startswith("TechNews Briefing")
+    assert "AI / Multimodal AI" in card_text
+    assert "Hardware / AI accelerators" in card_text
+    assert "Source" in card_text
+    assert "置信提示" in card_text
+    assert "Deep-Dive" in card_text
+    assert "Open Archive" in card_text
+    assert "https://archive.example.invalid/2026-06-01/technology/" in card_text
+
+
+def test_feishu_internal_app_requests_use_json_string_card_content() -> None:
+    briefing = feishu_test_briefing()
+    card = build_feishu_card(briefing, archive_url="https://archive.example.invalid/2026-06-01/technology/")
+    user = FeishuRecipient(
+        recipient_key="feishu_user_demo",
+        recipient_type="feishu_user",
+        receive_id_type="open_id",
+        receive_id="ou_fixture_user",
+    )
+    group = FeishuRecipient(
+        recipient_key="feishu_group_demo",
+        recipient_type="feishu_group",
+        receive_id_type="chat_id",
+        receive_id="oc_fixture_chat",
+    )
+
+    user_request = build_internal_app_message_request(user, card)
+    group_request = build_internal_app_message_request(group, card)
+
+    assert user_request.method == "POST"
+    assert user_request.path == "/open-apis/im/v1/messages"
+    assert user_request.query == {"receive_id_type": "open_id"}
+    assert user_request.body["msg_type"] == "interactive"
+    assert isinstance(user_request.body["content"], str)
+    assert json.loads(user_request.body["content"])["elements"]
+    assert group_request.query == {"receive_id_type": "chat_id"}
+    assert group_request.as_evidence_shape()["body"]["receive_id"] == "REDACTED"
+
+
+def test_feishu_delivery_status_records_success_and_redacted_failures() -> None:
+    user = FeishuRecipient(
+        recipient_key="feishu_user_demo",
+        recipient_type="feishu_user",
+        receive_id_type="open_id",
+        receive_id="ou_fixture_user",
+    )
+    group = FeishuRecipient(
+        recipient_key="feishu_group_demo",
+        recipient_type="feishu_group",
+        receive_id_type="chat_id",
+        receive_id="oc_fixture_chat",
+    )
+    success = delivery_status_from_response(user, {"code": 0, "data": {"message_id": "om_fixture_message"}})
+    failure_response = {
+        "code": 99991663,
+        "msg": "bad receive id ou_sensitive_user_12345678 with Bearer abcdefghijklmnop",
+        "data": {"chat_id": "oc_sensitive_chat_12345678"},
+    }
+    failure = delivery_status_from_response(group, failure_response)
+    status_map = build_delivery_status_map({user: {"code": 0, "data": {"message_id": "om_1"}}, group: failure_response})
+
+    assert success["status"] == "sent"
+    assert success["provider_message_id"] == "om_fixture_message"
+    assert failure["status"] == "failed"
+    assert failure["retryable"] is True
+    serialized_failure = json.dumps(failure, ensure_ascii=False)
+    assert "ou_sensitive" not in serialized_failure
+    assert "oc_sensitive" not in serialized_failure
+    assert "Bearer" not in serialized_failure
+    assert status_map["feishu_user_demo"]["status"] == "sent"
+    assert status_map["feishu_group_demo"]["status"] == "failed"
+
+
+def test_feishu_pending_status_and_recipient_validation() -> None:
+    recipient = FeishuRecipient(
+        recipient_key="feishu_group_demo",
+        recipient_type="feishu_group",
+        receive_id_type="chat_id",
+        receive_id="oc_fixture_chat",
+    )
+    pending = pending_delivery_status(recipient)
+
+    assert pending["status"] == "pending"
+    assert pending["path"] == "internal_app_bot"
+    assert_raises(
+        FeishuDeliveryError,
+        lambda: FeishuRecipient(
+            recipient_key="bad_user",
+            recipient_type="feishu_user",
+            receive_id_type="chat_id",
+            receive_id="oc_fixture_chat",
+        ),
+        "open_id",
+    )
+
+
+def test_feishu_rendered_text_and_fixtures_include_required_delivery_content() -> None:
+    briefing = feishu_test_briefing()
+    rendered = render_feishu_message_text(
+        briefing,
+        archive_url="https://archive.example.invalid/2026-06-01/technology/",
+    )
+    fixture_card = load_json("fixtures/feishu-delivery/push-briefing-card-content.json")
+    request_shape = load_json("fixtures/feishu-delivery/internal-app-send-message.request-shape.json")
+    delivery_examples = load_json("fixtures/feishu-delivery/delivery-status-examples.json")
+
+    for needle in ["Archive", "Source", "置信提示", "Deep-Dive"]:
+        assert needle in rendered
+    for needle in ["Archive", "Source", "置信提示"]:
+        assert needle in json.dumps(fixture_card, ensure_ascii=False)
+    assert request_shape["user_delivery"]["body"]["msg_type"] == "interactive"
+    assert request_shape["user_delivery"]["content_format"] == "json_string"
+    assert request_shape["group_delivery"]["query"]["receive_id_type"] == "chat_id"
+    assert delivery_examples["delivery_status"]["feishu_group_fallback_example"]["path"] == (
+        "custom_group_bot_fallback"
+    )
+
+
+def test_feishu_redaction_scrubs_sensitive_response_shapes() -> None:
+    redacted = redact_feishu_payload(
+        {
+            "Authorization": "Bearer abcdefghijklmnop",
+            "receive_id": "ou_sensitive_user_12345678",
+            "nested": {
+                "chat_id": "oc_sensitive_chat_12345678",
+                "message": "app cli_sensitiveappid12345678 failed",
+            },
+        }
+    )
+    serialized = json.dumps(redacted, ensure_ascii=False)
+
+    assert "Bearer" not in serialized
+    assert "ou_sensitive" not in serialized
+    assert "oc_sensitive" not in serialized
+    assert "cli_sensitive" not in serialized
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -937,6 +1095,12 @@ def main() -> int:
         test_archive_package_syncs_to_configured_target,
         test_archive_package_keeps_local_output_when_sync_target_is_unavailable,
         test_archive_storage_fixture_contains_complete_package_shape,
+        test_feishu_card_preserves_sections_sources_notices_and_archive_links,
+        test_feishu_internal_app_requests_use_json_string_card_content,
+        test_feishu_delivery_status_records_success_and_redacted_failures,
+        test_feishu_pending_status_and_recipient_validation,
+        test_feishu_rendered_text_and_fixtures_include_required_delivery_content,
+        test_feishu_redaction_scrubs_sensitive_response_shapes,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
