@@ -19,6 +19,77 @@ from technews_briefing.contracts import (  # noqa: E402
 )
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
 from technews_briefing.source_policy import SourceAccessPolicy  # noqa: E402
+from technews_briefing.source_registry import (  # noqa: E402
+    FIRST_VERSION_SOURCE_TYPES,
+    SourceRegistry,
+    SourceRegistryError,
+)
+from technews_briefing.taxonomy import TechnologyDomainTemplate  # noqa: E402
+
+
+EXPECTED_TECHNOLOGY_TEMPLATE = {
+    "AI": (
+        "Foundation models",
+        "Multimodal AI",
+        "AI agents",
+        "AI infrastructure",
+        "Evaluation and safety",
+        "AI applications",
+        "Open-source AI",
+    ),
+    "Software": (
+        "Developer tools",
+        "Programming languages",
+        "Cloud and DevOps",
+        "Security",
+        "Databases and data systems",
+        "Open-source projects",
+        "SaaS platforms",
+    ),
+    "Hardware": (
+        "Semiconductors",
+        "AI accelerators",
+        "Data center hardware",
+        "Consumer devices",
+        "Manufacturing and supply chain",
+        "Networking and connectivity",
+        "Energy and cooling",
+    ),
+    "Embodied Intelligence": (
+        "Robot body",
+        "Data collection",
+        "Model training",
+        "Recent papers",
+        "Financing",
+        "Deployment and pilots",
+        "Simulation and evaluation",
+    ),
+    "Academic Progress": (
+        "AI papers",
+        "Robotics papers",
+        "Systems papers",
+        "Hardware research",
+        "Datasets and benchmarks",
+        "Research institutions",
+        "Reproducibility and evaluation",
+    ),
+    "Technology Industry Progress": (
+        "Funding and investment",
+        "M&A and partnerships",
+        "Regulation and policy",
+        "Antitrust and litigation",
+        "Earnings and market signals",
+        "Talent and organization",
+        "Platform strategy",
+    ),
+}
+REQUIRED_EMBODIED_SUBCATEGORIES = {
+    "Robot body",
+    "Data collection",
+    "Model training",
+    "Recent papers",
+    "Financing",
+}
 
 
 def load_json(path: str):
@@ -137,6 +208,84 @@ def test_source_access_policy_centralizes_ingestion_decisions() -> None:
     assert not policy.evaluate_candidate(manual).allowed
 
 
+def test_technology_taxonomy_loads_configured_mvp_template() -> None:
+    template = TechnologyDomainTemplate.from_markdown_file(ROOT / "docs/taxonomy/technology-domain-template.md")
+    loaded = {section.name: section.subcategories for section in template.sections}
+    assert loaded == EXPECTED_TECHNOLOGY_TEMPLATE
+
+    template.require_mvp_coverage(
+        required_sections=set(EXPECTED_TECHNOLOGY_TEMPLATE),
+        required_embodied_subcategories=REQUIRED_EMBODIED_SUBCATEGORIES,
+    )
+    assert template.name == "technology"
+    assert len(template.section_names()) == 6
+
+
+def test_source_registry_loads_seed_sources_and_supported_first_version_types() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    assert len(registry.entries()) >= 30
+    assert len(registry.first_version_sources()) >= 30
+    assert registry.deferred_sources()
+    assert registry.first_version_source_types() == FIRST_VERSION_SOURCE_TYPES
+
+    arxiv = registry.entry_for("src-arxiv-cs-ai")
+    assert arxiv.source_type == "academic_source"
+    assert arxiv.primary_section == "Academic Progress"
+    assert arxiv.section_hints() == ("Academic Progress", "AI")
+    assert arxiv.trust_tier == "academic"
+    assert arxiv.media_availability == "paper metadata"
+    assert arxiv.eligibility_notes
+
+    manual = registry.require_first_version_connector("src-manual-url")
+    assert manual.source_type == "manual_url"
+
+
+def test_deferred_sources_stay_visible_but_cannot_run_as_first_version_connectors() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    deferred_ids = {entry.id for entry in registry.deferred_sources()}
+    connector_ids = {entry.id for entry in registry.first_version_connectors()}
+
+    assert {"src-hackaday", "src-x", "src-linkedin", "src-facebook"} <= deferred_ids
+    assert "src-x" not in connector_ids
+    assert registry.entry_for("src-x").source_type == "deferred_connector"
+    assert_raises(
+        SourceRegistryError,
+        lambda: registry.require_first_version_connector("src-x"),
+        "not a first-version source",
+    )
+
+
+def test_source_registry_and_access_policy_share_first_version_source_ids() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+
+    assert {entry.id for entry in registry.first_version_sources()} == {
+        row.source_id for row in policy.production_enabled_sources()
+    } | {row.source_id for row in policy.rows_by_eligibility("deferred")}
+
+
+def test_source_registry_requires_policy_for_production_enabled_connectors() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    production_connector_ids = {entry.id for entry in registry.production_enabled_connectors(policy)}
+
+    assert production_connector_ids == {
+        "src-rust-blog",
+        "src-kubernetes-blog",
+        "src-arxiv-cs-ai",
+        "src-arxiv-cs-lg",
+        "src-arxiv-cs-ro",
+        "src-arxiv-cs-cv",
+        "src-arxiv-cs-cl",
+    }
+    assert "src-the-verge" in {entry.id for entry in registry.first_version_sources()}
+    assert_raises(
+        SourceRegistryError,
+        lambda: registry.require_production_enabled_connector("src-the-verge", policy),
+        "not enabled for production auto-ingestion",
+    )
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -185,6 +334,11 @@ def main() -> int:
         test_status_records_represent_delivery_and_sync_failures,
         test_failed_status_requires_failure_reason,
         test_source_access_policy_centralizes_ingestion_decisions,
+        test_technology_taxonomy_loads_configured_mvp_template,
+        test_source_registry_loads_seed_sources_and_supported_first_version_types,
+        test_deferred_sources_stay_visible_but_cannot_run_as_first_version_connectors,
+        test_source_registry_and_access_policy_share_first_version_source_ids,
+        test_source_registry_requires_policy_for_production_enabled_connectors,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
