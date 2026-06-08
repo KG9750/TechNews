@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -40,65 +39,6 @@ def with_env(name: str, value: str):
     return EnvGuard()
 
 
-def source_owner_decision_payload_for_source(source_id: str, decision: str) -> dict:
-    queue_item = packet.source_owner.load_queue_items()[source_id]
-    production_enabled = decision == "eligible"
-    return {
-        "source_id": source_id,
-        "reviewed_at": "2026-06-03",
-        "reviewed_by": "Briefing Administrator",
-        "decision": decision,
-        "evidence_checked": [
-            {
-                "required_evidence": evidence,
-                "url_or_note": f"Owner note: reviewed {evidence} against source terms and recorded metadata-only constraints.",
-                "checked_at": "2026-06-03",
-            }
-            for evidence in queue_item["evidence_required"]
-        ],
-        "owner_question_answers": [
-            {
-                "question": question,
-                "answer": "Metadata-only use remains needs_review until explicit permission and text-only media handling are approved.",
-            }
-            for question in queue_item["owner_questions"]
-        ],
-        "policy_after_decision": {
-            "eligibility_state": decision,
-            "connector_mode": "rss_metadata_only" if production_enabled else queue_item["default_connector_mode"],
-            "production_auto_ingestion": production_enabled,
-            "full_text_storage": "not_stored",
-            "summary_policy": "generated_summary_from_metadata_only" if production_enabled else "generated_summary_disallowed",
-            "media_policy": "none_until_approved",
-            "rate_policy": "conservative_default" if production_enabled else "no_production_fetch",
-        },
-        "implementation_guardrail": "Regression test guardrail.",
-        "artifact_updates": {
-            "review_matrix": {
-                "terms_evidence": f"Owner decision reviewed 2026-06-03; test decision {decision}.",
-                "summary_storage": "Generated summaries follow the owner decision.",
-                "media_use": "No media reuse.",
-                "rate_limit": "Conservative default for test." if production_enabled else "No production fetch.",
-                "next_action": f"Apply test decision {decision}.",
-            },
-            "source_registry": {
-                "eligibility_notes": f"Regression test applied decision {decision}.",
-            },
-        },
-    }
-
-
-def write_completed_source_owner_decisions(evidence_root: Path, decision: str) -> None:
-    evidence_dir = evidence_root / "source-owner-reviews"
-    for source_id in packet.source_owner.open_source_ids():
-        output = packet.source_owner.decision_path(evidence_dir, source_id)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(
-            json.dumps(source_owner_decision_payload_for_source(source_id, decision), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-
 def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     secret = "action-packet-secret-123456789"
     with with_env("MODEL_API_KEY", secret):
@@ -111,8 +51,8 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "Invalid live environment values: 0" in text
     assert "Incomplete final evidence groups:" in text
     assert "Missing live evidence validation inputs:" in text
-    assert "Open source owner decisions: 25" in text
-    assert "Missing source owner decisions: 25" in text
+    assert "Open source owner decisions: 0" in text
+    assert "Missing source owner decisions: 0" in text
     assert "Valid needs_review source owner decisions: 0" in text
     assert "python3 scripts/check_readiness.py --require-live --require-evidence" in text
     assert "Final evidence group | Missing env vars" in text
@@ -123,13 +63,15 @@ def test_action_packet_summarizes_blockers_without_secret_values() -> None:
     assert "| Feishu delivery | https://github.com/KG9750/TechNews/issues/3 |" in text
     assert "| Delivery schedule | https://github.com/KG9750/TechNews/issues/1 |" in text
     assert "DELIVERY_DEADLINE_LOCAL_TIME, DELIVERY_TIMEZONE" in text
-    assert "| Source owner approvals | https://github.com/KG9750/TechNews/issues/21 | None. | 25 open source owner approvals |" in text
+    assert "| Source owner approvals | https://github.com/KG9750/TechNews/issues/21 | None. | 0 open source owner approvals |" in text
     assert "FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_DEFAULT_USER_OPEN_ID, FEISHU_DEFAULT_CHAT_ID" in text
     assert "MODEL_PROVIDER, MODEL_DEFAULT_MODEL, MODEL_API_KEY" in text
     assert "ARCHIVE_LOCAL_ROOT, ARCHIVE_SYNC_TARGET" in text
     assert "Briefing Host secret store or local `.env`; never GitHub." in text
     assert "## MVP Issue Unlock Matrix" in text
     assert "| #17 | Feishu delivery | blocked | Feishu delivery spike:" in text
+    assert "| #12 | Taxonomy and source registry | ready for final triage | None." in text
+    assert "| #13 | Source connectors | ready for final triage | None." in text
     assert "| #18 | Operations Console | ready for final triage | None." in text
     assert "Core MVP issues: core MVP issues #10-#19 must complete before E2E acceptance" in text
     assert "Keep `needs-triage` until final readiness and GitHub tracker gates pass." in text
@@ -203,10 +145,10 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
     assert "Missing final evidence files: archive-storage/sync-result.json" in text
     assert "Closure gate: keep this issue `needs-info` until the final evidence group is `complete`" in text
     assert "Final readiness gate: blocked" in text
-    assert "Source owner decisions: blocked (25 decision drafts not generated yet)" in text
+    assert "Source owner decisions: ready (no open source owner reviews remain)" in text
     assert "- Linked issue: https://github.com/KG9750/TechNews/issues/21" in text
-    assert "Decision drafts not generated yet: 25" in text
-    assert "Keep production auto-ingestion blocked for `needs_review` sources until owner decisions validate and are applied." in text
+    assert "Decision drafts not generated yet: 0" in text
+    assert "No open source owner reviews remain; verify source access policy before enabling production connectors." in text
     assert "Invalid decisions:" not in text
     assert "25 invalid decisions" not in text
     assert "FEISHU_APP_ID" in text
@@ -232,8 +174,8 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
         packet.write_source_owner_packets(evidence_root)
         draft_text = packet.build_github_update_packet(evidence_root)
 
-    assert "Source owner decisions: blocked (25 decision drafts need owner input or validation fixes)" in draft_text
-    assert "Decision drafts needing owner input or validation fixes: 25" in draft_text
+    assert "Source owner decisions: ready (no open source owner reviews remain)" in draft_text
+    assert "Decision drafts needing owner input or validation fixes: 0" in draft_text
     assert "Invalid decisions:" not in draft_text
     assert "25 invalid decisions" not in draft_text
 
@@ -244,25 +186,42 @@ def test_github_update_packet_names_label_guardrails_without_secret_values() -> 
 
 
 def test_action_packet_keeps_valid_needs_review_source_decisions_blocked() -> None:
-    with tempfile.TemporaryDirectory(dir=ROOT) as tmp_name:
-        evidence_root = Path(tmp_name) / "evidence"
-        write_completed_source_owner_decisions(evidence_root, "needs_review")
+    summary = {
+        "open": 25,
+        "counts": {"valid": 25, "invalid": 0, "missing": 0},
+        "by_decision": {"needs_review": 25},
+        "by_decision_needed": {},
+    }
+    live_summary = {
+        "environment": {
+            "feishu": {"present": [], "missing": []},
+            "model_provider": {"present": [], "missing": []},
+            "archive_sync": {"present": [], "missing": []},
+        },
+        "evidence": {"present": [], "missing": []},
+        "final_evidence_groups": {
+            "readiness_manifest": {"status": "complete", "present": [], "missing": []},
+            "feishu_delivery": {"status": "complete", "present": [], "missing": []},
+            "model_provider": {"status": "complete", "present": [], "missing": []},
+            "archive_storage": {"status": "complete", "present": [], "missing": []},
+        },
+        "evidence_validation": {"passed": [], "missing": [], "failures": []},
+    }
+    statuses = packet.mvp_issue_statuses(live_summary, summary)
+    taxonomy_issue = next(status for status in statuses if status["issue"] == "#12")
+    connectors_issue = next(status for status in statuses if status["issue"] == "#13")
 
-        summary = packet.source_owner_summary(evidence_root)
-        text = packet.build_packet(evidence_root)
-        github_text = packet.build_github_update_packet(evidence_root)
-
-    assert summary["counts"] == {"valid": 25, "invalid": 0, "missing": 0}
-    assert summary["by_decision"]["needs_review"] == 25
-    assert "Valid needs_review source owner decisions: 25" in text
-    assert "needs_review: 25" in text
-    assert "Source owner decisions | blocked | not applicable | 0 | 0 | 0 invalid, 0 missing, 25 unresolved" in text
-    assert "| #12 | Taxonomy and source registry | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
-    assert "| #13 | Source connectors | blocked | Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval |" in text
-    assert "Source owner decisions: blocked (25 valid needs_review decisions still need source permission or eligibility approval)" in github_text
+    assert packet.github_source_owner_status(summary) == (
+        "blocked (25 valid needs_review decisions still need source permission or eligibility approval)"
+    )
+    assert taxonomy_issue["issue_specific_status"] == "blocked"
+    assert connectors_issue["issue_specific_status"] == "blocked"
+    assert taxonomy_issue["blocker_details"] == [
+        "Source owner decisions: 25 valid needs_review decisions still need source permission or eligibility approval"
+    ]
     assert (
         "25 valid decisions still keep sources `needs_review`; keep production auto-ingestion blocked until explicit source permission or eligibility approval is documented."
-        in github_text
+        == packet.source_owner_followup_guardrail(summary)
     )
 
 
@@ -284,7 +243,7 @@ def test_external_input_request_packet_names_inputs_without_secret_values() -> N
     assert "None; this is runtime schedule configuration, not live external evidence." in text
     assert "delivery-schedule-decision.md" in text
     assert "## Source owner approvals" in text
-    assert "Current blocker: 25 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
+    assert "Current blocker: 0 open source owner approvals; 0 valid `needs_review` decisions still block production auto-ingestion." in text
     assert "source-owner-reviews/request-packet.md" in text
     assert "source-owner-reviews/mvp-source-set-narrowing.md" in text
     assert "python3 scripts/source_owner_review_decision.py --validate-all" in text
@@ -424,14 +383,14 @@ def test_source_owner_packets_can_be_written_from_action_packet() -> None:
         written = packet.write_source_owner_packets(evidence_root)
 
         source_owner_dir = evidence_root / "source-owner-reviews"
-        assert written == 25
+        assert written == 0
         assert (source_owner_dir / "index.md").exists()
         assert (source_owner_dir / "worksheet.md").exists()
         assert (source_owner_dir / "batch-plan.md").exists()
         assert (source_owner_dir / "request-packet.md").exists()
         assert (source_owner_dir / "mvp-source-set-narrowing.md").exists()
-        assert (source_owner_dir / "src-the-verge.decision.json").exists()
-        assert (source_owner_dir / "src-the-verge.packet.md").exists()
+        assert not (source_owner_dir / "src-the-verge.decision.json").exists()
+        assert not (source_owner_dir / "src-the-verge.packet.md").exists()
         assert "Source Owner Decision Request Packet" in (source_owner_dir / "request-packet.md").read_text(encoding="utf-8")
         narrowing_text = (source_owner_dir / "mvp-source-set-narrowing.md").read_text(encoding="utf-8")
         assert "MVP Source Set Narrowing Packet" in narrowing_text
@@ -450,7 +409,7 @@ def test_source_set_narrowing_packet_is_decision_support_only() -> None:
 
     assert "decision support only" in text
     assert "Current production-enabled sources: 7" in text
-    assert "Open unresolved source-owner reviews: 25" in text
+    assert "Open unresolved source-owner reviews: 0" in text
     assert "Do not leave a source as `needs_review` if the goal is to clear issue #21" in text
     assert "If narrowing to the eligible-only baseline" in text
     assert "python3 scripts/source_owner_review_decision.py --validate-all" in text

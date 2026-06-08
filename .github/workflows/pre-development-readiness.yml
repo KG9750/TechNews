@@ -38,16 +38,17 @@ jobs:
             scripts/readiness_action_packet.py \
             scripts/test_readiness_action_packet.py \
             scripts/source_owner_review_decision.py \
-            scripts/test_source_owner_review_decision.py
+            scripts/test_source_owner_review_decision.py \
+            scripts/test_product_modules.py \
+            scripts/run_tests.py \
+            scripts/generate_architecture_review_ui.py \
+            technews_briefing/__init__.py \
+            technews_briefing/contracts.py \
+            technews_briefing/source_policy.py \
+            technews_briefing/run.py
 
-      - name: Test live evidence helpers
-        run: python scripts/test_live_evidence_helpers.py
-
-      - name: Test readiness action packet helper
-        run: python scripts/test_readiness_action_packet.py
-
-      - name: Test source owner review decision helper
-        run: python scripts/test_source_owner_review_decision.py
+      - name: Run local test entrypoint
+        run: python scripts/run_tests.py
 
       - name: Verify evidence templates cannot pass as live evidence
         run: |
