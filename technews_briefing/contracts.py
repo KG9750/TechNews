@@ -22,6 +22,7 @@ CONNECTOR_STATUSES = {"completed", "partial", "timeout", "failed", "skipped"}
 DELIVERY_STATUSES = {"pending", "sent", "failed", "skipped"}
 SYNC_STATUSES = {"not_started", "local_written", "synced", "failed"}
 MODEL_TASK_STATUSES = {"pending", "completed", "failed", "skipped"}
+FAILED_STATUS = "failed"
 SOURCE_MEDIA_KINDS = {
     "feed_image",
     "open_graph_image",
@@ -29,6 +30,7 @@ SOURCE_MEDIA_KINDS = {
     "paper_asset",
     "favicon",
 }
+STATUS_COMMON_KEYS = {"status", "failure_reason", "retryable"}
 DISALLOWED_FULL_BODY_KEYS = {
     "article_body",
     "body",
@@ -238,6 +240,82 @@ def _optional_int(payload: Mapping[str, Any], key: str) -> int | None:
     return value
 
 
+def _optional_bool(payload: Mapping[str, Any], key: str) -> bool | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, bool):
+        raise ContractError(f"{key} must be a boolean when present")
+    return value
+
+
+@dataclass(frozen=True)
+class StatusRecord:
+    status: str
+    failure_reason: str | None = None
+    retryable: bool | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any], allowed: set[str], label: str) -> "StatusRecord":
+        status = _require_value(_require_str(payload, "status"), allowed, f"{label}.status")
+        failure_reason = _optional_str(payload, "failure_reason")
+        retryable = _optional_bool(payload, "retryable")
+        if status == FAILED_STATUS and failure_reason is None:
+            raise ContractError(f"{label}.failure_reason is required when status is failed")
+        metadata = {str(key): value for key, value in payload.items() if key not in STATUS_COMMON_KEYS}
+        return cls(status=status, failure_reason=failure_reason, retryable=retryable, metadata=metadata)
+
+
+@dataclass(frozen=True)
+class ModelUsageSummary:
+    provider: str
+    model: str
+    task_count: int
+    request_count: int
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    latency_ms: int | None = None
+    failure_count: int = 0
+    notes: str | None = None
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "ModelUsageSummary":
+        failure_count = payload.get("failure_count", 0)
+        if not isinstance(failure_count, int) or failure_count < 0:
+            raise ContractError("model_usage_summary.failure_count must be a non-negative integer")
+        return cls(
+            provider=_require_str(payload, "provider"),
+            model=_require_str(payload, "model"),
+            task_count=_require_non_negative_int(payload, "task_count"),
+            request_count=_require_non_negative_int(payload, "request_count"),
+            input_tokens=_optional_int(payload, "input_tokens"),
+            output_tokens=_optional_int(payload, "output_tokens"),
+            latency_ms=_optional_int(payload, "latency_ms"),
+            failure_count=failure_count,
+            notes=_optional_str(payload, "notes"),
+        )
+
+
+def _require_non_negative_int(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or value < 0:
+        raise ContractError(f"{key} must be a non-negative integer")
+    return value
+
+
+def _status_mapping(payload: Mapping[str, Any], key: str, allowed: set[str], label: str) -> Mapping[str, StatusRecord]:
+    values = _require_mapping(payload, key)
+    records: dict[str, StatusRecord] = {}
+    for record_key, record in values.items():
+        if not isinstance(record_key, str) or not record_key.strip():
+            raise ContractError(f"{label} keys must be non-empty strings")
+        if not isinstance(record, Mapping):
+            raise ContractError(f"{label}.{record_key} must be an object")
+        records[record_key] = StatusRecord.from_mapping(record, allowed, f"{label}.{record_key}")
+    return records
+
+
 @dataclass(frozen=True)
 class CandidateItem:
     id: str
@@ -309,6 +387,7 @@ class BriefingItem:
     selection_rationale: SelectionRationale
     confidence_level: str
     subcategory: str | None = None
+    source_media: SourceMedia | None = None
     confidence_notice: ConfidenceNotice | None = None
     media_attribution: Mapping[str, Any] | None = None
     related_history: tuple[Mapping[str, Any], ...] = ()
@@ -327,6 +406,10 @@ class BriefingItem:
         confidence_notice = ConfidenceNotice.from_mapping(notice_payload) if notice_payload else None
         if confidence_level != "high" and confidence_notice is None:
             raise ContractError("confidence_notice is required when confidence_level is not high")
+        source_media = _optional_mapping(payload, "source_media")
+        media_attribution = _optional_mapping(payload, "media_attribution")
+        if source_media and media_attribution is None:
+            raise ContractError("media_attribution is required when source_media is displayed")
         related_history = _optional_list(payload, "related_history")
         if not all(isinstance(item, Mapping) for item in related_history):
             raise ContractError("related_history must contain objects")
@@ -343,8 +426,9 @@ class BriefingItem:
             ),
             selection_rationale=SelectionRationale.from_mapping(_require_mapping(payload, "selection_rationale")),
             confidence_level=confidence_level,
+            source_media=SourceMedia.from_mapping(source_media) if source_media else None,
             confidence_notice=confidence_notice,
-            media_attribution=_optional_mapping(payload, "media_attribution"),
+            media_attribution=media_attribution,
             related_history=tuple(related_history),
         )
 
@@ -357,11 +441,11 @@ class ArchiveMetadata:
     files: Mapping[str, Any]
     selected_items: tuple[Mapping[str, Any], ...]
     excluded_candidates: tuple[Mapping[str, Any], ...]
-    connector_status: Mapping[str, Any]
-    delivery_status: Mapping[str, Any]
+    connector_status: Mapping[str, StatusRecord]
+    delivery_status: Mapping[str, StatusRecord]
     media_inventory: tuple[Mapping[str, Any], ...]
-    sync_status: Mapping[str, Any]
-    model_usage_summary: Mapping[str, Any]
+    sync_status: Mapping[str, StatusRecord]
+    model_usage_summary: ModelUsageSummary
     warnings: tuple[str, ...] = ()
 
     @classmethod
@@ -376,11 +460,11 @@ class ArchiveMetadata:
             files=_require_mapping(payload, "files"),
             selected_items=tuple(_require_list(payload, "selected_items")),
             excluded_candidates=tuple(_require_list(payload, "excluded_candidates")),
-            connector_status=_require_mapping(payload, "connector_status"),
-            delivery_status=_require_mapping(payload, "delivery_status"),
+            connector_status=_status_mapping(payload, "connector_status", CONNECTOR_STATUSES, "connector_status"),
+            delivery_status=_status_mapping(payload, "delivery_status", DELIVERY_STATUSES, "delivery_status"),
             media_inventory=tuple(_require_list(payload, "media_inventory")),
-            sync_status=_require_mapping(payload, "sync_status"),
-            model_usage_summary=_require_mapping(payload, "model_usage_summary"),
+            sync_status=_status_mapping(payload, "sync_status", SYNC_STATUSES, "sync_status"),
+            model_usage_summary=ModelUsageSummary.from_mapping(_require_mapping(payload, "model_usage_summary")),
             warnings=tuple(warnings),
         )
 
@@ -392,10 +476,10 @@ class BriefingRun:
     scheduled_for: str
     delivery_deadline: str
     started_at: str
-    connector_status: Mapping[str, Any]
-    model_task_status: Mapping[str, Any]
-    archive_status: Mapping[str, Any]
-    feishu_delivery_status: Mapping[str, Any]
+    connector_status: Mapping[str, StatusRecord]
+    model_task_status: Mapping[str, StatusRecord]
+    archive_status: Mapping[str, StatusRecord]
+    feishu_delivery_status: Mapping[str, StatusRecord]
     completed_at: str | None = None
     run_warnings: tuple[str, ...] = ()
 
@@ -411,9 +495,14 @@ class BriefingRun:
             delivery_deadline=_require_utc_timestamp(payload, "delivery_deadline"),
             started_at=_require_utc_timestamp(payload, "started_at"),
             completed_at=_optional_utc_timestamp(payload, "completed_at"),
-            connector_status=_require_mapping(payload, "connector_status"),
-            model_task_status=_require_mapping(payload, "model_task_status"),
-            archive_status=_require_mapping(payload, "archive_status"),
-            feishu_delivery_status=_require_mapping(payload, "feishu_delivery_status"),
+            connector_status=_status_mapping(payload, "connector_status", CONNECTOR_STATUSES, "connector_status"),
+            model_task_status=_status_mapping(payload, "model_task_status", MODEL_TASK_STATUSES, "model_task_status"),
+            archive_status=_status_mapping(payload, "archive_status", SYNC_STATUSES, "archive_status"),
+            feishu_delivery_status=_status_mapping(
+                payload,
+                "feishu_delivery_status",
+                DELIVERY_STATUSES,
+                "feishu_delivery_status",
+            ),
             run_warnings=tuple(warnings),
         )

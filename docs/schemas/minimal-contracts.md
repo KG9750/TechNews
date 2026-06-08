@@ -124,6 +124,7 @@ Minimum fields:
 | `original_source_anchor` | yes | Original title and source URL. |
 | `selection_rationale` | yes | Human-readable inclusion and ranking reason. |
 | `confidence_level` | yes | `high`, `medium`, or `low`. |
+| `source_media` | no | Source Media metadata when the item displays source media. |
 | `confidence_notice` | no | Required when confidence is not high. |
 | `media_attribution` | no | Required when source media is used. |
 | `related_history` | no | Lightweight links to earlier archived items. |

@@ -51,6 +51,10 @@ def test_contract_models_accept_existing_fixtures() -> None:
         load_json("fixtures/archive-storage/local-archive/2026-06-01/technology/metadata.json")
     )
     assert archive.run_id == "run_2026-06-01_archive_storage_spike"
+    assert archive.delivery_status["feishu_user_demo"].status == "skipped"
+    assert archive.sync_status["remote_sync"].status == "failed"
+    assert archive.sync_status["remote_sync"].failure_reason
+    assert archive.model_usage_summary.request_count == 0
 
 
 def test_contract_models_reject_full_body_metadata() -> None:
@@ -64,6 +68,59 @@ def test_confidence_notice_required_for_non_high_briefing_items() -> None:
     payload["confidence_level"] = "low"
     payload["confidence_notice"] = None
     assert_raises(ContractError, lambda: BriefingItem.from_mapping(payload), "confidence_notice is required")
+
+
+def test_low_confidence_fixture_maps_to_confidence_notice_shape() -> None:
+    payload = dict(load_json("fixtures/model-provider/outputs/low-confidence-news.json")["briefing_item"])
+    notice_text = payload["confidence_notice"]
+    payload["confidence_notice"] = {
+        "reason": "single_source_low_confidence",
+        "display_text_zh": notice_text,
+        "supporting_sources": [payload["original_source_anchor"]],
+    }
+    briefing_item = BriefingItem.from_mapping(payload)
+    assert briefing_item.confidence_level == "low"
+    assert briefing_item.confidence_notice is not None
+
+
+def test_source_media_requires_media_attribution_when_displayed() -> None:
+    payload = dict(load_json("fixtures/model-provider/outputs/high-confidence-news.json")["briefing_item"])
+    payload["source_media"] = {
+        "url": "https://example.invalid/image.jpg",
+        "kind": "open_graph_image",
+        "attribution": "Example Source",
+        "eligibility_note": "Fixture-only media metadata.",
+    }
+    payload["media_attribution"] = None
+    assert_raises(ContractError, lambda: BriefingItem.from_mapping(payload), "media_attribution is required")
+
+
+def test_status_records_represent_delivery_and_sync_failures() -> None:
+    run = AutomaticBriefingRun(
+        SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    )
+    prepared = run.prepare(
+        run_id="run_2026-06-01_failure_status",
+        domain_template="technology",
+        scheduled_for="2026-06-01T00:00:00Z",
+        delivery_deadline="2026-06-01T01:00:00Z",
+        started_at="2026-06-01T00:05:00Z",
+        connector_results=(),
+        model_task_status={"ranking": {"status": "failed", "failure_reason": "fixture model failure"}},
+        archive_status={
+            "remote_sync": {"status": "failed", "failure_reason": "fixture sync failure", "retryable": True}
+        },
+        feishu_delivery_status={"user": {"status": "failed", "failure_reason": "fixture delivery failure"}},
+    )
+    assert prepared.run.model_task_status["ranking"].failure_reason == "fixture model failure"
+    assert prepared.run.archive_status["remote_sync"].retryable is True
+    assert prepared.run.feishu_delivery_status["user"].status == "failed"
+
+
+def test_failed_status_requires_failure_reason() -> None:
+    payload = load_json("fixtures/archive-storage/local-archive/2026-06-01/technology/metadata.json")
+    payload["sync_status"]["remote_sync"] = {"status": "failed"}
+    assert_raises(ContractError, lambda: ArchiveMetadata.from_mapping(payload), "failure_reason is required")
 
 
 def test_source_access_policy_centralizes_ingestion_decisions() -> None:
@@ -105,7 +162,7 @@ def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
 
     assert [candidate.id for candidate in run.accepted_candidates] == ["cand_arxiv_2605_31603v1"]
     assert {candidate.source_id for candidate in run.excluded_candidates} == {"src-github-blog", "src-manual-url"}
-    assert run.run.connector_status["src-manual-url"]["status"] == "partial"
+    assert run.run.connector_status["src-manual-url"].status == "partial"
     assert run.run.run_warnings
 
 
@@ -123,6 +180,10 @@ def main() -> int:
         test_contract_models_accept_existing_fixtures,
         test_contract_models_reject_full_body_metadata,
         test_confidence_notice_required_for_non_high_briefing_items,
+        test_low_confidence_fixture_maps_to_confidence_notice_shape,
+        test_source_media_requires_media_attribution_when_displayed,
+        test_status_records_represent_delivery_and_sync_failures,
+        test_failed_status_requires_failure_reason,
         test_source_access_policy_centralizes_ingestion_decisions,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
