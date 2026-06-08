@@ -133,7 +133,7 @@ MVP_ISSUES = set(range(10, 21))
 COMPLETED_READINESS_BLOCKER_ISSUES = {3, 5, 6, SOURCE_OWNER_REVIEW_ISSUE}
 POST_READINESS_READY_MVP_ISSUES = set(range(10, 20))
 POST_READINESS_NEEDS_TRIAGE_MVP_ISSUES = {20}
-COMPLETED_MVP_ISSUES = {10, 11, 12, 13, 14}
+COMPLETED_MVP_ISSUES = {10, 11, 12, 13, 14, 15}
 MVP_ISSUE_DRAFTS = {
     10: "docs/issues/mvp/01-repo-ci-foundation.md",
     11: "docs/issues/mvp/02-contract-schemas.md",
@@ -1903,7 +1903,7 @@ def check_github_tracker(evidence_root: Path = DEFAULT_EVIDENCE_ROOT) -> list[st
         f"GitHub tracker: {len(REQUIRED_GITHUB_LABELS)} triage labels present",
         f"GitHub tracker: {len(REQUIRED_GITHUB_MILESTONES)} milestones open",
         (
-            "GitHub tracker: #10-#14 are complete, #15-#19 are ready-for-agent, and #20 remains needs-triage"
+            "GitHub tracker: #10-#15 are complete, #16-#19 are ready-for-agent, and #20 remains needs-triage"
             if readiness_passed
             else f"GitHub tracker: {len(MVP_ISSUES)} MVP issues remain needs-triage"
         ),
