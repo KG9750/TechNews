@@ -36,7 +36,9 @@ def assert_raises(expected_error: type[Exception], fn, expected_text: str) -> No
 
 
 def test_contract_models_accept_existing_fixtures() -> None:
-    candidates = [CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")]
+    candidates = [
+        CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")
+    ]
     assert len(candidates) == 3
     assert candidates[1].source_id == "src-arxiv-cs-ai"
 
@@ -69,7 +71,9 @@ def test_source_access_policy_centralizes_ingestion_decisions() -> None:
     assert len(policy.production_enabled_sources()) == 7
     assert len(policy.rows_by_eligibility("deferred")) == 25
 
-    candidates = [CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")]
+    candidates = [
+        CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")
+    ]
     github, arxiv, manual = candidates
     assert not policy.evaluate_candidate(github).allowed
     assert policy.evaluate_candidate(arxiv).allowed
@@ -78,7 +82,9 @@ def test_source_access_policy_centralizes_ingestion_decisions() -> None:
 
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
-    candidates = [CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")]
+    candidates = [
+        CandidateItem.from_mapping(item) for item in load_json("fixtures/source-ingestion/candidate-items.json")
+    ]
     run = AutomaticBriefingRun(policy).prepare(
         run_id="run_2026-06-01_test",
         domain_template="technology",

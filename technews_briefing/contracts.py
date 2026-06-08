@@ -341,9 +341,7 @@ class BriefingItem:
             original_source_anchor=OriginalSourceAnchor.from_mapping(
                 _require_mapping(payload, "original_source_anchor")
             ),
-            selection_rationale=SelectionRationale.from_mapping(
-                _require_mapping(payload, "selection_rationale")
-            ),
+            selection_rationale=SelectionRationale.from_mapping(_require_mapping(payload, "selection_rationale")),
             confidence_level=confidence_level,
             confidence_notice=confidence_notice,
             media_attribution=_optional_mapping(payload, "media_attribution"),
