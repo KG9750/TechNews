@@ -1156,7 +1156,9 @@ def test_operations_console_auth_uses_password_hash_and_signed_sessions() -> Non
     session = auth.verify_session(token, now=1010)
 
     assert session.username == "admin"
+    assert "$" not in auth.password_hash
     assert verify_admin_password("correct horse", auth.password_hash)
+    assert verify_admin_password("correct horse", auth.password_hash.replace(":", "$"))
     assert not verify_admin_password("wrong password", auth.password_hash)
     assert_raises(OperationsConsoleError, lambda: auth.login("admin", "wrong password", now=1000), "invalid")
     assert_raises(OperationsConsoleError, lambda: auth.verify_session(token + "tampered", now=1010), "signature")

@@ -19,6 +19,9 @@ class OperationsConsoleError(ValueError):
 
 SECRET_DISPLAY_VALUE = "REDACTED"
 SESSION_ALGORITHM = "hmac_sha256"
+PASSWORD_HASH_ALGORITHM = "pbkdf2_sha256"
+PASSWORD_HASH_DELIMITER = ":"
+LEGACY_PASSWORD_HASH_DELIMITER = "$"
 TABLE_COLUMNS = {
     "sources": {"source_id", "name", "source_type", "eligibility_state", "connector_status", "last_checked_at"},
     "taxonomy": {"section", "subcategory"},
@@ -71,17 +74,20 @@ def hash_admin_password(password: str, *, salt: bytes, iterations: int = 120_000
     if not salt:
         raise OperationsConsoleError("salt must not be empty")
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
-    return "pbkdf2_sha256${iterations}${salt}${digest}".format(
-        iterations=iterations,
-        salt=_b64encode(salt),
-        digest=_b64encode(digest),
+    return PASSWORD_HASH_DELIMITER.join(
+        (
+            PASSWORD_HASH_ALGORITHM,
+            str(iterations),
+            _b64encode(salt),
+            _b64encode(digest),
+        )
     )
 
 
 def verify_admin_password(password: str, password_hash: str) -> bool:
     try:
-        algorithm, iterations_raw, salt_raw, digest_raw = password_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
+        algorithm, iterations_raw, salt_raw, digest_raw = _split_password_hash(password_hash)
+        if algorithm != PASSWORD_HASH_ALGORITHM:
             return False
         iterations = int(iterations_raw)
         salt = _b64decode(salt_raw)
@@ -90,6 +96,11 @@ def verify_admin_password(password: str, password_hash: str) -> bool:
         return False
     actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
     return hmac.compare_digest(actual, expected)
+
+
+def _split_password_hash(password_hash: str) -> tuple[str, str, str, str]:
+    delimiter = PASSWORD_HASH_DELIMITER if PASSWORD_HASH_DELIMITER in password_hash else LEGACY_PASSWORD_HASH_DELIMITER
+    return tuple(password_hash.split(delimiter, 3))  # type: ignore[return-value]
 
 
 class AdminAuth:
