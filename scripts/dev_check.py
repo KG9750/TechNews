@@ -18,6 +18,8 @@ TOOLING_PATHS = [
     "scripts/test_deployment.py",
     "scripts/run_e2e_acceptance.py",
     "scripts/test_e2e_acceptance.py",
+    "scripts/run_daily_briefing.py",
+    "scripts/test_daily_run.py",
 ]
 COMMANDS = [
     ("format", [sys.executable, "-m", "ruff", "format", "--check", *TOOLING_PATHS]),

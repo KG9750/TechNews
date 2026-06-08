@@ -96,7 +96,7 @@ def build_feishu_card(
                     ["", f"**置信提示：**{_strip_confidence_prefix(item.confidence_notice.display_text_zh)}"]
                 )
             content_lines.append(f"[Source]({item.original_source_anchor.source_url})")
-            content_lines.append(f"[Deep-Dive]({detail.href})")
+            content_lines.append(f"[Deep-Dive]({_archive_url_for_detail(archive_url, detail.href)})")
             elements.append({"tag": "markdown", "content": "\n".join(content_lines)})
 
     elements.append(
@@ -147,7 +147,14 @@ def render_feishu_message_text(briefing: GeneratedBriefing, *, archive_url: str)
             lines.extend(f"- {bullet}" for bullet in item.bullets_zh)
             if item.confidence_notice is not None:
                 lines.extend(["", item.confidence_notice.display_text_zh])
-            lines.extend(["", f"Source: {item.original_source_anchor.source_url}", f"Deep-Dive: {detail.href}", ""])
+            lines.extend(
+                [
+                    "",
+                    f"Source: {item.original_source_anchor.source_url}",
+                    f"Deep-Dive: {_archive_url_for_detail(archive_url, detail.href)}",
+                    "",
+                ]
+            )
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -225,3 +232,9 @@ def _failure_reason(response: Mapping[str, object]) -> str:
 
 def _strip_confidence_prefix(value: str) -> str:
     return value.removeprefix("置信提示：").strip()
+
+
+def _archive_url_for_detail(archive_url: str, detail_href: str) -> str:
+    if detail_href.startswith(("https://", "http://")):
+        return detail_href
+    return archive_url.rstrip("/") + "/" + detail_href.lstrip("/")
