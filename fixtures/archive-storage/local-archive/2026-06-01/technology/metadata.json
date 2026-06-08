@@ -68,12 +68,12 @@
   "delivery_status": {
     "feishu_user_demo": {
       "recipient_type": "feishu_user",
-      "status": "not_sent_in_archive_spike",
+      "status": "skipped",
       "reason": "Archive/storage fixture does not call Feishu."
     },
     "feishu_group_demo": {
       "recipient_type": "feishu_group",
-      "status": "not_sent_in_archive_spike",
+      "status": "skipped",
       "reason": "Archive/storage fixture does not call Feishu."
     }
   },
@@ -88,7 +88,7 @@
   ],
   "sync_status": {
     "local_archive": {
-      "status": "written",
+      "status": "local_written",
       "root": "fixtures/archive-storage/local-archive",
       "package_path": "2026-06-01/technology"
     },

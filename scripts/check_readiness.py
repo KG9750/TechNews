@@ -1075,7 +1075,10 @@ def check_archive_fixture() -> list[str]:
     }
     missing = sorted(required - set(metadata))
     require(not missing, f"archive metadata missing fields: {', '.join(missing)}")
-    require(metadata["sync_status"]["local_archive"]["status"] == "written", "local archive status must be written")
+    require(
+        metadata["sync_status"]["local_archive"]["status"] == "local_written",
+        "local archive status must be local_written",
+    )
     require(metadata["sync_status"]["remote_sync"]["status"] == "failed", "fixture remote sync must record failure")
     require(metadata["sync_status"]["remote_sync"]["retryable"] is True, "fixture sync failure must be retryable")
     return ["archive fixture: local write and retryable sync failure represented"]
