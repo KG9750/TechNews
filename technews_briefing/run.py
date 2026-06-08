@@ -68,6 +68,8 @@ class AutomaticBriefingRun:
             if result.warning:
                 connector_status[result.source_id]["warning"] = result.warning
                 warnings.append(f"{result.source_id}: {result.warning}")
+            if result.status == "failed":
+                connector_status[result.source_id]["failure_reason"] = result.warning or "connector failed"
             if result.status in {"partial", "timeout", "failed"}:
                 warnings.append(f"{result.source_id}: connector status is {result.status}")
 

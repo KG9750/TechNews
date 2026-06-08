@@ -18,6 +18,11 @@ from technews_briefing.contracts import (  # noqa: E402
     ContractError,
 )
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
+from technews_briefing.source_connectors import (  # noqa: E402
+    SourceMetadataInput,
+    normalize_source_input,
+    run_source_connectors,
+)
 from technews_briefing.source_policy import SourceAccessPolicy  # noqa: E402
 from technews_briefing.source_registry import (  # noqa: E402
     FIRST_VERSION_SOURCE_TYPES,
@@ -95,6 +100,10 @@ REQUIRED_EMBODIED_SUBCATEGORIES = {
 def load_json(path: str):
     with (ROOT / path).open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def load_text(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
 
 
 def assert_raises(expected_error: type[Exception], fn, expected_text: str) -> None:
@@ -286,6 +295,166 @@ def test_source_registry_requires_policy_for_production_enabled_connectors() -> 
     )
 
 
+def test_source_connectors_normalize_each_first_version_source_type() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    run_id = "run_2026-06-01_source_connector_test"
+    discovered_at = "2026-06-01T06:02:34Z"
+
+    public_feed = normalize_source_input(
+        registry.entry_for("src-rust-blog"),
+        policy.row_for("src-rust-blog"),
+        SourceMetadataInput(
+            source_id="src-rust-blog",
+            content_type="application/rss+xml",
+            content=load_text("fixtures/source-ingestion/recorded-public-feed.rss"),
+        ),
+        run_id=run_id,
+        discovered_at=discovered_at,
+    )
+    academic = normalize_source_input(
+        registry.entry_for("src-arxiv-cs-ai"),
+        policy.row_for("src-arxiv-cs-ai"),
+        SourceMetadataInput(
+            source_id="src-arxiv-cs-ai",
+            content_type="application/atom+xml",
+            content=load_text("fixtures/source-ingestion/recorded-arxiv.atom"),
+        ),
+        run_id=run_id,
+        discovered_at=discovered_at,
+    )
+    manual = normalize_source_input(
+        registry.entry_for("src-manual-url"),
+        policy.row_for("src-manual-url"),
+        SourceMetadataInput(
+            source_id="src-manual-url",
+            content_type="text/html",
+            content=load_text("fixtures/source-ingestion/recorded-manual-url.html"),
+            fetched_url="https://www.apple.com/newsroom/2024/05/apple-introduces-m4-chip/",
+        ),
+        run_id=run_id,
+        discovered_at=discovered_at,
+    )
+
+    assert {public_feed.source_type, academic.source_type, manual.source_type} == {
+        "public_feed",
+        "academic_source",
+        "manual_url",
+    }
+    assert public_feed.original_source_anchor.source_name == "Rust Blog"
+    assert academic.original_source_anchor.source_url == "http://arxiv.org/abs/2605.31603v1"
+    assert manual.original_source_anchor.source_name == "Apple Newsroom"
+    assert manual.raw_metadata["open_graph_image_url"].startswith("https://www.apple.com/newsroom/")
+    assert public_feed.raw_metadata["description_excerpt"]
+    assert academic.raw_metadata["summary_excerpt"]
+
+
+def test_source_connectors_record_failures_and_policy_skips_without_aborting_run() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    results = run_source_connectors(
+        registry,
+        policy,
+        (
+            SourceMetadataInput(
+                source_id="src-rust-blog",
+                content_type="application/rss+xml",
+                content=load_text("fixtures/source-ingestion/recorded-public-feed.rss"),
+                completed_at="2026-06-01T06:03:00Z",
+            ),
+            SourceMetadataInput(
+                source_id="src-arxiv-cs-ai",
+                content_type="application/atom+xml",
+                error="fixture upstream 503",
+                completed_at="2026-06-01T06:03:01Z",
+            ),
+            SourceMetadataInput(
+                source_id="src-the-verge",
+                content_type="application/rss+xml",
+                content=load_text("fixtures/source-ingestion/recorded-public-feed.rss"),
+                completed_at="2026-06-01T06:03:02Z",
+            ),
+            SourceMetadataInput(
+                source_id="src-manual-url",
+                content_type="text/html",
+                content=load_text("fixtures/source-ingestion/recorded-manual-url.html"),
+                completed_at="2026-06-01T06:03:03Z",
+            ),
+        ),
+        run_id="run_2026-06-01_source_connector_policy_test",
+        discovered_at="2026-06-01T06:02:34Z",
+        delivery_deadline="2026-06-01T07:00:00Z",
+    )
+    by_source = {result.source_id: result for result in results}
+
+    assert by_source["src-rust-blog"].status == "completed"
+    assert by_source["src-arxiv-cs-ai"].status == "failed"
+    assert by_source["src-the-verge"].status == "skipped"
+    assert "probe-only" in by_source["src-the-verge"].warning
+    assert by_source["src-manual-url"].status == "skipped"
+    assert "manual-only" in by_source["src-manual-url"].warning
+
+    prepared = AutomaticBriefingRun(policy).prepare(
+        run_id="run_2026-06-01_source_connector_policy_test",
+        domain_template="technology",
+        scheduled_for="2026-06-01T06:00:00Z",
+        delivery_deadline="2026-06-01T07:00:00Z",
+        started_at="2026-06-01T06:01:00Z",
+        connector_results=results,
+    )
+    assert [candidate.source_id for candidate in prepared.accepted_candidates] == ["src-rust-blog"]
+    assert prepared.run.connector_status["src-arxiv-cs-ai"].status == "failed"
+    assert prepared.run.connector_status["src-the-verge"].status == "skipped"
+
+
+def test_source_connector_late_results_are_cut_off_at_delivery_deadline() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    results = run_source_connectors(
+        registry,
+        policy,
+        (
+            SourceMetadataInput(
+                source_id="src-arxiv-cs-ai",
+                content_type="application/atom+xml",
+                content=load_text("fixtures/source-ingestion/recorded-arxiv.atom"),
+                completed_at="2026-06-01T07:00:01Z",
+            ),
+        ),
+        run_id="run_2026-06-01_source_connector_timeout_test",
+        discovered_at="2026-06-01T06:02:34Z",
+        delivery_deadline="2026-06-01T07:00:00Z",
+    )
+
+    assert results[0].source_id == "src-arxiv-cs-ai"
+    assert results[0].status == "timeout"
+    assert not results[0].candidates
+    assert "delivery deadline" in results[0].warning
+
+
+def test_source_connector_output_matches_recorded_candidate_fixture_anchor() -> None:
+    registry = SourceRegistry.from_markdown_file(ROOT / "docs/source-registry.md")
+    policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
+    expected = load_json("fixtures/source-ingestion/candidate-items.json")[1]
+    generated = normalize_source_input(
+        registry.entry_for("src-arxiv-cs-ai"),
+        policy.row_for("src-arxiv-cs-ai"),
+        SourceMetadataInput(
+            source_id="src-arxiv-cs-ai",
+            content_type="application/atom+xml",
+            content=load_text("fixtures/source-ingestion/recorded-arxiv.atom"),
+        ),
+        run_id=expected["run_id"],
+        discovered_at=expected["discovered_at"],
+    )
+
+    assert generated.original_title == expected["original_title"]
+    assert generated.source_url == expected["source_url"]
+    assert generated.original_source_anchor.source_name == expected["original_source_anchor"]["source_name"]
+    assert generated.raw_metadata["authors"][:2] == expected["raw_metadata"]["authors"][:2]
+    assert generated.raw_metadata["summary_excerpt"] == expected["raw_metadata"]["summary_excerpt"]
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -339,6 +508,10 @@ def main() -> int:
         test_deferred_sources_stay_visible_but_cannot_run_as_first_version_connectors,
         test_source_registry_and_access_policy_share_first_version_source_ids,
         test_source_registry_requires_policy_for_production_enabled_connectors,
+        test_source_connectors_normalize_each_first_version_source_type,
+        test_source_connectors_record_failures_and_policy_skips_without_aborting_run,
+        test_source_connector_late_results_are_cut_off_at_delivery_deadline,
+        test_source_connector_output_matches_recorded_candidate_fixture_anchor,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
