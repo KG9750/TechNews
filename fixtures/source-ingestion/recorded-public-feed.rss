@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Rust Blog</title>
+    <item>
+      <title>Announcing Rust 1.89.0</title>
+      <link>https://blog.rust-lang.org/2026/06/01/Rust-1.89.0/</link>
+      <pubDate>Mon, 01 Jun 2026 12:00:00 +0000</pubDate>
+      <category>Rust</category>
+      <category>Release</category>
+      <description>Rust 1.89.0 release metadata excerpt for connector fixture validation.</description>
+    </item>
+  </channel>
+</rss>
