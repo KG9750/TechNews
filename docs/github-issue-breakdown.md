@@ -25,6 +25,8 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 `python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, post-readiness labels, and the acceptance coverage map.
 Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
+Issue #10 is implemented and closed by PR #24. Issues #11 through #19 remain `ready-for-agent`; issue #20 remains `needs-triage` until core MVP implementation completes.
+
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
 | Repo and CI | #10 | `docs/issues/mvp/01-repo-ci-foundation.md` | `ready-for-agent` | None after readiness gate |

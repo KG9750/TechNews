@@ -240,7 +240,7 @@ Verification:
 - `python3 scripts/check_readiness.py` verifies the 11 MVP issue-body drafts, required sections, relevant doc paths, dependency sections, `needs-triage` labels, and acceptance coverage map.
 - Issues with unresolved ADR dependencies stay `needs-triage`.
 - Only decision-complete issues receive `ready-for-agent`.
-- `python3 scripts/check_readiness.py --require-github` confirms pre-readiness issues remain guarded before the final gate passes, and after the gate passes it verifies #3/#5/#6/#21 are closed, #10-#19 are `ready-for-agent`, #20 remains `needs-triage` until core MVP implementation completes, and #1 may close after the readiness PR is merged.
+- `python3 scripts/check_readiness.py --require-github` confirms pre-readiness issues remain guarded before the final gate passes, and after the gate passes it verifies #3/#5/#6/#21 are closed, completed MVP issues are closed, open MVP implementation issues remain `ready-for-agent`, #20 remains `needs-triage` until core MVP implementation completes, and #1 may close after the readiness PR is merged.
 
 ## Development Readiness Gate
 
