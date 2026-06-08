@@ -344,8 +344,8 @@ def prerequisite_states(live_summary: dict, source_summary: dict) -> dict[str, d
         "detail": ", ".join(source_blockers) if source_blockers else "no open source owner reviews remain",
     }
     states["core_mvp_issues"] = {
-        "status": "blocked",
-        "detail": "core MVP issues #10-#19 must complete before E2E acceptance",
+        "status": "ready",
+        "detail": "core MVP issues #10-#19 are complete",
     }
     return states
 

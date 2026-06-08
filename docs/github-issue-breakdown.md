@@ -1,23 +1,23 @@
 # GitHub Issue Breakdown
 
-Status: Readiness gate passed; MVP issues ready for post-readiness triage
+Status: Readiness gate passed; MVP implementation complete
 Last updated: 2026-06-08
 
-Use this breakdown to keep GitHub issue labels aligned after the readiness gate. The external spike blockers are complete, source-owner narrowing is applied, and decision-complete implementation issues can move to `ready-for-agent`.
+Use this breakdown to keep GitHub issue labels aligned after the readiness gate. The external spike blockers are complete, source-owner narrowing is applied, and MVP implementation issues #10 through #20 are implemented and closed.
 
 ## Pre-Development Issues
 
 | GitHub issue | Status | Relevant docs |
 | --- | --- | --- |
 | #2 Prepare minimum contracts | Closed | `docs/schemas/minimal-contracts.md` |
-| #3 Run Feishu delivery spike | Ready to close after copy-safe update | `docs/spikes/feishu-delivery.md`, `docs/secrets.md` |
+| #3 Run Feishu delivery spike | Closed | `docs/spikes/feishu-delivery.md`, `docs/secrets.md` |
 | #4 Run source ingestion spike | Closed | `docs/spikes/source-ingestion.md`, `docs/source-registry.md` |
-| #5 Run model provider spike | Ready to close after copy-safe update | `docs/spikes/model-provider.md`, `fixtures/model-provider/` |
-| #6 Run archive and storage spike | Ready to close after copy-safe update | `docs/spikes/archive-storage.md`, `fixtures/archive-storage/` |
+| #5 Run model provider spike | Closed | `docs/spikes/model-provider.md`, `fixtures/model-provider/` |
+| #6 Run archive and storage spike | Closed | `docs/spikes/archive-storage.md`, `fixtures/archive-storage/` |
 | #7 Review technology taxonomy and briefing style guide | Closed | `docs/taxonomy/technology-domain-template.md`, `docs/briefing-style-guide.md` |
 | #8 Review golden samples | Closed | `fixtures/golden-samples/` |
 | #9 Record required ADRs before MVP issue execution | Closed | `docs/adr/` |
-| #21 Resolve source owner eligibility approvals | Ready to close after copy-safe update | `docs/source-owner-review-runbook.md`, `fixtures/source-ingestion/source-owner-review-queue.json` |
+| #21 Resolve source owner eligibility approvals | Closed | `docs/source-owner-review-runbook.md`, `fixtures/source-ingestion/source-owner-review-queue.json` |
 
 ## MVP Issue Drafts
 
@@ -25,7 +25,7 @@ Every draft below contains the required sections: Problem, Scope, Out of scope, 
 `python3 scripts/check_readiness.py` verifies this mapping, the required draft sections, relevant doc paths, dependency sections, post-readiness labels, and the acceptance coverage map.
 Use `python3 scripts/readiness_action_packet.py --write-mvp-issue-packets` to generate ignored per-issue triage packets under `evidence/mvp-issue-packets/` before changing any MVP issue label.
 
-Issues #10, #11, #12, #13, #14, #15, #16, #17, #18, and #19 are implemented and closed by PRs #24, #26, #28, #30, #32, #34, #36, #38, #40, and #42. Issue #20 is now `ready-for-agent` for the final end-to-end MVP acceptance run.
+Issues #10, #11, #12, #13, #14, #15, #16, #17, #18, #19, and #20 are implemented and closed by PRs #24, #26, #28, #30, #32, #34, #36, #38, #40, #42, and #44.
 
 | Module | GitHub issue | Draft | Initial label | Main blockers |
 | --- | --- | --- | --- | --- |
@@ -59,5 +59,5 @@ Issues #10, #11, #12, #13, #14, #15, #16, #17, #18, and #19 are implemented and 
 
 ## Creation Rule
 
-After the readiness gate passes, #10 through #19 can move to `ready-for-agent`. Issues #10 through #19 are complete; #20 is now `ready-for-agent` for final E2E acceptance.
+After the readiness gate passes, #10 through #20 can move to `ready-for-agent`. Issues #10 through #20 are complete.
 The ignored MVP issue triage packets are comment-ready context only; they do not replace `python3 scripts/check_readiness.py --require-live --require-evidence` or `python3 scripts/check_readiness.py --require-github`.
