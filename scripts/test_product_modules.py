@@ -35,6 +35,15 @@ from technews_briefing.feishu_delivery import (  # noqa: E402
     redact_feishu_payload,
     render_feishu_message_text,
 )
+from technews_briefing.operations_console import (  # noqa: E402
+    AdminAuth,
+    OperationsConsole,
+    OperationsConsoleError,
+    OperationsConsoleStore,
+    hash_admin_password,
+    seed_console_store,
+    verify_admin_password,
+)
 from technews_briefing.ranking import RankingInput, rank_candidates  # noqa: E402
 from technews_briefing.run import AutomaticBriefingRun, ConnectorResult  # noqa: E402
 from technews_briefing.source_connectors import (  # noqa: E402
@@ -1027,6 +1036,203 @@ def test_feishu_redaction_scrubs_sensitive_response_shapes() -> None:
     assert "cli_sensitive" not in serialized
 
 
+def console_seed() -> dict[str, tuple[dict[str, object], ...]]:
+    return {
+        "console_config": (
+            {"key": "DELIVERY_DEADLINE_LOCAL_TIME", "value": "08:00", "is_secret": False},
+            {"key": "DELIVERY_TIMEZONE", "value": "Asia/Shanghai", "is_secret": False},
+            {"key": "ADMIN_PASSWORD_HASH", "value": "pbkdf2-secret-value", "is_secret": True},
+            {"key": "SESSION_SECRET", "value": "session-secret-value", "is_secret": True},
+            {"key": "MODEL_API_KEY", "value": "model-secret-value", "is_secret": True},
+        ),
+        "sources": (
+            {
+                "source_id": "src-openai-news",
+                "name": "OpenAI News",
+                "source_type": "public_feed",
+                "eligibility_state": "deferred",
+                "connector_status": "skipped",
+                "last_checked_at": "2026-06-01T07:00:00Z",
+            },
+            {
+                "source_id": "src-arxiv-cs-ai",
+                "name": "arXiv cs.AI",
+                "source_type": "academic_source",
+                "eligibility_state": "eligible",
+                "connector_status": "completed",
+                "last_checked_at": "2026-06-01T07:01:00Z",
+            },
+        ),
+        "taxonomy": (
+            {"section": "AI", "subcategory": "Multimodal AI"},
+            {"section": "Hardware", "subcategory": "AI accelerators"},
+        ),
+        "recipients": (
+            {
+                "recipient_id": "feishu_user_demo",
+                "recipient_type": "feishu_user",
+                "label": "Default user",
+                "enabled": 1,
+            },
+            {
+                "recipient_id": "feishu_group_demo",
+                "recipient_type": "feishu_group",
+                "label": "Default group",
+                "enabled": 1,
+            },
+        ),
+        "subscriptions": (
+            {"recipient_id": "feishu_user_demo", "section": "AI", "subcategory": "Multimodal AI"},
+            {"recipient_id": "feishu_group_demo", "section": "Hardware", "subcategory": "AI accelerators"},
+        ),
+        "runs": (
+            {
+                "run_id": "run_2026-06-01_console",
+                "domain_template": "technology",
+                "scheduled_for": "2026-06-01T00:00:00Z",
+                "run_status": "completed_with_retryable_failures",
+                "archive_url": "https://archive.example.invalid/2026-06-01/technology/",
+            },
+        ),
+        "selected_items": (
+            {
+                "run_id": "run_2026-06-01_console",
+                "item_id": "brief_openai_gpt4o",
+                "title_zh": "OpenAI 发布 GPT-4o，重点降低实时多模态交互门槛。",
+                "section": "AI",
+                "confidence_level": "high",
+                "selection_rationale": "Official model release.",
+            },
+        ),
+        "excluded_candidates": (
+            {
+                "run_id": "run_2026-06-01_console",
+                "candidate_id": "cand_low_priority",
+                "reason": "below_selection_limit",
+                "selection_rationale": "Lower priority for this run.",
+            },
+        ),
+        "delivery_status": (
+            {
+                "run_id": "run_2026-06-01_console",
+                "recipient_id": "feishu_user_demo",
+                "status": "sent",
+                "retryable": 0,
+                "failure_reason": None,
+            },
+            {
+                "run_id": "run_2026-06-01_console",
+                "recipient_id": "feishu_group_demo",
+                "status": "failed",
+                "retryable": 1,
+                "failure_reason": "redacted Feishu failure",
+            },
+        ),
+        "sync_status": (
+            {
+                "run_id": "run_2026-06-01_console",
+                "target_key": "remote_sync",
+                "status": "failed",
+                "retryable": 1,
+                "failure_reason": "redacted sync failure",
+            },
+        ),
+    }
+
+
+def console_auth() -> AdminAuth:
+    password_hash = hash_admin_password("correct horse", salt=b"console-test-salt", iterations=1_000)
+    return AdminAuth(
+        username="admin",
+        password_hash=password_hash,
+        session_secret="session-secret-for-tests",
+        session_ttl_seconds=60,
+    )
+
+
+def test_operations_console_auth_uses_password_hash_and_signed_sessions() -> None:
+    auth = console_auth()
+    token = auth.login("admin", "correct horse", now=1000)
+    session = auth.verify_session(token, now=1010)
+
+    assert session.username == "admin"
+    assert verify_admin_password("correct horse", auth.password_hash)
+    assert not verify_admin_password("wrong password", auth.password_hash)
+    assert_raises(OperationsConsoleError, lambda: auth.login("admin", "wrong password", now=1000), "invalid")
+    assert_raises(OperationsConsoleError, lambda: auth.verify_session(token + "tampered", now=1010), "signature")
+    assert_raises(OperationsConsoleError, lambda: auth.verify_session(token, now=2000), "expired")
+
+
+def test_operations_console_dashboard_redacts_secrets_and_exposes_status_views() -> None:
+    store = OperationsConsoleStore()
+    store.initialize()
+    seed_console_store(store, console_seed())
+    auth = console_auth()
+    token = auth.login("admin", "correct horse", now=1000)
+    view = OperationsConsole(store=store, auth=auth).dashboard(token, now=1001)
+    serialized = json.dumps(view.configuration, ensure_ascii=False)
+
+    assert view.configuration["DELIVERY_DEADLINE_LOCAL_TIME"] == "08:00"
+    assert view.configuration["SESSION_SECRET"]["display_value"] == "REDACTED"
+    assert "model-secret-value" not in serialized
+    assert {source["source_id"] for source in view.sources} == {"src-openai-news", "src-arxiv-cs-ai"}
+    assert view.taxonomy["AI"] == ("Multimodal AI",)
+    assert len(view.recipients) == 2
+    assert view.runs[0]["archive_url"].startswith("https://archive.example.invalid/")
+    assert view.selected_items[0]["selection_rationale"]
+    assert view.excluded_candidates[0]["reason"] == "below_selection_limit"
+    assert {action["target_type"] for action in view.retry_actions} == {"delivery", "sync"}
+    assert_raises(
+        OperationsConsoleError, lambda: store.fetch_all("sources", order_by="name; DROP TABLE sources"), "ordering"
+    )
+    assert_raises(
+        OperationsConsoleError,
+        lambda: store.insert_many("sources", ({"source_id": "src-bad", "unexpected": "nope"},)),
+        "unknown columns",
+    )
+
+
+def test_operations_console_updates_configuration_only_with_valid_session() -> None:
+    store = OperationsConsoleStore()
+    store.initialize()
+    seed_console_store(store, console_seed())
+    auth = console_auth()
+    console = OperationsConsole(store=store, auth=auth)
+    token = auth.login("admin", "correct horse", now=1000)
+
+    console.update_configuration(token, "DELIVERY_DEADLINE_LOCAL_TIME", "08:15", now=1001)
+    console.update_configuration(token, "MODEL_API_KEY", "new-secret-value", is_secret=True, now=1001)
+    view = console.dashboard(token, now=1001)
+
+    assert view.configuration["DELIVERY_DEADLINE_LOCAL_TIME"] == "08:15"
+    assert view.configuration["MODEL_API_KEY"]["display_value"] == "REDACTED"
+    assert_raises(
+        OperationsConsoleError,
+        lambda: console.update_configuration("bad-token", "DELIVERY_TIMEZONE", "Asia/Shanghai"),
+        "session",
+    )
+
+
+def test_operations_console_seeded_sqlite_data_persists() -> None:
+    auth = console_auth()
+    with TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "console.sqlite3"
+        store = OperationsConsoleStore(db_path)
+        store.initialize()
+        seed_console_store(store, console_seed())
+        store.close()
+
+        reopened = OperationsConsoleStore(db_path)
+        token = auth.login("admin", "correct horse", now=1000)
+        view = OperationsConsole(store=reopened, auth=auth).dashboard(token, now=1001)
+        delivery_by_recipient = {row["recipient_id"]: row for row in view.delivery_status}
+
+        assert view.runs[0]["run_id"] == "run_2026-06-01_console"
+        assert delivery_by_recipient["feishu_group_demo"]["status"] == "failed"
+        assert view.sync_status[0]["retryable"] == 1
+        reopened.close()
+
+
 def test_automatic_briefing_run_filters_candidates_through_policy() -> None:
     policy = SourceAccessPolicy.from_file(ROOT / "fixtures/source-ingestion/source-access-policy.json")
     candidates = [
@@ -1101,6 +1307,10 @@ def main() -> int:
         test_feishu_pending_status_and_recipient_validation,
         test_feishu_rendered_text_and_fixtures_include_required_delivery_content,
         test_feishu_redaction_scrubs_sensitive_response_shapes,
+        test_operations_console_auth_uses_password_hash_and_signed_sessions,
+        test_operations_console_dashboard_redacts_secrets_and_exposes_status_views,
+        test_operations_console_updates_configuration_only_with_valid_session,
+        test_operations_console_seeded_sqlite_data_persists,
         test_automatic_briefing_run_filters_candidates_through_policy,
         test_product_modules_do_not_import_spike_runners,
     ]
