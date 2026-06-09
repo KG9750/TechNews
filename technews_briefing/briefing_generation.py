@@ -170,7 +170,7 @@ def _deep_dive_detail_from_selected(
         briefing_item_id=briefing_item.id,
         href=f"{deep_dive_base_path.rstrip('/')}/{briefing_item.id}.html",
         title_zh=briefing_item.title_zh,
-        summary_zh=("该详情页汇总推送条目的来源、入选理由、置信提示和媒体使用状态，不包含 AI 聊天。"),
+        summary_zh=_summary_zh(selected),
         source_list=source_list,
         selection_rationale=selected.selection_rationale.as_mapping(),
         confidence_notice=_confidence_notice(selected),
@@ -192,31 +192,46 @@ def _deep_dive_detail_from_selected(
 
 def _title_zh(selected: SelectedCandidate) -> str:
     candidate = selected.candidate
-    title = _compact(candidate.original_title, max_chars=44)
+    title = _compact(candidate.original_title, max_chars=80)
     if candidate.source_type == "academic_source":
-        return f"{candidate.source_name} 收录《{title}》，作为{selected.section}背景材料。"
+        return f"论文：{title}"
     if selected.confidence_level == "low":
-        return f"{candidate.source_name} 的未确认消息进入{selected.section}观察范围。"
-    return f"{candidate.source_name} 发布《{title}》，归入{selected.section}关注。"
+        return f"待核实：{title}"
+    return f"{candidate.source_name}：{title}"
 
 
 def _bullets_zh(selected: SelectedCandidate) -> list[str]:
     candidate = selected.candidate
     subcategory = selected.subcategory or "未细分子类"
+    summary_label = "论文摘要" if candidate.source_type == "academic_source" else "摘要"
     bullets = [
-        f"来源记录显示，{candidate.source_name} 提供了该条目的原始标题和链接。",
-        f"它被归入{selected.section}/{subcategory}，用于匹配订阅主题和事件影响。",
-        "原始来源锚点保留来源名、原题和链接，便于在归档中核验。",
+        f"{summary_label}：{_summary_zh(selected)}",
+        f"发布时间：{_published_label(candidate.published_at)}。",
+        f"栏目：{selected.section}/{subcategory}；来源：{candidate.source_name}。",
     ]
     if selected.confidence_level != "high":
-        bullets.append("由于置信度不是高，推送正文必须展示可见的置信提示。")
+        bullets.append("置信度未达高档，请结合来源链接核验。")
     elif selected.corroborating_sources:
-        bullets.append(f"另有 {len(selected.corroborating_sources)} 个来源作为交叉报道保存在详情页。")
+        bullets.append(f"另有 {len(selected.corroborating_sources)} 个相关来源保存在详情页。")
     elif selected.related_history:
-        bullets.append(f"详情页会保留 {len(selected.related_history)} 条相关历史，方便追踪上下文。")
-    elif candidate.source_media is None:
-        bullets.append("当前不展示配图，只使用来源与元数据，避免误导性生成图片。")
+        bullets.append(f"相关历史：{len(selected.related_history)} 条。")
     return bullets
+
+
+def _summary_zh(selected: SelectedCandidate) -> str:
+    candidate = selected.candidate
+    raw = dict(candidate.raw_metadata)
+    for key in ("description_excerpt", "summary_excerpt"):
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return _compact(value, max_chars=220)
+    return _compact(candidate.original_title, max_chars=160)
+
+
+def _published_label(value: str | None) -> str:
+    if not value:
+        return "来源未提供"
+    return value.replace("T", " ").removesuffix("Z") + " UTC"
 
 
 def _confidence_notice(selected: SelectedCandidate) -> dict[str, object] | None:

@@ -52,13 +52,13 @@ def with_env(values: Mapping[str, str]):
     return EnvGuard()
 
 
-def rss(title: str, link: str, pub_date: str, *, filler: str = "") -> str:
+def rss(title: str, link: str, pub_date: str, *, description: str, filler: str = "") -> str:
     return f"""<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0"><channel><title>Fixture Feed</title><item>
 <title>{title}</title>
 <link>{link}</link>
 <pubDate>{pub_date}</pubDate>
-<description>Short metadata-only description.{filler}</description>
+<description>{description}{filler}</description>
 </item></channel></rss>
 """
 
@@ -72,7 +72,7 @@ def atom(title: str, url: str, published: str) -> str:
 <id>{url}</id>
 <link href="{url}" rel="alternate" />
 <published>{published}</published>
-<summary>Short metadata-only abstract for live runner tests.</summary>
+<summary>This paper summary describes the actual research claim that should appear in the Feishu card.</summary>
 <author><name>Fixture Author</name></author>
 <category term="cs.AI" />
 </entry>
@@ -99,13 +99,15 @@ def test_daily_runner_fetches_live_metadata_and_delivers_non_fixture_card() -> N
                 "Kubernetes Live Metadata Test",
                 "https://kubernetes.io/blog/2026/06/08/live-metadata-test/",
                 "Mon, 08 Jun 2026 00:15:00 GMT",
-                filler="<description>" + ("x" * 1_100_000) + "</description>",
+                description="Kubernetes is moving readers from the legacy dashboard to Headlamp with migration guidance.",
+                filler=" " + ("x" * 1_100_000),
             )
         elif source.source_type == "public_feed":
             content = rss(
                 f"{source.name} Live Metadata Test",
                 f"https://example.invalid/{source.id}/live-metadata-test",
                 "Mon, 08 Jun 2026 00:10:00 GMT",
+                description=f"{source.name} published a concrete release update for live briefing summary tests.",
             )
         else:
             content = atom(
@@ -167,6 +169,11 @@ def test_daily_runner_fetches_live_metadata_and_delivers_non_fixture_card() -> N
     assert "TechNews Briefing - 2026-06-01" not in sent_payloads
     assert "GPT-4o" not in sent_payloads
     assert "Kubernetes Live Metadata Test" in sent_payloads
+    assert "Kubernetes is moving readers from the legacy dashboard to Headlamp" in sent_payloads
+    assert "This paper summary describes the actual research claim" in sent_payloads
+    assert "来源记录显示" not in sent_payloads
+    assert "用于匹配订阅主题" not in sent_payloads
+    assert "原始来源锚点" not in sent_payloads
     assert "https://archive.example.invalid/2026-06-08/technology/deep-dive/" in sent_payloads
     assert "max_results=1" in seen_fetch_urls["src-arxiv-cs-ai"]
     assert "ou_fixture_user" not in serialized_report

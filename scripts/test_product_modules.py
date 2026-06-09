@@ -706,6 +706,11 @@ def test_briefing_generator_creates_contract_items_and_section_groups() -> None:
     assert openai.id not in briefing.media_fallbacks
     assert openai.original_source_anchor.source_url == "https://openai.com/index/hello-gpt-4o/"
     assert 3 <= len(openai.bullets_zh) <= 4
+    rendered_bullets = "\n".join(openai.bullets_zh)
+    assert "摘要：" in rendered_bullets
+    assert "来源记录显示" not in rendered_bullets
+    assert "用于匹配订阅主题" not in rendered_bullets
+    assert "原始来源锚点" not in rendered_bullets
 
     assert low_confidence.confidence_level == "low"
     assert low_confidence.confidence_notice is not None
@@ -762,7 +767,7 @@ def test_briefing_generator_uses_structured_no_media_fallback_for_academic_items
     assert detail.media_fallback is not None
     assert detail.media_fallback.reason == "no_source_media"
     assert detail.source_list[0].source_url == "https://arxiv.org/abs/1706.03762"
-    assert "AI 聊天" in detail.summary_zh
+    assert "Attention Is All You Need" in detail.summary_zh
 
 
 def archive_test_briefing():
